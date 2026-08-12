@@ -33,6 +33,10 @@ Kite holdings carry **no** basket field. The link exists only in **order tags**,
 
 If the user mentions a smallcase/basket bought today, capture this *before* doing anything else.
 
+**When the user executes a received sheet themselves,** skip discovery entirely: choose a tag,
+pass it on every `place_order` call, then `basket.py record <tag> "<label>" fills.json` from the
+actual fills. Self-set tags never expire, so this path has no time pressure.
+
 ## Share / size a basket
 
 ```bash

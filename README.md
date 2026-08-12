@@ -168,6 +168,22 @@ Save what you find as `_smallcase_map.json` (gitignored):
 
 Then set each holding's `grp` from that map when you build `holdings.json`, and the dashboard groups by basket automatically.
 
+### If *you* place the orders (a sheet someone sent you)
+
+Then there is no platform stamping the tag — **so stamp it yourself.** Kite's `place_order`
+accepts a `tag`, so pass the same one on every leg:
+
+```bash
+python3 basket.py orders their_sheet.json 200000 --tag FRIEND_01
+#   ... place each order with tag="FRIEND_01" ...
+python3 basket.py record FRIEND_01 "Friend Basket" fills.json
+```
+
+`fills.json` is `{"SYM": {"q": qty, "avg": fill_price}, ...}` from your actual executions.
+
+This is strictly better than the discovery route: you already know the tag, so **nothing expires** —
+the same-day `get_orders` window only matters for baskets a *platform* placed on your behalf.
+
 ---
 
 ## Workflow 3 — Share a basket

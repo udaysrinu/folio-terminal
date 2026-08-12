@@ -3,7 +3,8 @@
 
   export <tag>                  build a shareable sheet from your captured basket
   md     <sheet.json>           render the sheet as markdown (human / LLM readable)
-  orders <sheet.json> <amount>  size ANYONE's sheet to your capital → order list
+  orders <sheet.json> <amount> [--tag T]   size ANYONE's sheet to your capital
+  record <tag> <label> <fills.json>        log an executed basket into the local map
 
 Sheet schema (this is the whole format):
   {"label":"Basket name", "asof":"YYYY-MM-DD",
@@ -64,7 +65,21 @@ def cmd_md(path, tiers=(1, 2, 3)):
     out = path.replace(".json", "") + ".md"
     open(out, "w").write("\n".join(L)); print(f"wrote {out}")
 
-def cmd_orders(path, amount):
+def cmd_record(tag, label, fills_path):
+    """Log a basket you executed yourself, so it groups in the dashboard like any other."""
+    import datetime, os
+    fills = json.load(open(fills_path))          # {"SYM": {"q": n, "avg": p}, ...}
+    m = json.load(open("_smallcase_map.json")) if os.path.exists("_smallcase_map.json") else {"batches": {}}
+    m.setdefault("batches", {})[tag] = {
+        "label": label, "grp": label.split()[0],
+        "executed": datetime.date.today().isoformat(), "holdings": fills,
+        "invested": round(sum(v["q"] * v["avg"] for v in fills.values())),
+    }
+    json.dump(m, open("_smallcase_map.json", "w"), indent=1)
+    print(f"recorded {tag}: {label} — {len(fills)} stocks, "
+          f"₹{m['batches'][tag]['invested']:,}")
+
+def cmd_orders(path, amount, tag=None):
     s = load_sheet(path); rows, cost, mu = size(s, amount)
     print(f"\n{s['label']}  (sheet as of {s.get('asof','?')})")
     print(f"Amount ₹{amount:,.0f} · minimum for whole shares ₹{mu:,.0f}"
@@ -73,6 +88,9 @@ def cmd_orders(path, amount):
     for sym, q, px, v, note in rows:
         print(f"{sym:13}{q:>5}{px:>10,.0f}{v:>11,.0f}  {note}")
     print("-" * 56 + f"\n{'TOTAL':13}{'':>5}{'':>10}{cost:>11,.0f}  ({cost/amount*100:.1f}% deployed)")
+    if tag:
+        print(f"\nPass tag=\"{tag}\" on every order — that is what makes this basket")
+        print(f"groupable later. Then: basket.py record {tag} \"<label>\" fills.json")
     print("\nNSE · CNC · market or limit. Not investment advice.")
 
 def demo():
@@ -90,6 +108,8 @@ if __name__ == "__main__":
     match a[0]:
         case "export": cmd_export(a[1] if len(a) > 1 else sys.exit("need <tag>"))
         case "md":     cmd_md(a[1])
-        case "orders": cmd_orders(a[1], float(a[2]))
+        case "orders": cmd_orders(a[1], float(a[2]),
+                                   a[a.index("--tag")+1] if "--tag" in a else None)
+        case "record": cmd_record(a[1], a[2], a[3])
         case "demo":   demo()
         case _:        sys.exit(__doc__)
