@@ -186,12 +186,15 @@ def build(args):
             'holdings': sorted(H, key=lambda x: -x['pnl']),
             'unreal': round(unreal), 'invested': round(invested), 'mkt': round(mkt),
             'combined': round(cum_realized + unreal),
+            # today's P&L across the book; dashboard shows this next to unrealised
+            'day_total': round(sum(h.get('dpnl', 0) or 0 for h in H)),
             'groups': sorted([{'g': k, 'pnl': round(v[0]), 'val': round(v[1])} for k, v in grp.items()], key=lambda x: -x['val']),
             'attention': attention,
         })
     else:
         out.update({'holdings': [], 'unreal': 0, 'invested': 0, 'mkt': 0,
-                    'combined': round(cum_realized), 'groups': [], 'attention': []})
+                    'combined': round(cum_realized), 'day_total': 0,
+                    'groups': [], 'attention': []})
 
     json.dump(out, open(args.out, 'w'))
     print(f"✓ {args.out} written")
