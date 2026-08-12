@@ -1,0 +1,27 @@
+# ---- YOUR DATA — never commit ----
+_holdings.json
+_smallcase_map.json
+live.json
+_deep.json
+_analysis.json
+_cumcurve.json
+*_sheet.json
+*_sheet.md
+*_BASKET.md
+tradebook*.xlsx
+tradebook*.csv
+taxpnl*.xlsx
+JOURNAL.md
+CURRENT_STATE.md
+TRADING_PLAN.md
+
+# keep the fakes
+!samples/*
+
+# ---- junk ----
+__pycache__/
+*.pyc
+.DS_Store
+node_modules/
+.playwright-mcp/
+*.png

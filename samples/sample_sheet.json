@@ -1,0 +1,6 @@
+{
+ "label": "Sample 4-stock basket",
+ "asof": "2026-08-12",
+ "weights": {"RELIANCE": 30.0, "TCS": 25.0, "HDFCBANK": 25.0, "NTPC": 20.0},
+ "prices":  {"RELIANCE": 2965.5, "TCS": 3702.1, "HDFCBANK": 1712.3, "NTPC": 351.6}
+}

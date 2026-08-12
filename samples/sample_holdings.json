@@ -1,0 +1,7 @@
+[
+ {"s":"RELIANCE","q":25,"avg":2820.00,"ltp":2965.50,"pnl":3638,"grp":"Core","day":0.82,"sl":2650,"dpnl":604},
+ {"s":"HDFCBANK","q":40,"avg":1655.00,"ltp":1712.30,"pnl":2292,"grp":"Core","day":-0.35,"sl":null,"dpnl":-240},
+ {"s":"NTPC","q":85,"avg":343.10,"ltp":351.60,"pnl":723,"grp":"Infra","day":1.10,"sl":null,"dpnl":329},
+ {"s":"NIFTYBEES","q":300,"avg":128.00,"ltp":124.15,"pnl":-1155,"grp":"Hedge","day":0.40,"sl":null,"dpnl":149},
+ {"s":"LIQUIDBEES","q":500,"avg":1000.00,"ltp":1000.10,"pnl":50,"grp":"Cash","day":0.01,"sl":null,"dpnl":5}
+]
