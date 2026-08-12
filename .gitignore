@@ -25,3 +25,7 @@ __pycache__/
 node_modules/
 .playwright-mcp/
 *.png
+
+# keep the agent skill
+!.claude/
+!.claude/**

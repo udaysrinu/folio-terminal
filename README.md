@@ -53,6 +53,61 @@ The page polls `live.json` every 30s. You can also **drag an XLSX/CSV straight o
 
 ---
 
+## Setup — Zerodha Kite MCP
+
+Optional, but it's what makes the live half work (holdings, prices, order tags). Zerodha run an **official, free** MCP server — you do **not** need a paid Kite Connect API subscription.
+
+```bash
+# Claude Code (streamable HTTP)
+claude mcp add --transport http kite https://mcp.kite.trade/mcp
+```
+
+For clients that only speak stdio, bridge it:
+
+```bash
+npx -y mcp-remote https://mcp.kite.trade/mcp
+```
+
+Then authenticate — the agent calls the `login` tool, which returns a URL. Open it, complete 2FA, **and wait for the browser to land on the success page**; the session only activates on that redirect.
+
+> **The session expires daily (~6am IST).** Re-run `login` each day. If a tool call hangs for minutes instead of erroring, that's an expired session — reconnect the server, then log in again.
+
+Tools you'll actually use:
+
+| Purpose | Tool |
+|---|---|
+| Auth | `login`, `get_profile` |
+| Positions | `get_holdings`, `get_positions`, `get_margins` |
+| Activity | `get_orders`, `get_trades`, `get_order_history` |
+| Prices | `get_ltp`, `get_quotes`, `get_ohlc`, `get_historical_data` |
+| Orders | `place_order`, `modify_order`, `cancel_order` |
+| GTT | `get_gtts`, `place_gtt_order`, `modify_gtt_order`, `delete_gtt_order` |
+| Lookup | `search_instruments` |
+
+---
+
+## Workflow 0 — Export your data
+
+There are two halves, and only one of them has an API.
+
+| Data | Source | How |
+|---|---|---|
+| **Tradebook** (realised P&L) | Zerodha **Console** | Manual: Console → Reports → Tradebook → date range → download XLSX. **No API exists for this** — Console is a separate back-office system. |
+| **Tax P&L** (all-time, with cost basis) | Console → Reports → P&L | Manual download. Use it for `--pre` (realised booked before your tradebook's window). |
+| **Holdings** | Kite MCP | `get_holdings` → map to `holdings.json` (schema below) |
+| **Order tags** | Kite MCP | `get_orders` — **same day only**, see Workflow 2 |
+| **Prices** | Kite MCP | `get_ltp` for a list, `get_quotes` for depth/circuit limits |
+| **History** | Kite MCP | `get_historical_data` with an `instrument_token` |
+
+Gotchas worth knowing before you trust a number:
+
+- **Same-day buys** appear as `t1_quantity`, not `quantity` — they're unsettled, and may not appear in holdings at all for a few hours.
+- **A fired GTT** shows as `quantity: 0` with `used_quantity: N` while the sale settles.
+- **Holdings merge.** Buy the same stock via two baskets and you get one blended average price. Nothing recovers the split afterwards except your own capture.
+- **Realised P&L is only as fresh as your tradebook.** Holdings are live; round-trips are frozen at your last download.
+
+---
+
 ## Workflow 1 — Dashboard from a tradebook
 
 ```
@@ -159,6 +214,29 @@ TOTAL                           200,878  (100.4% deployed)
 ```bash
 python3 basket.py demo    # self-check on the minimum-unit + skip logic
 ```
+
+---
+
+## Reading the dashboard
+
+Four views, and what each is actually for:
+
+| Tab | Answers |
+|---|---|
+| **Overview** | Cumulative realised curve, allocation tiles sized by value, basket concentration. "Where is my money, and how concentrated am I?" |
+| **Live Holdings** | Filter/sort by basket, per-position P&L with today's move, distance-to-stop bars. "What needs attention right now?" |
+| **Realised** | Gross profit − gross loss = net, profit factor, per-stock league table, full round-trip ledger. "Is my edge real?" |
+| **Never Sold** | Replays every buy and ignores every sell, valued at today's prices. "Did selling actually help?" |
+
+The metrics that matter, and how to read them honestly:
+
+- **Profit factor** = gross profit ÷ gross loss. Above 1.0 makes money. It's a better signal than win rate — you can win 12% of the time and still be profitable if the winners are big enough.
+- **Net P&L is the number**, not gross. A ₹2L gross profit with ₹1.3L of losses is ₹70k. The dashboard shows the subtraction explicitly because the gross figure flatters.
+- **Max drawdown** — worst peak-to-trough on the realised curve. Your real risk tolerance, measured rather than imagined.
+- **Concentration bar** — length is exposure share. If one basket is over ~40%, that's the position that decides your year.
+- **Never Sold** is a *hindsight* check, not a strategy. It can only show trades that recovered; it can't price the disasters your stops prevented. Read it to audit your exit rule, not to regret individual exits.
+
+FIFO matching (oldest lot first) is the same method Zerodha Console and Indian tax reports use, so the round-trip figures reconcile with your tax P&L.
 
 ---
 
