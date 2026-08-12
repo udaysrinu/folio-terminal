@@ -48,6 +48,17 @@ python3 basket.py demo                      # self-check
 
 Sheets carry **weights, not share counts** — weights survive different capital and different prices.
 
+## Own baskets / rebalancing
+
+```bash
+python3 basket.py new "<label>" prices.json [weights.json]   # yours to share, no subscription IP
+python3 basket.py rebalance <sheet.json> <holdings.json>     # drift + correcting orders
+```
+
+Before acting on a drift figure, check `_smallcase_map.json`: a stock held via two baskets shows
+one merged quantity in Kite, which fabricates drift against either basket's target. Say so rather
+than issuing the trade.
+
 ## Executing an order list
 
 - `exchange=NSE`, `product=CNC`, `order_type=LIMIT` for delivery.

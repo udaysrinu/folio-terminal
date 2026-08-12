@@ -233,6 +233,37 @@ python3 basket.py demo    # self-check on the minimum-unit + skip logic
 
 ---
 
+## Workflow 5 — Create your own basket, and rebalance it
+
+Your own baskets are yours — no subscription IP, so you can share them freely.
+
+```bash
+# create: equal-weight from a price list, or pass explicit weights (auto-normalised to 100%)
+python3 basket.py new "My Defence" prices.json
+python3 basket.py new "My Defence" prices.json weights.json
+
+# rebalance: what you hold vs the sheet's targets, and the orders to correct it
+python3 basket.py rebalance my_defence_sheet.json _holdings.json
+```
+
+```
+Stock           Now%   Tgt%   Drift Action   Qty     Value
+----------------------------------------------------------
+AXISCADES      10.6%  11.0%   -0.4%    BUY     1     1,543
+TITAGARH        8.2%   5.1%   +3.2%   SELL    18    15,004
+----------------------------------------------------------
+buy ₹14,889 · sell ₹16,484 · net ₹-1,595
+```
+
+Rebalances within the value you already hold, so it's cash-neutral-ish by construction.
+
+> ⚠️ **A stock held in two baskets will show a false drift.** Kite reports one merged quantity,
+> so shares bought for basket A get counted against basket B's target. In the example above the
+> +3.2% TITAGARH "overweight" is really shares from a *different* basket. Cross-check against
+> `_smallcase_map.json` before acting on any large drift.
+
+---
+
 ## Reading the dashboard
 
 Four views, and what each is actually for:

@@ -5,6 +5,8 @@
   md     <sheet.json>           render the sheet as markdown (human / LLM readable)
   orders <sheet.json> <amount> [--tag T]   size ANYONE's sheet to your capital
   record <tag> <label> <fills.json>        log an executed basket into the local map
+  new    <label> <prices.json> [w.json]    create your own basket (equal-weight by default)
+  rebalance <sheet.json> <holdings.json>   drift vs target + the orders to correct it
 
 Sheet schema (this is the whole format):
   {"label":"Basket name", "asof":"YYYY-MM-DD",
@@ -65,6 +67,53 @@ def cmd_md(path, tiers=(1, 2, 3)):
     out = path.replace(".json", "") + ".md"
     open(out, "w").write("\n".join(L)); print(f"wrote {out}")
 
+def cmd_new(label, prices_path, weights_path=None):
+    """Build your own basket. Equal-weight unless you pass explicit weights."""
+    prices = json.load(open(prices_path))                 # {"SYM": ltp}
+    if weights_path:
+        w = json.load(open(weights_path))
+        tot = sum(w.values())
+        w = {k: round(v / tot * 100, 2) for k, v in w.items()}   # normalise to 100
+        if miss := set(w) - set(prices): sys.exit(f"no price for: {', '.join(sorted(miss))}")
+    else:
+        w = {k: round(100 / len(prices), 2) for k in prices}
+    import datetime
+    sheet = {"label": label, "asof": datetime.date.today().isoformat(),
+             "weights": w, "prices": {k: prices[k] for k in w}}
+    out = label.lower().replace(" ", "_") + "_sheet.json"
+    json.dump(sheet, open(out, "w"), indent=1)
+    print(f"wrote {out} — {len(w)} stocks, "
+          f"{'equal-weight' if not weights_path else 'custom weights'}, "
+          f"min ₹{min_unit(sheet['weights'], sheet['prices']):,.0f}")
+
+def cmd_rebalance(sheet_path, holdings_path):
+    """Compare what you hold against the sheet's target weights → correcting orders."""
+    sh = load_sheet(sheet_path)
+    H = {h["s"]: h for h in json.load(open(holdings_path))}
+    w, p = sh["weights"], dict(sh["prices"])
+    for sym in w:                                   # prefer live ltp from holdings
+        if sym in H and H[sym].get("ltp"): p[sym] = H[sym]["ltp"]
+    held = {sym: H.get(sym, {}).get("q", 0) for sym in w}
+    value = sum(held[s] * p[s] for s in w)
+    if value <= 0: sys.exit("you hold none of this basket — use `orders` to buy in")
+
+    print(f"\n{sh['label']} — rebalance on ₹{value:,.0f} currently held")
+    print(f"\n{'Stock':13}{'Now%':>7}{'Tgt%':>7}{'Drift':>8}{'Action':>7}{'Qty':>6}{'Value':>10}")
+    print("-" * 58)
+    buys = sells = 0.0
+    for sym in sorted(w, key=lambda x: -w[x]):
+        now = held[sym] * p[sym] / value * 100
+        tgt_q = round(value * (w[sym] / 100) / p[sym])
+        d = tgt_q - held[sym]
+        act = "BUY" if d > 0 else "SELL" if d < 0 else "-"
+        if d > 0: buys += d * p[sym]
+        elif d < 0: sells += -d * p[sym]
+        print(f"{sym:13}{now:>6.1f}%{w[sym]:>6.1f}%{now-w[sym]:>+7.1f}%"
+              f"{act:>7}{abs(d):>6}{abs(d)*p[sym]:>10,.0f}")
+    print("-" * 58)
+    print(f"buy ₹{buys:,.0f} · sell ₹{sells:,.0f} · net ₹{buys-sells:+,.0f}")
+    print("\nTag these orders too, so the basket stays groupable. Not investment advice.")
+
 def cmd_record(tag, label, fills_path):
     """Log a basket you executed yourself, so it groups in the dashboard like any other."""
     import datetime, os
@@ -100,6 +149,15 @@ def demo():
     assert [r[1] for r in size(s, 2000)[0]] == [10, 1], "at minimum: 10xA, 1xB"
     assert any(r[4] for r in size(s, 500)[0]), "below minimum must skip"
     assert not any(r[4] for r in size(s, 2000)[0]), "at minimum must not skip"
+    # equal-weight normalises to 100
+    import tempfile, os, json as J
+    d = tempfile.mkdtemp(); pj = os.path.join(d, "p.json")
+    J.dump({"A": 100.0, "B": 200.0, "C": 400.0}, open(pj, "w"))
+    cwd = os.getcwd(); os.chdir(d)
+    cmd_new("EqTest", pj)
+    got = J.load(open("eqtest_sheet.json"))
+    assert abs(sum(got["weights"].values()) - 100) < 0.1, got["weights"]
+    os.chdir(cwd)
     print("demo OK")
 
 if __name__ == "__main__":
@@ -111,5 +169,7 @@ if __name__ == "__main__":
         case "orders": cmd_orders(a[1], float(a[2]),
                                    a[a.index("--tag")+1] if "--tag" in a else None)
         case "record": cmd_record(a[1], a[2], a[3])
+        case "new":    cmd_new(a[1], a[2], a[3] if len(a) > 3 else None)
+        case "rebalance": cmd_rebalance(a[1], a[2])
         case "demo":   demo()
         case _:        sys.exit(__doc__)
