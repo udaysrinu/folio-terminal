@@ -7,6 +7,7 @@ Three things it does:
 1. **Dashboard** — turn a broker tradebook into FIFO-matched realised P&L, an equity curve, basket concentration, and a "what if I never sold" counterfactual. Single HTML file, no build step.
 2. **Basket capture** — work out which holdings belong to which smallcase/basket by reading Kite **order tags** (the only place that link exists).
 3. **Basket interchange** — export a basket as a portable sheet, and size *anyone's* sheet to *your* capital as a concrete order list.
+4. **`basket.html`** — a single page that does #3 with no Python, no server and no broker connection. Send it to someone who has neither MCP nor a terminal.
 
 Everything runs on your machine. No account, no server, no telemetry.
 
@@ -261,6 +262,42 @@ Rebalances within the value you already hold, so it's cash-neutral-ish by constr
 > so shares bought for basket A get counted against basket B's target. In the example above the
 > +3.2% TITAGARH "overweight" is really shares from a *different* basket. Cross-check against
 > `_smallcase_map.json` before acting on any large drift.
+
+---
+
+## Workflow 6 — `basket.html`, for people without MCP or a terminal
+
+Open `basket.html` directly (works from `file://` — no server needed) and hand it to anyone:
+
+1. **Drop or paste the sheet** — shows label, theme, risk, and a profile: minimum investment,
+   concentration, largest holding, top-3 weight.
+2. **Enter an amount** → order table with qty and value per stock, plus **Copy as text** and
+   **Copy as CSV** (broker basket-upload format).
+3. **Optionally drop your holdings XLSX/CSV** (Zerodha Console → Holdings → download) → drift
+   against target weights and the correcting BUY/SELL per stock.
+
+Nothing is uploaded. The page has no network calls except the pinned, SRI-hashed SheetJS used to
+read `.xlsx`; CSV and JSON are parsed natively.
+
+### Optional sheet fields
+
+```json
+{"label":"My Defence","theme":"Defence","risk":"high", ...}
+```
+
+`theme` is free text; `risk` is `low` / `moderate` / `high` (colour-coded in the page). Set them with
+`basket.py new "My Defence" prices.json --theme Defence --risk high`.
+
+### Weights don't have to sum to 100
+
+They're treated as **relative proportions** and normalised, so a sheet whose weights sum to 56% still
+deploys your full amount. Both the CLI and the page do this identically — the self-check asserts it.
+
+### Concentration: "effective holdings"
+
+`1 / Σ(weight²)` — the inverse Herfindahl index. A 15-stock equal-weight basket has ~15 effective
+holdings; if one position dominates, the number collapses toward 1 regardless of how many stocks are
+listed. It's the honest answer to "am I actually diversified?"
 
 ---
 

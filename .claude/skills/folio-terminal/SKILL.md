@@ -59,6 +59,12 @@ Before acting on a drift figure, check `_smallcase_map.json`: a stock held via t
 one merged quantity in Kite, which fabricates drift against either basket's target. Say so rather
 than issuing the trade.
 
+## Recipient has no MCP / no terminal
+
+Send them `basket.html` plus the sheet `.json`. It runs from `file://`, sizes the basket to their
+capital, exports copy-paste orders or broker CSV, and will rebalance against a holdings XLSX/CSV.
+No Python, no server, no broker connection.
+
 ## Executing an order list
 
 - `exchange=NSE`, `product=CNC`, `order_type=LIMIT` for delivery.

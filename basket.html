@@ -1,0 +1,330 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Basket Sizer</title>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"
+ integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw"
+ crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<style>
+:root{--bg:#0a0e17;--bg2:#0f1521;--panel:#121a28;--panel2:#162032;--hair:#1f2d44;--hair2:#2a3b58;
+--tx:#e8eef7;--tx2:#8597b3;--tx3:#5d6f8c;--em:#1ec77d;--ox:#ff5d52;--gold:#e0a92e;--blue:#4d8dff}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--tx);font-family:Inter,system-ui,sans-serif;font-size:15px;
+line-height:1.5;padding:24px 20px 60px}
+.wrap{max-width:1000px;margin:0 auto}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums}
+h1{font-size:26px;font-weight:800;letter-spacing:-.02em}
+.sub{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--tx2);margin-top:5px}
+h2{font-size:11.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--tx2);
+display:flex;align-items:center;gap:10px;margin:26px 0 12px}
+h2::after{content:'';flex:1;height:1px;background:var(--hair)}
+.panel{background:var(--panel);border:1px solid var(--hair);border-radius:14px;padding:18px}
+.drop{border:1.5px dashed var(--hair2);border-radius:13px;padding:26px 22px;text-align:center;
+background:linear-gradient(160deg,var(--panel),var(--bg2));cursor:pointer;transition:.18s}
+.drop:hover,.drop.over{border-color:var(--em);background:rgba(30,199,125,.05)}
+.drop b{color:var(--em)}
+.dn{font-size:11.5px;color:var(--tx3);margin-top:7px;font-style:italic}
+textarea{width:100%;min-height:90px;background:var(--panel2);border:1px solid var(--hair2);
+color:var(--tx);border-radius:9px;padding:11px;font-family:ui-monospace,monospace;font-size:12px;resize:vertical}
+input[type=number]{background:var(--panel2);border:1px solid var(--hair2);color:var(--tx);
+border-radius:9px;padding:11px 13px;font-family:ui-monospace,monospace;font-size:17px;width:230px}
+button{font-size:12px;letter-spacing:.05em;padding:9px 16px;border-radius:9px;border:1px solid var(--hair2);
+background:var(--panel2);color:var(--tx);cursor:pointer}
+button:hover{border-color:var(--em);color:var(--em)}
+button.pri{background:var(--em);border-color:var(--em);color:#04130c;font-weight:700}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+.kpi{background:linear-gradient(160deg,var(--panel),var(--bg2));border:1px solid var(--hair);
+border-radius:13px;padding:15px 17px;border-left:3px solid var(--accent,var(--blue))}
+.kpi .k{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--tx2)}
+.kpi .v{font-size:24px;font-weight:800;margin-top:5px;line-height:1}
+.kpi .s{font-size:11px;color:var(--tx2);margin-top:4px}
+.tag{display:inline-block;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;
+padding:4px 10px;border-radius:20px;border:1px solid var(--hair2);color:var(--tx2);margin-right:7px}
+.tag.risk-low{border-color:var(--em);color:var(--em)}
+.tag.risk-moderate{border-color:var(--gold);color:var(--gold)}
+.tag.risk-high{border-color:var(--ox);color:var(--ox)}
+.tag.theme{border-color:var(--blue);color:var(--blue)}
+table{width:100%;border-collapse:collapse;margin-top:4px}
+th{font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--tx2);text-align:left;
+padding:10px;border-bottom:1px solid var(--hair2)}
+th.r,td.r{text-align:right}
+td{padding:8px 10px;border-bottom:1px solid var(--hair);font-size:13.5px}
+tr:hover td{background:var(--panel2)}
+td.sym{font-weight:600;font-size:12.5px}
+tr.skip td{opacity:.45}
+tfoot td{font-weight:700;border-top:1px solid var(--hair2);border-bottom:none}
+.wbar{height:6px;border-radius:3px;background:var(--blue);min-width:2px}
+.warn{border:1px solid var(--gold);background:rgba(224,169,46,.08);color:var(--gold);
+border-radius:9px;padding:11px 14px;font-size:12.5px;margin-top:12px}
+.err{border-color:var(--ox);background:rgba(255,93,82,.08);color:var(--ox)}
+.note{font-size:12px;color:var(--tx2);font-style:italic;margin-top:9px;line-height:1.5}
+.foot{font-size:10.5px;color:var(--tx3);text-align:center;margin-top:36px;line-height:1.7}
+.hide{display:none}
+</style></head><body><div class="wrap">
+
+<div><h1>Basket Sizer</h1><div class="sub">Weighted stock basket → your order list · runs entirely in this page</div></div>
+
+<h2>1 · Load the basket sheet</h2>
+<div class="drop" id="drop">
+  <div style="font-size:18px;font-weight:800;margin-bottom:5px">Drop the <b>.json</b> sheet here</div>
+  <div style="font-size:12.5px;color:var(--tx2)">or <b>click to browse</b> — or paste it below</div>
+  <div class="dn">Nothing is uploaded. No account, no server, no broker connection needed.</div>
+  <input type="file" id="fin" accept=".json,.txt" class="hide">
+</div>
+<textarea id="paste" placeholder='Or paste the sheet JSON here, e.g.
+{"label":"My Basket","theme":"Defence","risk":"high",
+ "weights":{"INFY":60,"TCS":40},
+ "prices":{"INFY":1420.5,"TCS":3850}}'></textarea>
+<div class="row" style="margin-top:10px">
+  <button class="pri" onclick="fromPaste()">Load pasted sheet</button>
+  <button onclick="loadDemo()">Load a demo basket</button>
+</div>
+<div id="msg"></div>
+
+<div id="out" class="hide">
+  <h2>2 · Basket profile</h2>
+  <div id="prof"></div>
+
+  <h2>3 · Your investment</h2>
+  <div class="panel">
+    <div class="row">
+      <input type="number" id="amt" placeholder="200000" step="1000">
+      <button class="pri" onclick="calc()">Calculate orders</button>
+      <span id="minhint" class="mono" style="font-size:12px;color:var(--tx2)"></span>
+    </div>
+    <div class="note">Whole shares only — no fractional trading on Indian exchanges.</div>
+  </div>
+
+  <div id="orders"></div>
+
+  <h2>5 · Already own it? Rebalance <span style="text-transform:none;letter-spacing:0;font-weight:400">(optional)</span></h2>
+  <div class="drop" id="hdrop" style="padding:20px">
+    <div style="font-size:15px;font-weight:700">Drop your holdings <b>XLSX / CSV</b></div>
+    <div style="font-size:12px;color:var(--tx2);margin-top:4px">
+      Zerodha Console → Holdings → download. Needs a symbol column and a quantity column.</div>
+    <input type="file" id="hfin" accept=".xlsx,.xls,.csv" class="hide">
+  </div>
+  <div id="rebal"></div>
+</div>
+
+<div class="foot">
+  Weights, not share counts — so one sheet works at any capital and any price.<br>
+  Verify every order in your broker before placing. Not investment advice.
+</div>
+</div>
+<script>
+let SHEET=null;
+const $=id=>document.getElementById(id);
+const M=v=>'₹'+Math.round(v).toLocaleString('en-IN');
+const say=(t,cls='warn')=>$('msg').innerHTML=t?`<div class="${cls}">${t}</div>`:'';
+
+// ---- the whole sizing model, same maths as basket.py ----
+const minUnit=(w,p)=>Math.max(...Object.keys(w).map(s=>p[s]/(w[s]/100)));
+function size(sheet,amount){
+  const w=sheet.weights,p=sheet.prices;
+  const rows=Object.keys(w).sort((a,b)=>w[b]-w[a]).map(s=>{
+    const q=Math.round(amount*(w[s]/100)/p[s]);
+    return {s,w:w[s],px:p[s],q:Math.max(0,q),val:Math.max(0,q)*p[s],skip:q<1};
+  });
+  return {rows,cost:rows.reduce((a,r)=>a+r.val,0),min:minUnit(w,p)};
+}
+// effective number of holdings = 1/HHI — a real diversification measure
+function effN(w){const t=Object.values(w).reduce((a,b)=>a+b,0);
+  return 1/Object.values(w).reduce((a,x)=>a+Math.pow(x/t,2),0);}
+
+function validate(s){
+  if(typeof s!=='object'||!s) throw new Error('Not a JSON object.');
+  for(const k of ['weights','prices']) if(!s[k]||!Object.keys(s[k]).length) throw new Error(`Missing "${k}".`);
+  const miss=Object.keys(s.weights).filter(x=>!(x in s.prices));
+  if(miss.length) throw new Error('No price for: '+miss.join(', '));
+  const bad=Object.entries(s.prices).filter(([,v])=>!(v>0)).map(([k])=>k);
+  if(bad.length) throw new Error('Price must be > 0 for: '+bad.join(', '));
+  const tot=Object.values(s.weights).reduce((a,b)=>a+b,0);
+  if(!(tot>0)) throw new Error('Weights must sum to more than zero.');
+  s.rawTotal=tot;
+  // weights are relative proportions — normalise so sizing matches the profile
+  if(Math.abs(tot-100)>0.01)
+    s.weights=Object.fromEntries(Object.entries(s.weights).map(([k,v])=>[k,v/tot*100]));
+  s.label=s.label||'Untitled basket';
+  return s;
+}
+
+function load(obj){
+  try{ SHEET=validate(obj); }catch(e){ say('Could not read that sheet — '+e.message,'warn err'); return; }
+  say('');
+  const w=SHEET.weights,p=SHEET.prices,n=Object.keys(w).length;
+  const tot=Object.values(w).reduce((a,b)=>a+b,0), mu=minUnit(w,p);
+  const top=Object.keys(w).sort((a,b)=>w[b]-w[a]);
+  const top3=top.slice(0,3).reduce((a,s)=>a+w[s],0)/tot*100;
+  const eN=effN(w);
+  const conc=eN>=10?['Low','var(--em)']:eN>=5?['Moderate','var(--gold)']:['High','var(--ox)'];
+  const risk=(SHEET.risk||'').toLowerCase();
+
+  $('prof').innerHTML=`<div class="panel" style="margin-bottom:12px">
+    <div style="font-size:19px;font-weight:800">${SHEET.label}</div>
+    <div style="margin-top:9px">
+      ${SHEET.theme?`<span class="tag theme">${SHEET.theme}</span>`:''}
+      ${risk?`<span class="tag risk-${risk}">${risk} risk</span>`:''}
+      ${SHEET.asof?`<span class="tag">as of ${SHEET.asof}</span>`:''}
+      <span class="tag">${n} stocks</span>
+    </div></div>
+   <div class="kpis">
+    <div class="kpi" style="--accent:var(--blue)"><div class="k">Minimum</div>
+      <div class="v mono">${M(mu)}</div><div class="s">for whole shares · binding: ${top.reduce((a,s)=>p[s]/w[s]>p[a]/w[a]?s:a)}</div></div>
+    <div class="kpi" style="--accent:${conc[1]}"><div class="k">Concentration</div>
+      <div class="v" style="color:${conc[1]}">${conc[0]}</div><div class="s">${eN.toFixed(1)} effective holdings</div></div>
+    <div class="kpi" style="--accent:var(--gold)"><div class="k">Largest</div>
+      <div class="v mono">${(w[top[0]]/tot*100).toFixed(1)}%</div><div class="s">${top[0]}</div></div>
+    <div class="kpi" style="--accent:var(--gold)"><div class="k">Top 3</div>
+      <div class="v mono">${top3.toFixed(1)}%</div><div class="s">of the basket</div></div>
+   </div>
+   ${Math.abs((SHEET.rawTotal??100)-100)>1?`<div class="warn">Sheet weights summed to
+      ${SHEET.rawTotal.toFixed(1)}%, not 100% — normalised to relative proportions, so your full
+      amount still gets deployed.</div>`:''}`;
+
+  $('out').classList.remove('hide');
+  $('minhint').textContent='minimum ≈ '+M(mu);
+  if(!$('amt').value) $('amt').value=Math.ceil(mu/1000)*1000;
+  $('orders').innerHTML='';
+}
+
+function calc(){
+  const amt=parseFloat($('amt').value);
+  if(!(amt>0)){ say('Enter an amount greater than zero.','warn err'); return; }
+  say('');
+  const {rows,cost,min}=size(SHEET,amt), mx=Math.max(...rows.map(r=>r.w));
+  const skipped=rows.filter(r=>r.skip);
+  $('orders').innerHTML=`<h2>4 · Orders</h2>
+   ${amt<min?`<div class="warn"><b>Below the ${M(min)} minimum.</b> ${skipped.length} stock(s) can't
+     afford even one share and are skipped — the basket's shape changes. Consider ${M(min)} or more.</div>`:''}
+   <div class="panel"><table>
+    <thead><tr><th>Stock</th><th>Weight</th><th class="r">Price</th><th class="r">Qty</th><th class="r">Value</th></tr></thead>
+    <tbody>${rows.map(r=>`<tr class="${r.skip?'skip':''}">
+      <td class="sym">${r.s}</td>
+      <td><div class="row" style="gap:7px"><span class="mono" style="font-size:11.5px;color:var(--tx2);min-width:42px">${r.w.toFixed(1)}%</span>
+        <div class="wbar" style="width:${r.w/mx*90}px"></div></div></td>
+      <td class="r mono">${r.px.toLocaleString('en-IN',{maximumFractionDigits:2})}</td>
+      <td class="r mono" style="font-weight:700">${r.skip?'—':r.q}</td>
+      <td class="r mono">${r.skip?'skipped':M(r.val)}</td></tr>`).join('')}</tbody>
+    <tfoot><tr><td colspan="3">TOTAL</td>
+      <td class="r mono">${rows.reduce((a,r)=>a+r.q,0)}</td>
+      <td class="r mono">${M(cost)}</td></tr></tfoot></table>
+    <div class="note">${(cost/amt*100).toFixed(1)}% of your amount deployed · rounding leaves
+      ${M(Math.abs(amt-cost))} ${cost>amt?'over':'un'}-committed.</div>
+    <div class="row" style="margin-top:13px">
+      <button onclick="copyOrders()">Copy as text</button>
+      <button onclick="copyCSV()">Copy as CSV</button>
+    </div></div>
+   <div class="note">Place on NSE as <b>CNC</b> (delivery). Prefer <b>limit</b> orders on illiquid
+     small-caps — thin order books mean a market order can fill well away from the last price.</div>`;
+  window.__rows=rows;
+}
+const lines=()=>window.__rows.filter(r=>!r.skip);
+function copyOrders(){
+  const t=`${SHEET.label} — ${$('amt').value}\n`+
+    lines().map(r=>`BUY ${r.q} ${r.s} @ ~${r.px} (CNC)`).join('\n');
+  navigator.clipboard.writeText(t).then(()=>say('Copied — paste into your broker or send to an agent.'));
+}
+function copyCSV(){
+  const t='symbol,exchange,transaction_type,quantity,product,order_type\n'+
+    lines().map(r=>`${r.s},NSE,BUY,${r.q},CNC,LIMIT`).join('\n');
+  navigator.clipboard.writeText(t).then(()=>say('CSV copied — most brokers accept a basket-order upload.'));
+}
+
+// ---- holdings upload -> rebalance (same model as basket.py rebalance) ----
+const SYMC=['symbol','tradingsymbol','instrument','scrip','stock'];
+const QTYC=['quantity','qty','quantity available','net quantity','holdings qty'];
+function parseHoldings(rows){
+  let hi=-1,si=-1,qi=-1;
+  for(let i=0;i<Math.min(40,rows.length);i++){
+    const low=(rows[i]||[]).map(c=>String(c??'').trim().toLowerCase());
+    const a=low.findIndex(c=>SYMC.includes(c)), b=low.findIndex(c=>QTYC.includes(c));
+    if(a>-1&&b>-1){hi=i;si=a;qi=b;break;}
+  }
+  if(hi<0) throw new Error('no header row with a symbol and a quantity column');
+  const out={};
+  for(let r=hi+1;r<rows.length;r++){
+    const sym=String(rows[r]?.[si]??'').trim().toUpperCase();
+    const q=parseFloat(rows[r]?.[qi]);
+    if(sym&&q>0) out[sym]=(out[sym]||0)+q;
+  }
+  if(!Object.keys(out).length) throw new Error('no rows with a symbol and a positive quantity');
+  return out;
+}
+function rebalance(held){
+  const w=SHEET.weights,p=SHEET.prices;
+  const syms=Object.keys(w);
+  const value=syms.reduce((a,s)=>a+(held[s]||0)*p[s],0);
+  if(value<=0){ $('rebal').innerHTML=`<div class="warn">None of this basket's ${syms.length}
+    stocks appear in that file — nothing to rebalance. Use step 4 to buy in.</div>`; return; }
+  let buy=0,sell=0;
+  const rows=syms.sort((a,b)=>w[b]-w[a]).map(s=>{
+    const q=held[s]||0, now=q*p[s]/value*100, tgt=Math.round(value*(w[s]/100)/p[s]), d=tgt-q;
+    if(d>0)buy+=d*p[s]; else if(d<0)sell+=-d*p[s];
+    return {s,now,tgt:w[s],d,px:p[s]};
+  });
+  const missing=syms.filter(s=>!(held[s]>0));
+  $('rebal').innerHTML=`<div class="panel"><div class="mono" style="font-size:12.5px;color:var(--tx2)">
+     Rebalancing ${M(value)} currently held across ${syms.length-missing.length}/${syms.length} stocks</div>
+    <table><thead><tr><th>Stock</th><th class="r">Now</th><th class="r">Target</th>
+      <th class="r">Drift</th><th class="r">Action</th></tr></thead><tbody>
+    ${rows.map(r=>`<tr><td class="sym">${r.s}</td>
+      <td class="r mono">${r.now.toFixed(1)}%</td><td class="r mono">${r.tgt.toFixed(1)}%</td>
+      <td class="r mono" style="color:${Math.abs(r.now-r.tgt)>2?'var(--gold)':'var(--tx2)'}">
+        ${(r.now-r.tgt>=0?'+':'')}${(r.now-r.tgt).toFixed(1)}%</td>
+      <td class="r mono" style="font-weight:700;color:${r.d>0?'var(--em)':r.d<0?'var(--ox)':'var(--tx3)'}">
+        ${r.d===0?'—':(r.d>0?'BUY ':'SELL ')+Math.abs(r.d)}</td></tr>`).join('')}
+    </tbody></table>
+    <div class="note">buy ${M(buy)} · sell ${M(sell)} · net ${(buy-sell>=0?'+':'-')}${M(Math.abs(buy-sell))}</div>
+    ${missing.length?`<div class="warn">Not in your file: <b>${missing.join(', ')}</b> — shown as BUY from zero.</div>`:''}
+    <div class="warn">A stock you hold in <b>more than one</b> basket shows false drift: brokers report
+      one merged quantity, so the other basket's shares count against this target. Check before acting
+      on a large drift.</div></div>`;
+}
+function readHoldings(f){
+  const fr=new FileReader(), csv=f.name.toLowerCase().endsWith('.csv');
+  fr.onerror=()=>say('Could not read that file.','warn err');
+  fr.onload=e=>{ try{
+      const rows=csv
+        ? e.target.result.split(/\r?\n/).map(l=>l.split(','))
+        : XLSX.utils.sheet_to_json(
+            (w=>w.Sheets[w.SheetNames[0]])(XLSX.read(new Uint8Array(e.target.result),{type:'array'})),
+            {header:1,raw:true,defval:null});
+      rebalance(parseHoldings(rows)); say('');
+    }catch(err){ say('Could not read those holdings — '+err.message,'warn err'); } };
+  csv?fr.readAsText(f):fr.readAsArrayBuffer(f);
+}
+
+function fromPaste(){
+  const v=$('paste').value.trim();
+  if(!v){ say('Paste a sheet first.','warn err'); return; }
+  try{ load(JSON.parse(v)); }catch(e){ say('That is not valid JSON — '+e.message,'warn err'); }
+}
+function loadDemo(){
+  load({label:'Demo — 4-stock large cap',theme:'Large cap',risk:'low',asof:'2026-08-12',
+    weights:{RELIANCE:30,TCS:25,HDFCBANK:25,NTPC:20},
+    prices:{RELIANCE:2965.5,TCS:3702.1,HDFCBANK:1712.3,NTPC:351.6}});
+}
+function readFile(f){
+  const fr=new FileReader();
+  fr.onload=e=>{ try{ load(JSON.parse(e.target.result)); }
+                 catch(err){ say('Could not parse that file — '+err.message,'warn err'); } };
+  fr.onerror=()=>say('Could not read that file.','warn err');
+  fr.readAsText(f);
+}
+const d=$('drop');
+d.onclick=()=>$('fin').click();
+d.ondragover=e=>{e.preventDefault();d.classList.add('over')};
+d.ondragleave=()=>d.classList.remove('over');
+d.ondrop=e=>{e.preventDefault();d.classList.remove('over');if(e.dataTransfer.files[0])readFile(e.dataTransfer.files[0])};
+$('fin').onchange=e=>{if(e.target.files[0])readFile(e.target.files[0])};
+$('amt').addEventListener('keydown',e=>{if(e.key==='Enter')calc()});
+const hd=$('hdrop');
+hd.onclick=()=>$('hfin').click();
+hd.ondragover=e=>{e.preventDefault();hd.classList.add('over')};
+hd.ondragleave=()=>hd.classList.remove('over');
+hd.ondrop=e=>{e.preventDefault();hd.classList.remove('over');
+  if(!SHEET){say('Load a basket sheet first.','warn err');return;}
+  if(e.dataTransfer.files[0])readHoldings(e.dataTransfer.files[0])};
+$('hfin').onchange=e=>{if(!SHEET){say('Load a basket sheet first.','warn err');return;}
+  if(e.target.files[0])readHoldings(e.target.files[0])};
+</script></body></html>
