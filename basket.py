@@ -17,8 +17,12 @@ import json, sys
 
 def load_sheet(path):
     s = json.load(open(path))
-    for k in ("label", "weights", "prices"):
+    for k in ("label", "weights"):
         if k not in s: sys.exit(f"sheet missing '{k}'")
+    s.setdefault("prices", {})
+    if unpriced := [k for k in s["weights"] if not s["prices"].get(k, 0) > 0]:
+        sys.exit("no price yet for: " + ", ".join(sorted(unpriced))
+                 + "\n  add prices to the sheet (or use basket.html to fill them in)")
     if miss := set(s["weights"]) - set(s["prices"]):
         sys.exit(f"no price for: {', '.join(sorted(miss))}")
     if bad := [k for k, v in s["prices"].items() if not v > 0]:

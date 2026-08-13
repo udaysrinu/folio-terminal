@@ -125,6 +125,8 @@ border-radius:9px;padding:11px 14px;font-size:12.5px;margin-top:12px}
   <h2>Step 2 · What's in it</h2>
   <div id="prof"></div>
 
+  <div id="needpx"></div>
+
   <h2>Step 3 · How much do you want to invest?</h2>
   <div class="panel">
     <div class="row">
@@ -151,16 +153,20 @@ border-radius:9px;padding:11px 14px;font-size:12.5px;margin-top:12px}
 <div class="view" id="tNew">
   <h2>Type or paste your stocks</h2>
   <div class="panel">
-    <textarea id="nlist" style="min-height:150px" placeholder="One per line — SYMBOL, price [, weight]
-Commas, tabs or spaces all work, so you can paste straight from Excel.
+    <textarea id="nlist" style="min-height:150px" placeholder="Just symbols is enough — one per line:
 
+RELIANCE
+TCS
+HDFCBANK
+NTPC
+
+Add a price if you have it (skips a step later):
 RELIANCE, 2965.5
-TCS, 3702.1
-HDFCBANK, 1712.3
-NTPC, 351.6
 
-Add a third number to set custom weights (they get normalised to 100%):
-RELIANCE, 2965.5, 40"></textarea>
+Add a third number for custom weights (normalised to 100%):
+RELIANCE, 2965.5, 40
+
+Commas, tabs or spaces all work — paste straight from Excel."></textarea>
     <div class="row" style="margin-top:12px">
       <input id="nlabel" placeholder="Basket name" style="flex:1;min-width:180px">
       <input id="ntheme" placeholder="Theme (optional)" style="width:170px">
@@ -172,8 +178,8 @@ RELIANCE, 2965.5, 40"></textarea>
       <button class="pri" onclick="buildNew()">Build basket</button>
       <button onclick="$('nlist').value='RELIANCE, 2965.5\nTCS, 3702.1\nHDFCBANK, 1712.3\nNTPC, 351.6';$('nlabel').value='My Large Cap'">Fill an example</button>
     </div>
-    <div class="note">Equal-weight unless you give weights. Prices are just a reference for
-      sizing — refresh them before you trade.</div>
+    <div class="note">Symbols alone give you an equal-weight basket. Prices are only needed to turn
+      weights into share counts — you can add them now or when you size it.</div>
   </div>
   <div id="nout"></div>
 
@@ -200,10 +206,12 @@ const M=v=>'₹'+Math.round(v).toLocaleString('en-IN');
 const say=(t,cls='warn')=>$('msg').innerHTML=t?`<div class="${cls}">${t}</div>`:'';
 
 // ---- the whole sizing model, same maths as basket.py ----
-const minUnit=(w,p)=>Math.max(...Object.keys(w).map(s=>p[s]/(w[s]/100)));
+const priced=(w,p)=>Object.keys(w).filter(s=>p[s]>0);
+const missingPx=(w,p)=>Object.keys(w).filter(s=>!(p[s]>0));
+const minUnit=(w,p)=>{const k=priced(w,p);return k.length?Math.max(...k.map(s=>p[s]/(w[s]/100))):0;};
 function size(sheet,amount){
   const w=sheet.weights,p=sheet.prices;
-  const rows=Object.keys(w).sort((a,b)=>w[b]-w[a]).map(s=>{
+  const rows=priced(w,p).sort((a,b)=>w[b]-w[a]).map(s=>{
     const q=Math.round(amount*(w[s]/100)/p[s]);
     return {s,w:w[s],px:p[s],q:Math.max(0,q),val:Math.max(0,q)*p[s],skip:q<1};
   });
@@ -215,11 +223,9 @@ function effN(w){const t=Object.values(w).reduce((a,b)=>a+b,0);
 
 function validate(s){
   if(typeof s!=='object'||!s) throw new Error('Not a JSON object.');
-  for(const k of ['weights','prices']) if(!s[k]||!Object.keys(s[k]).length) throw new Error(`Missing "${k}".`);
-  const miss=Object.keys(s.weights).filter(x=>!(x in s.prices));
-  if(miss.length) throw new Error('No price for: '+miss.join(', '));
-  const bad=Object.entries(s.prices).filter(([,v])=>!(v>0)).map(([k])=>k);
-  if(bad.length) throw new Error('Price must be > 0 for: '+bad.join(', '));
+  if(!s.weights||!Object.keys(s.weights).length) throw new Error('Missing "weights".');
+  s.prices=s.prices||{};                       // prices may be absent or partial — asked for later
+  s.prices=Object.fromEntries(Object.entries(s.prices).filter(([,v])=>v>0));  // drop bad prices
   const tot=Object.values(s.weights).reduce((a,b)=>a+b,0);
   if(!(tot>0)) throw new Error('Weights must sum to more than zero.');
   s.rawTotal=tot;
@@ -263,15 +269,35 @@ function load(obj){
       ${SHEET.rawTotal.toFixed(1)}%, not 100% — normalised to relative proportions, so your full
       amount still gets deployed.</div>`:''}`;
 
+  const need=missingPx(w,p);
+  $('needpx').innerHTML = need.length
+    ? `<div class="warn"><b>${need.length} stock(s) need a current price</b> before this can be
+        sized: ${need.join(', ')}.</div>
+       <div class="panel" style="margin-top:12px">
+         <textarea id="pxin" style="min-height:110px" placeholder="${need.map(x=>x+', ').join('\n')}">${need.map(x=>x+', ').join('\n')}</textarea>
+         <div class="row" style="margin-top:11px"><button class="pri" onclick="addPrices()">Add prices</button></div>
+         <div class="note">Fill in the number after each comma — from your broker, Google Finance,
+           or wherever. Prices only affect share counts, never the weights.</div>
+       </div>` : '';
   $('out').classList.remove('hide');
-  $('minhint').textContent='minimum ≈ '+M(mu);
+  $('minhint').textContent = need.length ? need.length+' price(s) missing' : 'minimum ≈ '+M(mu);
   if(!$('amt').value) $('amt').value=Math.ceil(mu/1000)*1000;
   $('orders').innerHTML='';
 }
 
+function addPrices(){
+  try{
+    const {prices}=parseLines($('pxin').value);
+    if(!Object.keys(prices).length) throw new Error('no numbers found after the commas');
+    SHEET.prices={...SHEET.prices,...prices};
+    load(SHEET); say('Prices added.','ok');
+  }catch(e){ say('Could not read those prices — '+e.message,'warn err'); }
+}
 function calc(){
   const amt=parseFloat($('amt').value);
   if(!(amt>0)){ say('Enter an amount greater than zero.','warn err'); return; }
+  if(missingPx(SHEET.weights,SHEET.prices).length){
+    say('Add the missing prices first — see the box above.','warn err'); return; }
   say('');
   const {rows,cost,min}=size(SHEET,amt), mx=Math.max(...rows.map(r=>r.w));
   const skipped=rows.filter(r=>r.skip);
@@ -378,26 +404,25 @@ function readHoldings(f){
 
 // ---- create a basket from pasted lines ----
 function parseLines(txt){
-  const w={},p={}; let anyW=false;
+  const w={},p={},missing=[]; let anyW=false;
   txt.split(/\r?\n/).forEach(line=>{
     const t=line.trim(); if(!t||t.startsWith('#')) return;
     const parts=t.split(/[,\t]+|\s{1,}/).map(x=>x.trim()).filter(Boolean);
-    if(parts.length<2) return;
     const sym=parts[0].toUpperCase().replace(/[^A-Z0-9&.-]/g,'');
-    const px=parseFloat(parts[1].replace(/[^0-9.]/g,''));
-    if(!sym||!(px>0)) return;
-    p[sym]=px;
+    if(!sym) return;
+    const px=parts[1]!==undefined?parseFloat(parts[1].replace(/[^0-9.]/g,'')):NaN;
+    if(px>0) p[sym]=px; else missing.push(sym);   // symbols-only is fine
     const wt=parts[2]!==undefined?parseFloat(parts[2].replace(/[^0-9.]/g,'')):NaN;
     if(wt>0){ w[sym]=wt; anyW=true; } else w[sym]=null;
   });
-  const syms=Object.keys(p);
-  if(!syms.length) throw new Error('no usable "SYMBOL, price" lines found');
+  const syms=[...new Set([...Object.keys(p),...missing])];
+  if(!syms.length) throw new Error('no usable lines found — put one symbol per line');
   if(anyW){                                   // fill blanks with the average of given weights
     const given=syms.filter(s=>w[s]!==null);
     const avg=given.reduce((a,s)=>a+w[s],0)/given.length;
     syms.forEach(s=>{ if(w[s]===null) w[s]=avg; });
   } else syms.forEach(s=>{ w[s]=100/syms.length; });
-  return {weights:w,prices:p,custom:anyW};
+  return {weights:w,prices:p,custom:anyW,missing:[...new Set(missing)]};
 }
 function download(name,text){
   const a=document.createElement('a');
@@ -409,7 +434,7 @@ function showBuilt(sheet,where,how){
   const n=Object.keys(sheet.weights).length;
   const mu=minUnit(sheet.weights,sheet.prices);
   $(where).innerHTML=`<div class="ok">Built <b>${sheet.label}</b> — ${n} stocks, ${how},
-     minimum ≈ ${M(mu)}, ${effN(sheet.weights).toFixed(1)} effective holdings.</div>
+     ${mu>0?`minimum ≈ ${M(mu)}, `:''}${effN(sheet.weights).toFixed(1)} effective holdings.</div>
    <div class="panel" style="margin-top:12px">
      <div class="row">
        <button class="pri" onclick='useBuilt(${JSON.stringify(json)})'>Use it now →</button>
@@ -430,7 +455,7 @@ function useBuilt(json){
 }
 function buildNew(){
   try{
-    const {weights,prices,custom}=parseLines($('nlist').value);
+    const {weights,prices,custom,missing}=parseLines($('nlist').value);
     const tot=Object.values(weights).reduce((a,b)=>a+b,0);
     const sheet={label:$('nlabel').value.trim()||'My basket',
       asof:new Date().toISOString().slice(0,10)};
@@ -438,7 +463,9 @@ function buildNew(){
     if($('nrisk').value) sheet.risk=$('nrisk').value;
     sheet.weights=Object.fromEntries(Object.entries(weights).map(([k,v])=>[k,+(v/tot*100).toFixed(2)]));
     sheet.prices=prices;
-    showBuilt(sheet,'nout',custom?'custom weights (normalised)':'equal-weight');
+    showBuilt(sheet,'nout',
+      (custom?'custom weights (normalised)':'equal-weight')
+      + (missing.length?` · ${missing.length} price(s) still needed`:''));
     say('');
   }catch(e){ say('Could not build that — '+e.message,'warn err'); }
 }
