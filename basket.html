@@ -134,6 +134,9 @@ border-radius:9px;padding:11px 14px;font-size:12.5px;margin-top:12px}
       <button class="pri" onclick="calc()">Calculate orders</button>
       <span id="minhint" class="mono" style="font-size:12px;color:var(--tx2)"></span>
     </div>
+    <div class="row" id="quick" style="margin-top:11px">
+    </div>
+    <div class="note" id="unitnote" style="font-style:normal;color:var(--tx2)"></div>
     <div class="note">Enter the total rupees you want to put in. Indian exchanges only allow whole shares, so we round — and tell you the smallest amount that works.</div>
   </div>
 
@@ -281,7 +284,12 @@ function load(obj){
        </div>` : '';
   $('out').classList.remove('hide');
   $('minhint').textContent = need.length ? need.length+' price(s) missing' : 'minimum ≈ '+M(mu);
+  $('quick').innerHTML = mu>0
+    ? '<span class="mono" style="font-size:11px;color:var(--tx3)">QUICK PICK:</span>' +
+      [1,2,3,5].map(k=>`<button onclick="setAmt(${Math.round(mu*k)})">${M(mu*k)}</button>`).join('')
+    : '';
   if(!$('amt').value) $('amt').value=Math.ceil(mu/1000)*1000;
+  showUnits();
   $('orders').innerHTML='';
 }
 
@@ -293,6 +301,14 @@ function addPrices(){
     load(SHEET); say('Prices added.','ok');
   }catch(e){ say('Could not read those prices — '+e.message,'warn err'); }
 }
+function setAmt(v){ $('amt').value=v; calc(); showUnits(); }
+function showUnits(){
+  const mu=minUnit(SHEET.weights,SHEET.prices), amt=parseFloat($('amt').value);
+  $('unitnote').innerHTML = (mu>0 && amt>0)
+    ? `That is <b>${(amt/mu).toFixed(2)}×</b> the minimum. Larger amounts buy more shares per stock,
+       so rounding matters less and the weights track the target more closely.`
+    : '';
+}
 function calc(){
   const amt=parseFloat($('amt').value);
   if(!(amt>0)){ say('Enter an amount greater than zero.','warn err'); return; }
@@ -300,31 +316,41 @@ function calc(){
     say('Add the missing prices first — see the box above.','warn err'); return; }
   say('');
   const {rows,cost,min}=size(SHEET,amt), mx=Math.max(...rows.map(r=>r.w));
+  let worst=0, worstSym='—';
+  rows.filter(r=>!r.skip).forEach(r=>{const d=Math.abs(r.val/cost*100-r.w);
+    if(d>worst){worst=d;worstSym=r.s;}});
   const skipped=rows.filter(r=>r.skip);
   $('orders').innerHTML=`<h2>Step 4 · Place these orders</h2>
    ${amt<min?`<div class="warn"><b>Below the ${M(min)} minimum.</b> ${skipped.length} stock(s) can't
      afford even one share and are skipped — the basket's shape changes. Consider ${M(min)} or more.</div>`:''}
    <div class="panel"><table>
-    <thead><tr><th>Stock</th><th>Weight</th><th class="r">Price</th><th class="r">Qty</th><th class="r">Value</th></tr></thead>
+    <thead><tr><th>Stock</th><th>Target</th><th class="r">Price</th><th class="r">Qty</th>
+      <th class="r">Value</th><th class="r">Actual</th><th class="r">Drift</th></tr></thead>
     <tbody>${rows.map(r=>`<tr class="${r.skip?'skip':''}">
       <td class="sym">${r.s}</td>
       <td><div class="row" style="gap:7px"><span class="mono" style="font-size:11.5px;color:var(--tx2);min-width:42px">${r.w.toFixed(1)}%</span>
         <div class="wbar" style="width:${r.w/mx*90}px"></div></div></td>
       <td class="r mono">${r.px.toLocaleString('en-IN',{maximumFractionDigits:2})}</td>
       <td class="r mono" style="font-weight:700">${r.skip?'—':r.q}</td>
-      <td class="r mono">${r.skip?'skipped':M(r.val)}</td></tr>`).join('')}</tbody>
+      <td class="r mono">${r.skip?'skipped':M(r.val)}</td>
+      <td class="r mono">${r.skip?'—':(r.val/cost*100).toFixed(1)+'%'}</td>
+      <td class="r mono" style="color:${r.skip?'var(--tx3)':Math.abs(r.val/cost*100-r.w)>1.5?'var(--gold)':'var(--tx2)'}">
+        ${r.skip?'—':(r.val/cost*100-r.w>=0?'+':'')+(r.val/cost*100-r.w).toFixed(1)+'%'}</td></tr>`).join('')}</tbody>
     <tfoot><tr><td colspan="3">TOTAL</td>
       <td class="r mono">${rows.reduce((a,r)=>a+r.q,0)}</td>
-      <td class="r mono">${M(cost)}</td></tr></tfoot></table>
+      <td class="r mono">${M(cost)}</td><td class="r mono">100.0%</td><td></td></tr></tfoot></table>
     <div class="note">${(cost/amt*100).toFixed(1)}% of your amount deployed · rounding leaves
-      ${M(Math.abs(amt-cost))} ${cost>amt?'over':'un'}-committed.</div>
+      ${M(Math.abs(amt-cost))} ${cost>amt?'over':'un'}-committed.
+      Worst weight drift <b>${worst.toFixed(1)}%</b> on ${worstSym}${worst>1.5
+        ? ` — unavoidable at this size; roughly ${M(min*Math.ceil(worst/0.75))} would halve it.`
+        : ' — well within tolerance.'}</div>
     <div class="row" style="margin-top:13px">
       <button onclick="copyOrders()">Copy as text</button>
       <button onclick="copyCSV()">Copy as CSV</button>
     </div></div>
    <div class="note">Place on NSE as <b>CNC</b> (delivery). Prefer <b>limit</b> orders on illiquid
      small-caps — thin order books mean a market order can fill well away from the last price.</div>`;
-  window.__rows=rows;
+  window.__rows=rows; showUnits();
 }
 const lines=()=>window.__rows.filter(r=>!r.skip);
 function copyOrders(){
