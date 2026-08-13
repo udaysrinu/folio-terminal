@@ -1,5 +1,5 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Basket Sizer</title>
+<title>Basket Workbench</title>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"
  integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw"
  crossorigin="anonymous" referrerpolicy="no-referrer"></script>
@@ -59,14 +59,55 @@ border-radius:9px;padding:11px 14px;font-size:12.5px;margin-top:12px}
 .note{font-size:12px;color:var(--tx2);font-style:italic;margin-top:9px;line-height:1.5}
 .foot{font-size:10.5px;color:var(--tx3);text-align:center;margin-top:36px;line-height:1.7}
 .hide{display:none}
+.tabs{display:flex;gap:7px;margin:20px 0 4px}
+.tab{font-size:12px;letter-spacing:.06em;text-transform:uppercase;padding:9px 18px;cursor:pointer;
+background:var(--panel);border:1px solid var(--hair);color:var(--tx2);border-radius:10px}
+.tab:hover{color:var(--tx);border-color:var(--hair2)}
+.tab.on{background:var(--em);color:#fff;border-color:var(--em);font-weight:700}
+.view{display:none}.view.on{display:block}
+input[type=text],input:not([type]),select{background:var(--panel2);border:1px solid var(--hair2);
+color:var(--tx);border-radius:9px;padding:10px 12px;font-size:14px;font-family:inherit}
+.how{display:flex;align-items:stretch;gap:10px;margin-top:18px;flex-wrap:wrap}
+.hstep{flex:1;min-width:210px;display:flex;gap:11px;align-items:flex-start;background:var(--panel);
+border:1px solid var(--hair);border-radius:14px;padding:14px 16px;font-size:12.5px;color:var(--tx2);
+box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.hstep b{display:block;color:var(--tx);font-size:13.5px;margin-bottom:2px}
+.hn{flex:none;width:23px;height:23px;border-radius:50%;background:var(--em);color:#fff;
+font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.harr{align-self:center;color:var(--tx3);font-size:17px}
+@media(max-width:780px){.harr{display:none}}
+code{background:var(--panel2);border:1px solid var(--hair);border-radius:5px;padding:1px 5px;
+font-family:ui-monospace,monospace;font-size:12px}
+.sendbox{margin-top:12px;background:var(--panel2);border:1px solid var(--hair);border-radius:11px;
+padding:13px 16px;font-size:12.5px;color:var(--tx2)}
+.sendbox b{color:var(--tx)} .sendbox ol{margin:7px 0 7px 20px} .sendbox li{margin:3px 0}
+.ok{border:1px solid var(--em);background:rgba(18,120,74,.08);color:var(--em);
+border-radius:9px;padding:11px 14px;font-size:12.5px;margin-top:12px}
 </style></head><body><div class="wrap">
 
-<div><h1>Basket Sizer</h1><div class="sub">Weighted stock basket → your order list · runs entirely in this page</div></div>
+<div><h1>Basket Workbench</h1><div class="sub">Create · size · rebalance stock baskets — entirely in this page, no install</div></div>
 
-<h2>1 · Load the basket sheet</h2>
+<div class="how">
+  <div class="hstep"><span class="hn">1</span><div><b>Someone sends you 2 files</b>
+    <div>a basket <code>.json</code> and this page</div></div></div>
+  <div class="harr">→</div>
+  <div class="hstep"><span class="hn">2</span><div><b>You type your amount</b>
+    <div>₹50,000 or ₹5,00,000 — whatever you have</div></div></div>
+  <div class="harr">→</div>
+  <div class="hstep"><span class="hn">3</span><div><b>You get exact orders</b>
+    <div>how many shares of each, to place in your broker</div></div></div>
+</div>
+
+<div class="tabs">
+  <button class="tab on" data-v="tSize">📥 I received a basket</button>
+  <button class="tab" data-v="tNew">📤 I want to share one</button>
+</div>
+
+<div class="view on" id="tSize">
+<h2>Step 1 · Open the basket someone sent you</h2>
 <div class="drop" id="drop">
   <div style="font-size:18px;font-weight:800;margin-bottom:5px">Drop the <b>.json</b> sheet here</div>
-  <div style="font-size:12.5px;color:var(--tx2)">or <b>click to browse</b> — or paste it below</div>
+  <div style="font-size:12.5px;color:var(--tx2)">or <b>click to browse</b> — or paste the text below</div>
   <div class="dn">Nothing is uploaded. No account, no server, no broker connection needed.</div>
   <input type="file" id="fin" accept=".json,.txt" class="hide">
 </div>
@@ -81,22 +122,22 @@ border-radius:9px;padding:11px 14px;font-size:12.5px;margin-top:12px}
 <div id="msg"></div>
 
 <div id="out" class="hide">
-  <h2>2 · Basket profile</h2>
+  <h2>Step 2 · What's in it</h2>
   <div id="prof"></div>
 
-  <h2>3 · Your investment</h2>
+  <h2>Step 3 · How much do you want to invest?</h2>
   <div class="panel">
     <div class="row">
       <input type="number" id="amt" placeholder="200000" step="1000">
       <button class="pri" onclick="calc()">Calculate orders</button>
       <span id="minhint" class="mono" style="font-size:12px;color:var(--tx2)"></span>
     </div>
-    <div class="note">Whole shares only — no fractional trading on Indian exchanges.</div>
+    <div class="note">Enter the total rupees you want to put in. Indian exchanges only allow whole shares, so we round — and tell you the smallest amount that works.</div>
   </div>
 
   <div id="orders"></div>
 
-  <h2>5 · Already own it? Rebalance <span style="text-transform:none;letter-spacing:0;font-weight:400">(optional)</span></h2>
+  <h2>Step 5 · Already own it? <span style="text-transform:none;letter-spacing:0;font-weight:400">— top up to the right weights (optional)</span></h2>
   <div class="drop" id="hdrop" style="padding:20px">
     <div style="font-size:15px;font-weight:700">Drop your holdings <b>XLSX / CSV</b></div>
     <div style="font-size:12px;color:var(--tx2);margin-top:4px">
@@ -105,6 +146,47 @@ border-radius:9px;padding:11px 14px;font-size:12.5px;margin-top:12px}
   </div>
   <div id="rebal"></div>
 </div>
+</div><!-- /tSize -->
+
+<div class="view" id="tNew">
+  <h2>Type or paste your stocks</h2>
+  <div class="panel">
+    <textarea id="nlist" style="min-height:150px" placeholder="One per line — SYMBOL, price [, weight]
+Commas, tabs or spaces all work, so you can paste straight from Excel.
+
+RELIANCE, 2965.5
+TCS, 3702.1
+HDFCBANK, 1712.3
+NTPC, 351.6
+
+Add a third number to set custom weights (they get normalised to 100%):
+RELIANCE, 2965.5, 40"></textarea>
+    <div class="row" style="margin-top:12px">
+      <input id="nlabel" placeholder="Basket name" style="flex:1;min-width:180px">
+      <input id="ntheme" placeholder="Theme (optional)" style="width:170px">
+      <select id="nrisk"><option value="">Risk (optional)</option>
+        <option value="low">low</option><option value="moderate">moderate</option>
+        <option value="high">high</option></select>
+    </div>
+    <div class="row" style="margin-top:12px">
+      <button class="pri" onclick="buildNew()">Build basket</button>
+      <button onclick="$('nlist').value='RELIANCE, 2965.5\nTCS, 3702.1\nHDFCBANK, 1712.3\nNTPC, 351.6';$('nlabel').value='My Large Cap'">Fill an example</button>
+    </div>
+    <div class="note">Equal-weight unless you give weights. Prices are just a reference for
+      sizing — refresh them before you trade.</div>
+  </div>
+  <div id="nout"></div>
+
+  <h2>Or turn what you already own into a basket</h2>
+  <div class="drop" id="idrop" style="padding:20px">
+    <div style="font-size:15px;font-weight:700">Drop a holdings <b>XLSX / CSV</b></div>
+    <div style="font-size:12px;color:var(--tx2);margin-top:4px">
+      Turns what you already own into a basket sheet — weights from current value.
+      Needs symbol, quantity and a price column.</div>
+    <input type="file" id="ifin" accept=".xlsx,.xls,.csv" class="hide">
+  </div>
+  <div id="iout"></div>
+</div><!-- /tNew -->
 
 <div class="foot">
   Weights, not share counts — so one sheet works at any capital and any price.<br>
@@ -193,7 +275,7 @@ function calc(){
   say('');
   const {rows,cost,min}=size(SHEET,amt), mx=Math.max(...rows.map(r=>r.w));
   const skipped=rows.filter(r=>r.skip);
-  $('orders').innerHTML=`<h2>4 · Orders</h2>
+  $('orders').innerHTML=`<h2>Step 4 · Place these orders</h2>
    ${amt<min?`<div class="warn"><b>Below the ${M(min)} minimum.</b> ${skipped.length} stock(s) can't
      afford even one share and are skipped — the basket's shape changes. Consider ${M(min)} or more.</div>`:''}
    <div class="panel"><table>
@@ -294,6 +376,111 @@ function readHoldings(f){
   csv?fr.readAsText(f):fr.readAsArrayBuffer(f);
 }
 
+// ---- create a basket from pasted lines ----
+function parseLines(txt){
+  const w={},p={}; let anyW=false;
+  txt.split(/\r?\n/).forEach(line=>{
+    const t=line.trim(); if(!t||t.startsWith('#')) return;
+    const parts=t.split(/[,\t]+|\s{1,}/).map(x=>x.trim()).filter(Boolean);
+    if(parts.length<2) return;
+    const sym=parts[0].toUpperCase().replace(/[^A-Z0-9&.-]/g,'');
+    const px=parseFloat(parts[1].replace(/[^0-9.]/g,''));
+    if(!sym||!(px>0)) return;
+    p[sym]=px;
+    const wt=parts[2]!==undefined?parseFloat(parts[2].replace(/[^0-9.]/g,'')):NaN;
+    if(wt>0){ w[sym]=wt; anyW=true; } else w[sym]=null;
+  });
+  const syms=Object.keys(p);
+  if(!syms.length) throw new Error('no usable "SYMBOL, price" lines found');
+  if(anyW){                                   // fill blanks with the average of given weights
+    const given=syms.filter(s=>w[s]!==null);
+    const avg=given.reduce((a,s)=>a+w[s],0)/given.length;
+    syms.forEach(s=>{ if(w[s]===null) w[s]=avg; });
+  } else syms.forEach(s=>{ w[s]=100/syms.length; });
+  return {weights:w,prices:p,custom:anyW};
+}
+function download(name,text){
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([text],{type:'application/json'}));
+  a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+}
+function showBuilt(sheet,where,how){
+  const json=JSON.stringify(sheet,null,1);
+  const n=Object.keys(sheet.weights).length;
+  const mu=minUnit(sheet.weights,sheet.prices);
+  $(where).innerHTML=`<div class="ok">Built <b>${sheet.label}</b> — ${n} stocks, ${how},
+     minimum ≈ ${M(mu)}, ${effN(sheet.weights).toFixed(1)} effective holdings.</div>
+   <div class="panel" style="margin-top:12px">
+     <div class="row">
+       <button class="pri" onclick='useBuilt(${JSON.stringify(json)})'>Use it now →</button>
+       <button onclick='download(${JSON.stringify(sheet.label.toLowerCase().replace(/[^a-z0-9]+/g,"_")+"_sheet.json")},${JSON.stringify(json)})'>Download .json</button>
+       <button onclick='navigator.clipboard.writeText(${JSON.stringify(json)}).then(()=>say("Sheet copied — paste it to whoever you are sharing with."))'>Copy JSON</button>
+     </div>
+     <div class="sendbox"><b>To share it, send these 2 things:</b>
+       <ol><li>the <code>.json</code> file (Download saves it to your <b>Downloads</b> folder)</li>
+       <li>this page — <code>basket.html</code> — or just the link to it</li></ol>
+       They open the page, drop the file in, and get orders sized to <i>their</i> money.
+       Nothing is uploaded anywhere.</div>
+   </div>`;
+}
+function useBuilt(json){
+  document.querySelector('.tab[data-v="tSize"]').click();
+  $('paste').value=json; load(JSON.parse(json));
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function buildNew(){
+  try{
+    const {weights,prices,custom}=parseLines($('nlist').value);
+    const tot=Object.values(weights).reduce((a,b)=>a+b,0);
+    const sheet={label:$('nlabel').value.trim()||'My basket',
+      asof:new Date().toISOString().slice(0,10)};
+    if($('ntheme').value.trim()) sheet.theme=$('ntheme').value.trim();
+    if($('nrisk').value) sheet.risk=$('nrisk').value;
+    sheet.weights=Object.fromEntries(Object.entries(weights).map(([k,v])=>[k,+(v/tot*100).toFixed(2)]));
+    sheet.prices=prices;
+    showBuilt(sheet,'nout',custom?'custom weights (normalised)':'equal-weight');
+    say('');
+  }catch(e){ say('Could not build that — '+e.message,'warn err'); }
+}
+// ---- build a sheet from an uploaded holdings file (weights by current value) ----
+const PXC=['price','last price','ltp','close price','average price','avg price','avg. cost','average cost'];
+function sheetFromHoldings(rows){
+  let hi=-1,si=-1,qi=-1,pi=-1;
+  for(let i=0;i<Math.min(40,rows.length);i++){
+    const low=(rows[i]||[]).map(c=>String(c??'').trim().toLowerCase());
+    const a=low.findIndex(c=>SYMC.includes(c)), b=low.findIndex(c=>QTYC.includes(c)),
+          c2=low.findIndex(c=>PXC.includes(c));
+    if(a>-1&&b>-1&&c2>-1){hi=i;si=a;qi=b;pi=c2;break;}
+  }
+  if(hi<0) throw new Error('need a symbol, a quantity and a price column');
+  const val={},px={};
+  for(let r=hi+1;r<rows.length;r++){
+    const sym=String(rows[r]?.[si]??'').trim().toUpperCase();
+    const q=parseFloat(rows[r]?.[qi]), p=parseFloat(rows[r]?.[pi]);
+    if(!sym||!(q>0)||!(p>0)) continue;
+    val[sym]=(val[sym]||0)+q*p; px[sym]=p;
+  }
+  const syms=Object.keys(val);
+  if(!syms.length) throw new Error('no rows with a symbol, quantity and price');
+  const tot=syms.reduce((a,s)=>a+val[s],0);
+  return {label:'From my holdings',asof:new Date().toISOString().slice(0,10),
+    weights:Object.fromEntries(syms.map(s=>[s,+(val[s]/tot*100).toFixed(2)])),
+    prices:px};
+}
+function readImport(f){
+  const fr=new FileReader(), csv=f.name.toLowerCase().endsWith('.csv');
+  fr.onerror=()=>say('Could not read that file.','warn err');
+  fr.onload=e=>{ try{
+      const rows=csv
+        ? e.target.result.split(/\r?\n/).map(l=>l.split(','))
+        : XLSX.utils.sheet_to_json(
+            (w=>w.Sheets[w.SheetNames[0]])(XLSX.read(new Uint8Array(e.target.result),{type:'array'})),
+            {header:1,raw:true,defval:null});
+      showBuilt(sheetFromHoldings(rows),'iout','weights from current value'); say('');
+    }catch(err){ say('Could not build from that file — '+err.message,'warn err'); } };
+  csv?fr.readAsText(f):fr.readAsArrayBuffer(f);
+}
+
 function fromPaste(){
   const v=$('paste').value.trim();
   if(!v){ say('Paste a sheet first.','warn err'); return; }
@@ -327,4 +514,15 @@ hd.ondrop=e=>{e.preventDefault();hd.classList.remove('over');
   if(e.dataTransfer.files[0])readHoldings(e.dataTransfer.files[0])};
 $('hfin').onchange=e=>{if(!SHEET){say('Load a basket sheet first.','warn err');return;}
   if(e.target.files[0])readHoldings(e.target.files[0])};
+document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
+  document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
+  t.classList.add('on'); $(t.dataset.v).classList.add('on'); say('');});
+const idr=$('idrop');
+idr.onclick=()=>$('ifin').click();
+idr.ondragover=e=>{e.preventDefault();idr.classList.add('over')};
+idr.ondragleave=()=>idr.classList.remove('over');
+idr.ondrop=e=>{e.preventDefault();idr.classList.remove('over');
+  if(e.dataTransfer.files[0])readImport(e.dataTransfer.files[0])};
+$('ifin').onchange=e=>{if(e.target.files[0])readImport(e.target.files[0])};
 </script></body></html>

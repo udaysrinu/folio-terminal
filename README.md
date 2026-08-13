@@ -7,7 +7,7 @@ Three things it does:
 1. **Dashboard** — turn a broker tradebook into FIFO-matched realised P&L, an equity curve, basket concentration, and a "what if I never sold" counterfactual. Single HTML file, no build step.
 2. **Basket capture** — work out which holdings belong to which smallcase/basket by reading Kite **order tags** (the only place that link exists).
 3. **Basket interchange** — export a basket as a portable sheet, and size *anyone's* sheet to *your* capital as a concrete order list.
-4. **`basket.html`** — a single page that does #3 with no Python, no server and no broker connection. Send it to someone who has neither MCP nor a terminal.
+4. **`basket.html`** — a button-driven page that does #3 *and* creates baskets, with no Python, no server and no broker connection. Send it to someone who has neither MCP nor a terminal.
 
 Everything runs on your machine. No account, no server, no telemetry.
 
@@ -265,16 +265,24 @@ Rebalances within the value you already hold, so it's cash-neutral-ish by constr
 
 ---
 
-## Workflow 6 — `basket.html`, for people without MCP or a terminal
+## Workflow 6 — `basket.html`, the no-terminal path
 
-Open `basket.html` directly (works from `file://` — no server needed) and hand it to anyone:
+Open `basket.html` directly (works from `file://` — no server, no install) . Two tabs, framed by intent:
 
-1. **Drop or paste the sheet** — shows label, theme, risk, and a profile: minimum investment,
-   concentration, largest holding, top-3 weight.
-2. **Enter an amount** → order table with qty and value per stock, plus **Copy as text** and
-   **Copy as CSV** (broker basket-upload format).
-3. **Optionally drop your holdings XLSX/CSV** (Zerodha Console → Holdings → download) → drift
-   against target weights and the correcting BUY/SELL per stock.
+**📥 I received a basket**
+1. Drop or paste the sheet → profile: minimum investment, concentration, largest and top-3 weight.
+2. Enter your amount → order table, plus **Copy as text** and **Copy as CSV** (broker basket-upload format).
+3. Optionally drop your holdings XLSX/CSV → drift vs target and the correcting BUY/SELL per stock.
+
+**📤 I want to share one**
+1. Paste `SYMBOL, price` lines — commas, tabs or spaces all work, so an Excel paste is fine.
+   Add a third number for custom weights (normalised to 100%); omit it for equal-weight.
+2. Name it, optionally tag theme and risk → **Build basket**.
+3. **Download .json** / **Copy JSON**, or **Use it now →** to size it yourself immediately.
+4. Or drop a holdings file to turn what you already own into a basket (weights by current value).
+
+This replaces the `basket.py new` / `export` / `orders` / `rebalance` commands for anyone who
+doesn't want a terminal — the CLI remains for scripting and for the agent.
 
 Nothing is uploaded. The page has no network calls except the pinned, SRI-hashed SheetJS used to
 read `.xlsx`; CSV and JSON are parsed natively.
