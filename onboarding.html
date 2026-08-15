@@ -39,6 +39,9 @@ padding:4px 11px;border-radius:20px;border:1px solid var(--em);color:var(--em);f
 border-radius:10px;padding:13px 16px;font-size:13px;margin-top:14px}
 .ok{border:1px solid var(--em);background:rgba(18,120,74,.08);color:var(--em);
 border-radius:10px;padding:13px 16px;font-size:13px;margin-top:14px}
+.safe{border:1px solid var(--em);background:rgba(18,120,74,.07);border-radius:11px;
+padding:14px 17px;font-size:13.5px;color:var(--tx2);margin-top:15px;line-height:1.6}
+.safe b{color:var(--em)}
 .note{font-size:12.5px;color:var(--tx2);font-style:italic;margin-top:10px}
 table{width:100%;border-collapse:collapse;margin-top:6px}
 th{font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--tx2);text-align:left;
@@ -89,8 +92,13 @@ plan covers it — pick the <b>Publisher</b> app type.</p>
     <a href="basket.html" style="font-size:12.5px">← back to the workbench</a>
   </div>
   <div id="msg"></div>
-  <div class="note">Stored in this browser only. If the button later errors about the API key,
-    check that the redirect URL matches exactly.</div>
+  <div class="safe"><b>Your key never leaves this device.</b>
+    This is a plain HTML + JavaScript page with <b>no server and no backend</b> — there is nowhere
+    for it to be sent. It is written to your browser's own storage, read only to build the Kite
+    handoff form, and removed the moment you clear site data or press <i>Remove key</i>.
+    Nobody else — including me — can see it.</div>
+  <div class="note">If the button later errors about the API key, check that the redirect URL
+    matches exactly.</div>
 </div>
 
 <h2>Is this safe?</h2>
