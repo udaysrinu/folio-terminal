@@ -13,7 +13,7 @@ Sheet schema (this is the whole format):
    "weights":{"SYM": 11.0, ...},     # percent, need not sum to exactly 100
    "prices" :{"SYM": 1543.4, ...}}   # reference price per symbol
 """
-import json, sys
+import json, sys, math
 
 def load_sheet(path):
     s = json.load(open(path))
@@ -36,7 +36,7 @@ def load_sheet(path):
 
 def min_unit(w, p):
     """Smallest basket size where every symbol affords >=1 whole share."""
-    return max(p[s] / (w[s] / 100) for s in w)
+    return math.ceil(max(p[s] / (w[s] / 100) for s in w))   # ceil: a suggested amount must clear its own floor
 
 def size(sheet, amount):
     """→ ([(sym, qty, price, value, note)], total_cost, minimum_unit)"""
@@ -146,7 +146,19 @@ def cmd_record(tag, label, fills_path):
           f"₹{m['batches'][tag]['invested']:,}")
 
 def cmd_orders(path, amount, tag=None):
-    s = load_sheet(path); rows, cost, mu = size(s, amount)
+    s = load_sheet(path)
+    mu = min_unit(s["weights"], s["prices"])
+    if amount < mu:                      # hard stop: a partial basket is a different basket
+        starved = [k for k in s["weights"]
+                   if round(amount * (s["weights"][k] / 100) / s["prices"][k]) < 1]
+        binding = max(s["weights"], key=lambda k: s["prices"][k] / s["weights"][k])
+        sys.exit(f"₹{amount:,.0f} is below this basket's minimum of ₹{mu:,.0f}.\n"
+                 f"  {', '.join(starved)} would get zero shares — you'd own a different, "
+                 f"more concentrated basket.\n"
+                 f"  The floor is set by {binding} (₹{s['prices'][binding]:,.0f} at "
+                 f"{s['weights'][binding]:.1f}%).\n"
+                 f"  Try: ₹{mu:,.0f} (minimum) · ₹{mu*2:,.0f} (2x) · ₹{mu*3:,.0f} (3x)")
+    rows, cost, mu = size(s, amount)
     meta = " · ".join(filter(None, [s.get("theme"),
                      f"{s['risk']} risk" if s.get("risk") else None,
                      f"as of {s.get('asof','?')}"]))
@@ -167,8 +179,10 @@ def demo():
     s = {"label": "t", "weights": {"A": 50, "B": 50}, "prices": {"A": 100, "B": 1000}}
     assert min_unit(s["weights"], s["prices"]) == 2000, "B at 50% needs a 2000 basket"
     assert [r[1] for r in size(s, 2000)[0]] == [10, 1], "at minimum: 10xA, 1xB"
-    assert any(r[4] for r in size(s, 500)[0]), "below minimum must skip"
+    assert any(r[4] for r in size(s, 500)[0]), "size() still flags starved rows"
     assert not any(r[4] for r in size(s, 2000)[0]), "at minimum must not skip"
+    mu2 = min_unit(s["weights"], s["prices"])          # the floor must clear itself
+    assert not any(r[4] for r in size(s, mu2)[0]), f"suggested minimum {mu2} still starves a stock"
     # a sheet whose weights don't sum to 100 must still deploy the full amount
     import tempfile as _tf, json as _J, os as _os
     _d = _tf.mkdtemp(); _sp = _os.path.join(_d, "s.json")

@@ -81,6 +81,9 @@ font-family:ui-monospace,monospace;font-size:12px}
 .sendbox{margin-top:12px;background:var(--panel2);border:1px solid var(--hair);border-radius:11px;
 padding:13px 16px;font-size:12.5px;color:var(--tx2)}
 .sendbox b{color:var(--tx)} .sendbox ol{margin:7px 0 7px 20px} .sendbox li{margin:3px 0}
+.setup{font-size:12.5px;color:var(--em);text-decoration:none;border:1px dashed var(--em);
+border-radius:9px;padding:9px 14px}
+.setup:hover{background:rgba(18,120,74,.07)}
 .ok{border:1px solid var(--em);background:rgba(18,120,74,.08);color:var(--em);
 border-radius:9px;padding:11px 14px;font-size:12.5px;margin-top:12px}
 </style></head><body><div class="wrap">
@@ -211,7 +214,8 @@ const say=(t,cls='warn')=>$('msg').innerHTML=t?`<div class="${cls}">${t}</div>`:
 // ---- the whole sizing model, same maths as basket.py ----
 const priced=(w,p)=>Object.keys(w).filter(s=>p[s]>0);
 const missingPx=(w,p)=>Object.keys(w).filter(s=>!(p[s]>0));
-const minUnit=(w,p)=>{const k=priced(w,p);return k.length?Math.max(...k.map(s=>p[s]/(w[s]/100))):0;};
+const minUnit=(w,p)=>{const k=priced(w,p);
+  return k.length?Math.ceil(Math.max(...k.map(s=>p[s]/(w[s]/100)))):0;};  // ceil: a suggested amount must clear its own floor
 function size(sheet,amount){
   const w=sheet.weights,p=sheet.prices;
   const rows=priced(w,p).sort((a,b)=>w[b]-w[a]).map(s=>{
@@ -286,7 +290,7 @@ function load(obj){
   $('minhint').textContent = need.length ? need.length+' price(s) missing' : 'minimum ≈ '+M(mu);
   $('quick').innerHTML = mu>0
     ? '<span class="mono" style="font-size:11px;color:var(--tx3)">QUICK PICK:</span>' +
-      [1,2,3,5].map(k=>`<button onclick="setAmt(${Math.round(mu*k)})">${M(mu*k)}</button>`).join('')
+      [1,2,3,5].map(k=>`<button onclick="setAmt(${Math.ceil(mu*k)})">${M(mu*k)}</button>`).join('')
     : '';
   if(!$('amt').value) $('amt').value=Math.ceil(mu/1000)*1000;
   showUnits();
@@ -301,6 +305,10 @@ function addPrices(){
     load(SHEET); say('Prices added.','ok');
   }catch(e){ say('Could not read those prices — '+e.message,'warn err'); }
 }
+function bindingSym(){const w=SHEET.weights,p=SHEET.prices;
+  return priced(w,p).reduce((a,s)=>p[s]/w[s]>p[a]/w[a]?s:a);}
+function missBelow(amt){const w=SHEET.weights,p=SHEET.prices;
+  return priced(w,p).filter(s=>Math.round(amt*(w[s]/100)/p[s])<1);}
 function setAmt(v){ $('amt').value=v; calc(); showUnits(); }
 function showUnits(){
   const mu=minUnit(SHEET.weights,SHEET.prices), amt=parseFloat($('amt').value);
@@ -314,6 +322,20 @@ function calc(){
   if(!(amt>0)){ say('Enter an amount greater than zero.','warn err'); return; }
   if(missingPx(SHEET.weights,SHEET.prices).length){
     say('Add the missing prices first — see the box above.','warn err'); return; }
+  const floor=minUnit(SHEET.weights,SHEET.prices);
+  if(amt<floor){                      // hard stop: a partial basket is not this basket
+    const opts=[1,2,3].map(k=>`<button onclick="setAmt(${Math.ceil(floor*k)})">${M(floor*k)}${k>1?` (${k}×)`:' (minimum)'}</button>`).join('');
+    $('orders').innerHTML=`<h2>Step 4 · Place these orders</h2>
+      <div class="warn err"><b>₹${(+amt).toLocaleString('en-IN')} is below this basket's minimum
+        of ${M(floor)}.</b><br>
+        At this amount <b>${missBelow(amt).join(', ')}</b> would get zero shares, so you would not
+        own this basket — you would own a different, more concentrated one. Pick an amount at or
+        above the minimum:</div>
+      <div class="panel" style="margin-top:12px"><div class="row">${opts}</div>
+        <div class="note">The floor exists because ${bindingSym()} costs ${M(SHEET.prices[bindingSym()])}
+          but is only ${SHEET.weights[bindingSym()].toFixed(1)}% of the basket — you need
+          ${M(floor)} invested before one share of it fits.</div></div>`;
+    $('unitnote').innerHTML=''; window.__rows=[]; return; }
   say('');
   const {rows,cost,min}=size(SHEET,amt), mx=Math.max(...rows.map(r=>r.w));
   let worst=0, worstSym='—';
@@ -345,6 +367,9 @@ function calc(){
         ? ` — unavoidable at this size; roughly ${M(min*Math.ceil(worst/0.75))} would halve it.`
         : ' — well within tolerance.'}</div>
     <div class="row" style="margin-top:13px">
+      ${localStorage.getItem('ft_kite_api_key')
+        ? '<button class="pri" onclick="placeInKite()">Place in Kite →</button>'
+        : '<a href="onboarding.html" class="setup">⚡ Set up one-click ordering (free)</a>'}
       <button onclick="copyOrders()">Copy as text</button>
       <button onclick="copyCSV()">Copy as CSV</button>
     </div></div>
@@ -353,6 +378,24 @@ function calc(){
   window.__rows=rows; showUnits();
 }
 const lines=()=>window.__rows.filter(r=>!r.skip);
+function placeInKite(){
+  const key=localStorage.getItem('ft_kite_api_key');
+  if(!key){ location.href='onboarding.html'; return; }
+  const rows=lines();
+  if(!rows.length){ say('Nothing to place — size the basket first.','warn err'); return; }
+  const tag=(SHEET.label||'basket').replace(/[^A-Za-z0-9]/g,'').slice(0,20);
+  const data=rows.map(r=>({variety:'regular',exchange:'NSE',tradingsymbol:r.s,
+    transaction_type:'BUY',order_type:'LIMIT',product:'CNC',
+    price:+r.px.toFixed(2),quantity:r.q,readonly:false,tag}));
+  const f=document.createElement('form');
+  f.method='POST'; f.action='https://kite.zerodha.com/connect/basket'; f.target='_blank';
+  for(const [n,v] of [['api_key',key],['data',JSON.stringify(data)]]){
+    const i=document.createElement('input'); i.type='hidden'; i.name=n; i.value=v; f.appendChild(i);
+  }
+  document.body.appendChild(f); f.submit(); f.remove();
+  say(`Opened Kite with ${rows.length} orders as LIMIT · CNC. Review the prices — they came from the
+       sheet and may be stale — then confirm there. Nothing is placed until you confirm.`,'ok');
+}
 function copyOrders(){
   const t=`${SHEET.label} — ${$('amt').value}\n`+
     lines().map(r=>`BUY ${r.q} ${r.s} @ ~${r.px} (CNC)`).join('\n');

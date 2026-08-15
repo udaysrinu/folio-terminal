@@ -1,0 +1,137 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>One-click ordering · setup</title>
+<style>
+:root{--bg:#e8e8de;--bg2:#f1f0e8;--panel:#fbfaf6;--panel2:#f4f2ea;--hair:#e2e0d4;--hair2:#ccc9ba;
+--tx:#1b1b19;--tx2:#87867a;--tx3:#a5a498;--em:#12784a;--ox:#c8352a;--gold:#a8791a;--blue:#2b5fc4}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--tx);font-family:Inter,system-ui,sans-serif;font-size:15px;
+line-height:1.55;padding:34px 20px 70px;
+background-image:linear-gradient(180deg,rgba(0,0,0,.05),transparent 240px)}
+.wrap{max-width:760px;margin:0 auto}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,monospace}
+h1{font-size:29px;font-weight:800;letter-spacing:-.02em}
+.sub{font-size:12px;letter-spacing:.13em;text-transform:uppercase;color:var(--tx2);margin-top:6px}
+.lede{font-size:16px;color:var(--tx2);margin-top:18px}.lede b{color:var(--tx);font-weight:600}
+h2{font-size:11.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--tx2);
+display:flex;align-items:center;gap:10px;margin:32px 0 13px}
+h2::after{content:'';flex:1;height:1px;background:var(--hair)}
+.panel{background:var(--panel);border:1px solid var(--hair);border-radius:16px;padding:20px 23px;
+box-shadow:0 1px 2px rgba(0,0,0,.04),0 10px 26px -12px rgba(0,0,0,.10)}
+.step{display:flex;gap:15px;align-items:flex-start;padding:15px 0;border-bottom:1px solid var(--hair)}
+.step:last-child{border-bottom:none;padding-bottom:0}
+.sn{flex:none;width:27px;height:27px;border-radius:50%;background:var(--em);color:#fff;
+font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.step b{display:block;font-size:14.5px;margin-bottom:3px}
+.step p{font-size:13px;color:var(--tx2)}
+a{color:var(--em)}
+code{background:var(--panel2);border:1px solid var(--hair);border-radius:5px;padding:1px 6px;
+font-family:ui-monospace,monospace;font-size:12.5px}
+input{background:var(--panel2);border:1px solid var(--hair2);color:var(--tx);border-radius:9px;
+padding:11px 13px;font-family:ui-monospace,monospace;font-size:15px;width:100%;max-width:390px}
+button{font-size:12.5px;letter-spacing:.04em;padding:10px 17px;border-radius:9px;
+border:1px solid var(--hair2);background:var(--panel2);color:var(--tx);cursor:pointer}
+button:hover{border-color:var(--em);color:var(--em)}
+button.pri{background:var(--em);border-color:var(--em);color:#fff;font-weight:700}
+.row{display:flex;gap:11px;align-items:center;flex-wrap:wrap;margin-top:13px}
+.free{display:inline-block;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;
+padding:4px 11px;border-radius:20px;border:1px solid var(--em);color:var(--em);font-weight:700}
+.warn{border:1px solid var(--gold);background:rgba(168,121,26,.09);color:var(--gold);
+border-radius:10px;padding:13px 16px;font-size:13px;margin-top:14px}
+.ok{border:1px solid var(--em);background:rgba(18,120,74,.08);color:var(--em);
+border-radius:10px;padding:13px 16px;font-size:13px;margin-top:14px}
+.note{font-size:12.5px;color:var(--tx2);font-style:italic;margin-top:10px}
+table{width:100%;border-collapse:collapse;margin-top:6px}
+th{font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--tx2);text-align:left;
+padding:9px;border-bottom:1px solid var(--hair2)}
+td{padding:9px;border-bottom:1px solid var(--hair);font-size:13.5px}
+.foot{font-size:11px;color:var(--tx3);text-align:center;margin-top:40px;line-height:1.8}
+</style></head><body><div class="wrap">
+
+<div><h1>One-click ordering</h1><div class="sub">Optional setup · about 5 minutes</div></div>
+<p class="lede">Without this, you copy the order list and type it into your broker by hand.
+With it, a single button hands the whole basket to Kite — <b>all 15 orders pre-filled</b> —
+and you just review and confirm.</p>
+
+<h2>What it costs</h2>
+<div class="panel">
+  <span class="free">₹0 · free tier</span>
+  <p style="margin-top:11px;font-size:14px">Zerodha's <b>Personal</b> plan is free and covers
+    <i>"full fledged order, GTT, alerts management"</i> — which is all this needs.</p>
+  <table>
+    <thead><tr><th>Plan</th><th>Cost</th><th>You need it for</th></tr></thead>
+    <tbody>
+      <tr><td><b>Personal</b></td><td class="mono">₹0</td><td>Placing orders — <b>this is the one</b></td></tr>
+      <tr><td>Connect</td><td class="mono">₹500/mo</td><td>Live streaming + historical candles — not needed here</td></tr>
+    </tbody>
+  </table>
+  <div class="warn">Confirm the free plan issues a usable key when you sign up. Zerodha's pricing
+    page lists order management under the free tier, but the basket handoff is documented separately —
+    if the button errors with an API-key message, that's the thing to check first.</div>
+</div>
+
+<h2>Setup</h2>
+<div class="panel">
+  <div class="step"><span class="sn">1</span><div><b>Open the Kite developer console</b>
+    <p>Go to <a href="https://developers.kite.trade" target="_blank" rel="noopener">developers.kite.trade</a>
+       and sign in with the same Zerodha account you trade from.</p></div></div>
+  <div class="step"><span class="sn">2</span><div><b>Create an app</b>
+    <p>Pick the free <b>Personal</b> plan. Name it anything — "Basket Workbench" is fine.</p></div></div>
+  <div class="step"><span class="sn">3</span><div><b>Set the redirect URL</b>
+    <p>Paste this exactly:</p>
+    <p class="mono" style="margin-top:6px;color:var(--tx)">https://udaysrinu.github.io/folio-terminal/</p>
+    <p style="margin-top:6px">Kite sends you back here after you confirm the basket. It must match
+       what you register, or the handoff is rejected.</p></div></div>
+  <div class="step"><span class="sn">4</span><div><b>Copy the API key</b>
+    <p>The app page shows an <code>api_key</code> — a short string like <code>abcd1234efgh5678</code>.
+       Copy it. <b>Ignore the API secret</b> — this never needs it.</p></div></div>
+  <div class="step"><span class="sn">5</span><div><b>Paste it below</b>
+    <p>It's saved only in this browser and used only to build the handoff form. Nothing is
+       transmitted to me, to GitHub, or anywhere else.</p></div></div>
+</div>
+
+<h2>Your API key</h2>
+<div class="panel">
+  <input id="key" placeholder="paste your api_key here" spellcheck="false" autocomplete="off">
+  <div class="row">
+    <button class="pri" onclick="save()">Save key</button>
+    <button onclick="clearKey()">Remove key</button>
+    <a href="basket.html" style="font-size:12.5px">← back to the workbench</a>
+  </div>
+  <div id="msg"></div>
+  <div class="note">Stored in this browser's localStorage. Clearing site data removes it.
+    Anyone using this page on their own device sets their own key.</div>
+</div>
+
+<h2>Is it safe to put a key in a web page?</h2>
+<div class="panel">
+  <p style="font-size:13.5px;color:var(--tx2)">Yes — an <code>api_key</code> alone can't touch your
+  account. It only identifies the <i>app</i>. Placing an order still needs <b>your Zerodha login and
+  2FA</b>, which happens on Kite's own site, and every order is shown to you for approval before
+  anything executes. The dangerous half is the <b>API secret</b> — which this page never asks for
+  and never uses.</p>
+  <p style="font-size:13.5px;color:var(--tx2);margin-top:9px">What actually happens: the page builds
+  a form and posts it to <code>kite.zerodha.com/connect/basket</code>. Your browser goes to Kite,
+  Kite shows the basket, you confirm. The orders are placed by Kite, in your session — not by this page.</p>
+</div>
+
+<div class="foot">
+  <a href="index.html">Folio Terminal</a> · not investment advice · verify every order before confirming
+</div>
+</div>
+<script>
+const K='ft_kite_api_key', $=id=>document.getElementById(id);
+const show=(t,c)=>$('msg').innerHTML=`<div class="${c}">${t}</div>`;
+function save(){
+  const v=$('key').value.trim();
+  if(!v){ show('Paste a key first.','warn'); return; }
+  if(!/^[A-Za-z0-9_-]{6,40}$/.test(v)){
+    show('That does not look like an api_key — expect ~16 letters and numbers, no spaces.','warn'); return; }
+  localStorage.setItem(K,v);
+  show('Saved. The workbench will now show a <b>Place in Kite →</b> button once you size a basket.','ok');
+}
+function clearKey(){ localStorage.removeItem(K); $('key').value=''; show('Key removed.','warn'); }
+addEventListener('DOMContentLoaded',()=>{
+  const v=localStorage.getItem(K);
+  if(v){ $('key').value=v; show('A key is already saved in this browser.','ok'); }
+});
+</script></body></html>
