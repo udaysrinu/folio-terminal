@@ -149,7 +149,9 @@ border-radius:9px;padding:11px 14px;font-size:12.5px;margin-top:12px}
   <div class="drop" id="hdrop" style="padding:20px">
     <div style="font-size:15px;font-weight:700">Drop your holdings <b>XLSX / CSV</b></div>
     <div style="font-size:12px;color:var(--tx2);margin-top:4px">
-      Zerodha Console → Holdings → download. Needs a symbol column and a quantity column.</div>
+      <b>Zerodha:</b> Kite → Holdings → the download icon (top-right of the table), or
+      Console → Portfolio → Holdings → download. Any broker export works if it has an
+      instrument/symbol column and a quantity column.</div>
     <input type="file" id="hfin" accept=".xlsx,.xls,.csv" class="hide">
   </div>
   <div id="rebal"></div>
@@ -429,12 +431,14 @@ function copyCSV(){
 }
 
 // ---- holdings upload -> rebalance (same model as basket.py rebalance) ----
-const SYMC=['symbol','tradingsymbol','instrument','scrip','stock'];
-const QTYC=['quantity','qty','quantity available','net quantity','holdings qty'];
+const num=v=>parseFloat(String(v??'').replace(/[^0-9.\-]/g,''));
+const norm=c=>String(c??'').trim().toLowerCase().replace(/\./g,'').replace(/\s+/g,' ');
+const SYMC=['symbol','tradingsymbol','instrument','scrip','stock','name'];
+const QTYC=['quantity','qty','quantity available','net quantity','holdings qty','free qty'];
 function parseHoldings(rows){
   let hi=-1,si=-1,qi=-1;
   for(let i=0;i<Math.min(40,rows.length);i++){
-    const low=(rows[i]||[]).map(c=>String(c??'').trim().toLowerCase());
+    const low=(rows[i]||[]).map(norm);
     const a=low.findIndex(c=>SYMC.includes(c)), b=low.findIndex(c=>QTYC.includes(c));
     if(a>-1&&b>-1){hi=i;si=a;qi=b;break;}
   }
@@ -442,7 +446,7 @@ function parseHoldings(rows){
   const out={};
   for(let r=hi+1;r<rows.length;r++){
     const sym=String(rows[r]?.[si]??'').trim().toUpperCase();
-    const q=parseFloat(rows[r]?.[qi]);
+    const q=num(rows[r]?.[qi]);
     if(sym&&q>0) out[sym]=(out[sym]||0)+q;
   }
   if(!Object.keys(out).length) throw new Error('no rows with a symbol and a positive quantity');
@@ -675,20 +679,22 @@ function fromEmail(){
 }
 
 // ---- build a sheet from an uploaded holdings file (weights by current value) ----
-const PXC=['price','last price','ltp','close price','average price','avg price','avg. cost','average cost'];
+const PXC=['ltp','price','last price','close price','average price','avg price','avg cost',
+  'average cost','buy avg','buy average'];   // ltp first: current value beats historical cost
 function sheetFromHoldings(rows){
   let hi=-1,si=-1,qi=-1,pi=-1;
   for(let i=0;i<Math.min(40,rows.length);i++){
-    const low=(rows[i]||[]).map(c=>String(c??'').trim().toLowerCase());
-    const a=low.findIndex(c=>SYMC.includes(c)), b=low.findIndex(c=>QTYC.includes(c)),
-          c2=low.findIndex(c=>PXC.includes(c));
+    const low=(rows[i]||[]).map(norm);
+    const a=low.findIndex(c=>SYMC.includes(c)), b=low.findIndex(c=>QTYC.includes(c));
+    // prefer the earliest price-ish column in PXC order (ltp before avg cost)
+    let c2=-1; for(const want of PXC){ const j=low.indexOf(want); if(j>-1){c2=j;break;} }
     if(a>-1&&b>-1&&c2>-1){hi=i;si=a;qi=b;pi=c2;break;}
   }
   if(hi<0) throw new Error('need a symbol, a quantity and a price column');
   const val={},px={};
   for(let r=hi+1;r<rows.length;r++){
     const sym=String(rows[r]?.[si]??'').trim().toUpperCase();
-    const q=parseFloat(rows[r]?.[qi]), p=parseFloat(rows[r]?.[pi]);
+    const q=num(rows[r]?.[qi]), p=num(rows[r]?.[pi]);
     if(!sym||!(q>0)||!(p>0)) continue;
     val[sym]=(val[sym]||0)+q*p; px[sym]=p;
   }
