@@ -154,6 +154,14 @@ border-radius:9px;padding:11px 14px;font-size:12.5px;margin-top:12px}
       instrument/symbol column and a quantity column.</div>
     <input type="file" id="hfin" accept=".xlsx,.xls,.csv" class="hide">
   </div>
+  <textarea id="hpaste" style="min-height:96px;margin-top:11px" placeholder="…or just copy the holdings table from your broker and paste it here.
+
+Select the rows in Kite → Holdings, copy, paste. One line per stock:
+   AXISCADES   32   1,554.93   1,543.40
+Headers optional. It reads the symbol, the quantity, and a price if present."></textarea>
+  <div class="row" style="margin-top:10px">
+    <button class="pri" onclick="pasteHoldings()">Use pasted holdings</button>
+  </div>
   <div id="rebal"></div>
 </div>
 </div><!-- /tSize -->
@@ -340,6 +348,20 @@ function showUnits(){
        so rounding matters less and the weights track the target more closely.`
     : '';
 }
+function bestNearby(amt){
+  // scan +/-6% for the amount whose rounded weights sit closest to target
+  const worst=a=>{const {rows,cost}=size(SHEET,a);
+    return rows.filter(r=>!r.skip).reduce((m,r)=>Math.max(m,Math.abs(r.val/cost*100-r.w)),0);};
+  const floor=minUnit(SHEET.weights,SHEET.prices);
+  let best=amt, bw=worst(amt);
+  for(let i=-60;i<=60;i++){
+    const a=Math.round((amt*(1+i/1000))/100)*100;        // 100-rupee steps
+    if(a<floor) continue;
+    const w=worst(a);
+    if(w<bw-0.001){ bw=w; best=a; }
+  }
+  return {amt:best,drift:bw};
+}
 function calc(){
   const amt=parseFloat($('amt').value);
   if(!(amt>0)){ say('Enter an amount greater than zero.','warn err'); return; }
@@ -386,9 +408,13 @@ function calc(){
       <td class="r mono">${M(cost)}</td><td class="r mono">100.0%</td><td></td></tr></tfoot></table>
     <div class="note">${(cost/amt*100).toFixed(1)}% of your amount deployed · rounding leaves
       ${M(Math.abs(amt-cost))} ${cost>amt?'over':'un'}-committed.
-      Worst weight drift <b>${worst.toFixed(1)}%</b> on ${worstSym}${worst>1.5
-        ? ` — unavoidable at this size; roughly ${M(min*Math.ceil(worst/0.75))} would halve it.`
-        : ' — well within tolerance.'}</div>
+      Worst weight drift <b>${worst.toFixed(1)}%</b> on ${worstSym}.</div>
+    ${(()=>{const b=bestNearby(amt);
+      return (worst-b.drift>0.25)
+        ? `<div class="row" style="margin-top:11px"><button onclick="setAmt(${b.amt})">
+             Use ${M(b.amt)} instead — drift ${b.drift.toFixed(1)}% not ${worst.toFixed(1)}%</button>
+           <span class="note" style="margin:0">nearest amount that rounds more cleanly</span></div>`
+        : '';})()}
     <div class="row" style="margin-top:13px">
       ${localStorage.getItem('ft_kite_api_key')
         ? '<button class="pri" onclick="placeInKite()">Place in Kite →</button>'
@@ -481,6 +507,26 @@ function rebalance(held){
     <div class="warn">A stock you hold in <b>more than one</b> basket shows false drift: brokers report
       one merged quantity, so the other basket's shares count against this target. Check before acting
       on a large drift.</div></div>`;
+}
+// tolerant paste: header row optional, price optional
+function holdingsFromText(txt){
+  const rows=txt.split(/\r?\n/).map(l=>l.split(/[\t,]+|\s{2,}|\s+/).filter(Boolean));
+  const looksHeader=rows.length&&rows[0].some(c=>SYMC.includes(norm(c)));
+  if(looksHeader) return parseHoldings(rows);
+  const out={};
+  rows.forEach(p=>{
+    if(p.length<2) return;
+    const sym=p[0].toUpperCase().replace(/[^A-Z0-9&.\-]/g,'');
+    const q=num(p[1]);
+    if(sym&&q>0&&Number.isFinite(q)) out[sym]=(out[sym]||0)+q;
+  });
+  if(!Object.keys(out).length) throw new Error('no "SYMBOL quantity" lines found');
+  return out;
+}
+function pasteHoldings(){
+  if(!SHEET){ say('Load a basket sheet first.','warn err'); return; }
+  try{ rebalance(holdingsFromText($('hpaste').value)); say(''); }
+  catch(e){ say('Could not read those holdings — '+e.message,'warn err'); }
 }
 function readHoldings(f){
   const fr=new FileReader(), csv=f.name.toLowerCase().endsWith('.csv');
