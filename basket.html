@@ -21,8 +21,8 @@ background:linear-gradient(160deg,var(--panel),var(--bg2));cursor:pointer;transi
 .drop:hover,.drop.over{border-color:var(--em);background:rgba(30,199,125,.05)}
 .drop b{color:var(--em)}
 .dn{font-size:11.5px;color:var(--tx3);margin-top:7px;font-style:italic}
-textarea{width:100%;min-height:90px;background:var(--panel2);border:1px solid var(--hair2);
-color:var(--tx);border-radius:9px;padding:11px;font-family:ui-monospace,monospace;font-size:12px;resize:vertical}
+textarea{width:100%;min-height:150px;max-height:70vh;overflow:auto;resize:vertical;background:var(--panel2);border:1px solid var(--hair2);
+color:var(--tx);border-radius:9px;padding:11px;font-family:ui-monospace,monospace;font-size:12.5px;line-height:1.5}
 input[type=number]{background:var(--panel2);border:1px solid var(--hair2);color:var(--tx);
 border-radius:9px;padding:11px 13px;font-family:ui-monospace,monospace;font-size:17px;width:230px}
 button{font-size:12px;letter-spacing:.05em;padding:9px 16px;border-radius:9px;border:1px solid var(--hair2);
@@ -237,7 +237,27 @@ Commas, tabs or spaces all work — paste straight from Excel."></textarea>
 </div>
 <script>
 let SHEET=null;
+const SAVE='ft_last_basket';
+function remember(){ try{ if(SHEET) localStorage.setItem(SAVE,
+  JSON.stringify({sheet:SHEET,amt:$('amt').value})); }catch(e){} }
+function forget(){ localStorage.removeItem(SAVE); location.reload(); }
 const $=id=>document.getElementById(id);
+// grow a textarea to fit its content (bounded), so a 20-line JSON is not a 3-line slot
+function fit(el){
+  if(!el) return;
+  el.style.height='auto';
+  const max=Math.round(innerHeight*0.7);
+  el.style.height=Math.min(Math.max(el.scrollHeight+6,150),max)+'px';
+}
+function fitAll(){ document.querySelectorAll('textarea').forEach(fit); }
+addEventListener('DOMContentLoaded',()=>{
+  document.querySelectorAll('textarea').forEach(t=>{
+    t.addEventListener('input',()=>fit(t));
+    t.addEventListener('paste',()=>setTimeout(()=>fit(t),0));
+  });
+  fitAll();
+});
+addEventListener('resize',fitAll);
 const M=v=>'₹'+Math.round(v).toLocaleString('en-IN');
 const say=(t,cls='warn')=>$('msg').innerHTML=t?`<div class="${cls}">${t}</div>`:'';
 
@@ -318,6 +338,8 @@ function load(obj){
            or wherever. Prices only affect share counts, never the weights.</div>
        </div>` : '';
   $('out').classList.remove('hide');
+  remember();
+  setTimeout(()=>{fit($('pxin'));},0);
   $('minhint').textContent = need.length ? need.length+' price(s) missing' : 'minimum ≈ '+M(mu);
   $('quick').innerHTML = mu>0
     ? '<span class="mono" style="font-size:11px;color:var(--tx3)">QUICK PICK:</span>' +
@@ -418,13 +440,14 @@ function calc(){
     <div class="row" style="margin-top:13px">
       ${localStorage.getItem('ft_kite_api_key')
         ? '<button class="pri" onclick="placeInKite()">Place in Kite →</button>'
-        : '<a href="onboarding.html" class="setup">⚡ Set up one-click ordering (free · no server, key stays on your device)</a>'}
+        : '<a href="onboarding.html" target="_blank" rel="noopener" class="setup">'
+          + '⚡ Set up one-click ordering — opens in a new tab, free, key stays on your device</a>'}
       <button onclick="copyOrders()">Copy as text</button>
       <button onclick="copyCSV()">Copy as CSV</button>
     </div></div>
    <div class="note">Place on NSE as <b>CNC</b> (delivery). Prefer <b>limit</b> orders on illiquid
      small-caps — thin order books mean a market order can fill well away from the last price.</div>`;
-  window.__rows=rows; showUnits();
+  window.__rows=rows; showUnits(); remember();
 }
 const lines=()=>window.__rows.filter(r=>!r.skip);
 function placeInKite(){
@@ -590,7 +613,7 @@ function showBuilt(sheet,where,how){
 }
 function useBuilt(json){
   document.querySelector('.tab[data-v="tSize"]').click();
-  $('paste').value=json; load(JSON.parse(json));
+  $('paste').value=json; fit($('paste')); load(JSON.parse(json));
   window.scrollTo({top:0,behavior:'smooth'});
 }
 function buildNew(){
@@ -711,7 +734,7 @@ function fromEmail(){
             <div class="note">You can also paste the invest email and the repair email together —
               the fill from the repair order will be picked up automatically.</div>
           </div>`;
-        say(''); return;
+        setTimeout(()=>fit($('npx')),0); say(''); return;
       }
       const inv=Object.keys(shares).reduce((a,k)=>a+shares[k]*prices[k],0);
       showBuilt(sheetFrom(shares,prices,label),'mout',
@@ -798,6 +821,16 @@ hd.ondrop=e=>{e.preventDefault();hd.classList.remove('over');
   if(e.dataTransfer.files[0])readHoldings(e.dataTransfer.files[0])};
 $('hfin').onchange=e=>{if(!SHEET){say('Load a basket sheet first.','warn err');return;}
   if(e.target.files[0])readHoldings(e.target.files[0])};
+(function restore(){
+  let v; try{ v=JSON.parse(localStorage.getItem(SAVE)||'null'); }catch(e){ return; }
+  if(!v||!v.sheet) return;
+  load(v.sheet);
+  if(v.amt) $('amt').value=v.amt;
+  $('msg').innerHTML=`<div class="ok">Picked up where you left off — <b>${v.sheet.label}</b>.
+    <a href="#" onclick="forget();return false" style="color:inherit;text-decoration:underline">start fresh</a></div>`;
+  if(v.amt) calc();
+  setTimeout(fitAll,0);
+})();
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));

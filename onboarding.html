@@ -92,6 +92,7 @@ plan covers it — pick the <b>Publisher</b> app type.</p>
     <a href="basket.html" style="font-size:12.5px">← back to the workbench</a>
   </div>
   <div id="msg"></div>
+  <div id="back" class="hide"></div>
   <div class="safe"><b>Your key never leaves this device.</b>
     This is a plain HTML + JavaScript page with <b>no server and no backend</b> — there is nowhere
     for it to be sent. It is written to your browser's own storage, read only to build the Kite
@@ -122,7 +123,16 @@ function save(){
   if(!/^[A-Za-z0-9_-]{6,40}$/.test(v)){
     show('That does not look like an api_key — expect ~16 letters and numbers, no spaces.','warn'); return; }
   localStorage.setItem(K,v);
-  show('Saved. The workbench will now show a <b>Place in Kite →</b> button once you size a basket.','ok');
+  show('Key saved.','ok');
+  $('back').className='';
+  $('back').innerHTML=`<div class="safe" style="margin-top:13px"><b>Now go back and place the orders:</b>
+    <ol style="margin:8px 0 0 20px">
+      <li>If this opened in a <b>new tab</b> — close it and return to the workbench tab, then press
+        <b>Calculate orders</b> again. Your basket is still loaded.</li>
+      <li>Otherwise <a href="basket.html">open the workbench</a> — it reopens the last basket you
+        were working on automatically.</li>
+    </ol>
+    Either way, <b>Place in Kite →</b> now appears beside the copy buttons.</div>`;
 }
 function clearKey(){ localStorage.removeItem(K); $('key').value=''; show('Key removed.','warn'); }
 addEventListener('DOMContentLoaded',()=>{
