@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Folio Terminal - Workbench</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600&amp;family=IBM+Plex+Mono&amp;family=IBM+Plex+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "ground": "#e6e5da",
+            "card": "#fbfaf6",
+            "inset": "#f2f0e6",
+            "rule": "#c9c6b4",
+            "rule-dark": "#a8a492",
+            "ink-primary": "#171a16",
+            "ink-body": "#4f4e44",
+            "ink-muted": "#63625a",
+            "action": "#0f6b42",
+            "negative": "#b52d23",
+            "warning": "#856011"
+          },
+          "borderRadius": {
+            "DEFAULT": "4px",
+            "button": "8px"
+          },
+          "fontFamily": {
+            "headline": ["Barlow Condensed", "sans-serif"],
+            "body": ["IBM Plex Sans", "sans-serif"],
+            "mono": ["IBM Plex Mono", "monospace"]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    body {
+      background-color: theme('colors.ground');
+      color: theme('colors.ink-primary');
+    }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+</head>
+<body class="font-body antialiased min-h-screen flex flex-col">
+<!-- TopNavBar -->
+<header class="bg-[#e6e5da] w-full top-0 border-b border-[#a8a492] flex justify-between items-center px-6 h-14 w-full max-w-full">
+<div class="font-headline text-xl font-semibold text-[#171a16] uppercase tracking-tighter">
+      Folio Terminal
+    </div>
+<nav class="hidden md:flex gap-6 items-center">
+<a class="font-headline text-lg font-semibold uppercase tracking-tight text-[#0f6b42] border-b-2 border-[#0f6b42] pb-1 cursor-pointer active:opacity-80" href="#">Baskets</a>
+<a class="font-headline text-lg font-semibold uppercase tracking-tight text-[#4f4e44] hover:text-[#171a16] hover:bg-[#f2f0e6] transition-colors duration-150 cursor-pointer active:opacity-80 px-2 rounded-sm" href="#">Dashboard</a>
+<a class="font-headline text-lg font-semibold uppercase tracking-tight text-[#4f4e44] hover:text-[#171a16] hover:bg-[#f2f0e6] transition-colors duration-150 cursor-pointer active:opacity-80 px-2 rounded-sm" href="#">Setup</a>
+<a class="font-headline text-lg font-semibold uppercase tracking-tight text-[#4f4e44] hover:text-[#171a16] hover:bg-[#f2f0e6] transition-colors duration-150 cursor-pointer active:opacity-80 px-2 rounded-sm" href="#">Guide</a>
+</nav>
+<div class="flex gap-4 items-center">
+<span class="material-symbols-outlined text-[#171a16] cursor-pointer hover:bg-[#f2f0e6] transition-colors duration-150 p-1 rounded-sm">settings</span>
+<span class="material-symbols-outlined text-[#171a16] cursor-pointer hover:bg-[#f2f0e6] transition-colors duration-150 p-1 rounded-sm">account_circle</span>
+</div>
+</header>
+<!-- Main Workbench Canvas -->
+<main class="flex-grow w-full max-w-[1180px] mx-auto px-6 py-12 flex flex-col gap-12">
+<!-- Instrument Readout (Hero) -->
+<section class="flex flex-col gap-3">
+<h2 class="font-body text-[10px] font-semibold tracking-widest text-ink-muted uppercase">SIZE THIS BASKET</h2>
+<div class="font-mono text-[33px] leading-tight text-ink-primary tabular-nums tracking-tight flex items-center flex-wrap">
+<span>₹4,00,000</span>
+<span class="text-ink-muted mx-3 font-sans text-2xl font-light">→</span>
+<span>3 stocks</span>
+<span class="text-ink-muted mx-3 font-sans text-2xl font-light">→</span>
+<span class="text-action">₹3,98,835 deployed</span>
+<span class="text-ink-muted mx-3 font-sans text-2xl font-light">→</span>
+<span class="text-ink-muted">₹1,165 left</span>
+</div>
+<p class="font-body text-sm text-ink-body mt-2">
+<span class="font-medium text-ink-primary">Defence &amp; Railways Tracker</span> · 3 holdings · reference prices 16 Aug.<br/>
+        Minimum for this basket is ₹12,720, set by TCS.
+      </p>
+</section>
+<!-- Controls Row -->
+<section class="flex items-center gap-4 border-t border-rule pt-6">
+<div class="relative">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 font-mono text-ink-muted">₹</span>
+<input class="pl-7 pr-3 py-2 bg-card border border-rule-dark rounded-button font-mono tabular-nums text-ink-primary focus:ring-1 focus:ring-action focus:border-action outline-none w-48 shadow-sm" type="text" value="4,00,000"/>
+</div>
+<button class="bg-action text-ground font-body font-medium px-6 py-2 rounded-button hover:bg-[#0c5936] transition-colors focus:ring-2 focus:ring-offset-2 focus:ring-offset-ground focus:ring-action">Calculate orders</button>
+<button class="bg-transparent border border-rule-dark text-ink-primary font-body font-medium px-6 py-2 rounded-button hover:bg-inset transition-colors focus:ring-2 focus:ring-offset-2 focus:ring-offset-ground focus:ring-rule-dark">Place in Kite</button>
+</section>
+<!-- The Ledger -->
+<section class="flex flex-col gap-4 mt-8">
+<div class="flex justify-between items-end border-b-2 border-ink-primary pb-2">
+<div>
+<h3 class="font-headline text-2xl font-semibold text-ink-primary tracking-tight">Your orders</h3>
+<p class="font-body text-xs text-ink-muted mt-1">Whole shares only. Drift is how far each holding lands from its target once rounded.</p>
+</div>
+</div>
+<div class="w-full overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-rule font-body text-[10px] text-ink-muted uppercase tracking-widest font-semibold h-[41px]">
+<th class="py-2 pr-4 font-normal">STOCK</th>
+<th class="py-2 px-4 text-right font-normal">TARGET</th>
+<th class="py-2 px-4 text-right font-normal">SHARES</th>
+<th class="py-2 px-4 text-right font-normal">PRICE</th>
+<th class="py-2 px-4 text-right font-normal">COST</th>
+<th class="py-2 px-4 text-right font-normal">WEIGHT</th>
+<th class="py-2 pl-4 text-right font-normal">DRIFT</th>
+</tr>
+</thead>
+<tbody class="font-mono text-sm tabular-nums">
+<tr class="border-b border-rule h-[41px] hover:bg-inset transition-colors">
+<td class="py-2 pr-4 text-ink-primary font-body">TCS</td>
+<td class="py-2 px-4 text-right text-ink-body">25.0%</td>
+<td class="py-2 px-4 text-right text-ink-primary">31</td>
+<td class="py-2 px-4 text-right text-ink-body">3,180</td>
+<td class="py-2 px-4 text-right text-ink-primary">98,580</td>
+<td class="py-2 px-4 text-right text-ink-body">24.7%</td>
+<td class="py-2 pl-4 text-right text-negative">-0.3</td>
+</tr>
+<tr class="border-b border-rule h-[41px] hover:bg-inset transition-colors">
+<td class="py-2 pr-4 text-ink-primary font-body">RELIANCE</td>
+<td class="py-2 px-4 text-right text-ink-body">30.0%</td>
+<td class="py-2 px-4 text-right text-ink-primary">92</td>
+<td class="py-2 px-4 text-right text-ink-body">1,310</td>
+<td class="py-2 px-4 text-right text-ink-primary">1,20,520</td>
+<td class="py-2 px-4 text-right text-ink-body">30.2%</td>
+<td class="py-2 pl-4 text-right text-action">+0.2</td>
+</tr>
+<tr class="border-b border-rule h-[41px] hover:bg-inset transition-colors">
+<td class="py-2 pr-4 text-ink-primary font-body">HDFCBANK</td>
+<td class="py-2 px-4 text-right text-ink-body">45.0%</td>
+<td class="py-2 px-4 text-right text-ink-primary">103</td>
+<td class="py-2 px-4 text-right text-ink-body">1,745</td>
+<td class="py-2 px-4 text-right text-ink-primary">1,79,735</td>
+<td class="py-2 px-4 text-right text-ink-body">45.1%</td>
+<td class="py-2 pl-4 text-right text-action">+0.1</td>
+</tr>
+</tbody>
+<tfoot class="font-mono text-sm tabular-nums font-semibold bg-inset">
+<tr class="border-t-2 border-rule-dark h-[41px]">
+<td class="py-2 pr-4 text-ink-primary font-body uppercase text-xs tracking-wider">DEPLOYED</td>
+<td class="py-2 px-4 text-right text-ink-primary">100.0%</td>
+<td class="py-2 px-4 text-right text-ink-primary">226</td>
+<td class="py-2 px-4 text-right"></td>
+<td class="py-2 px-4 text-right text-ink-primary">3,98,835</td>
+<td class="py-2 px-4 text-right text-ink-primary">99.7%</td>
+<td class="py-2 pl-4 text-right text-ink-primary">±0.3</td>
+</tr>
+</tfoot>
+</table>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-[#e6e5da] w-full bottom-0 border-t border-[#c9c6b4] mt-12 flex flex-col md:flex-row justify-between items-center px-6 py-8 w-full max-w-[1180px] mx-auto">
+<div class="font-body text-xs font-normal tabular-nums text-[#63625a] flex gap-4 items-center">
+<span class="font-headline font-bold text-[#171a16] text-sm">Folio Terminal</span>
+<span>© 2024 Folio Terminal. Open-source under MIT License. Financial data for calculation purposes only. Not investment advice.</span>
+</div>
+<div class="flex gap-4 mt-4 md:mt-0 font-body text-xs">
+<a class="text-[#63625a] hover:text-[#4f4e44] hover:underline decoration-[#a8a492] transition-opacity duration-200" href="#">Terms</a>
+<a class="text-[#63625a] hover:text-[#4f4e44] hover:underline decoration-[#a8a492] transition-opacity duration-200" href="#">Privacy</a>
+<a class="text-[#63625a] hover:text-[#4f4e44] hover:underline decoration-[#a8a492] transition-opacity duration-200" href="#">Source</a>
+</div>
+</footer>
+</body></html>

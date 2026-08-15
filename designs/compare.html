@@ -1,0 +1,189 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Folio Terminal — design directions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   A = SHARPEN THE PAPER   (recommended: commit to what already differentiates)
+   B = MINERAL + BLUE      (codex's proposal, rendered faithfully)
+   C = TODAY               (what is shipped right now, for reference)
+   ============================================================ */
+[data-d="A"]{
+  --paper:#e6e5da; --surface:#fbfaf6; --surface2:#f2f0e6;
+  --ink:#171a16; --body:#4f4e44; --muted:#63625a;
+  --rule:#c9c6b4; --rule-strong:#a8a492;         /* deliberately visible: rules carry the ledger */
+  --action:#0f6b42; --action-strong:#0b5433; --loss:#b52d23; --warn:#856011;
+  --display:'Barlow Semi Condensed'; --ui:'IBM Plex Sans'; --num:'IBM Plex Mono';
+  --r-btn:8px; --r-card:4px;                      /* documents have corners, not pills */
+}
+[data-d="B"]{
+  --paper:#E9EAE3; --surface:#FCFCF8; --surface2:#F3F4EE;
+  --ink:#18211D; --body:#46534C; --muted:#5C6A61;
+  --rule:#D1D6CD; --rule-strong:#AEB8AF;
+  --action:#155A78; --action-strong:#0f4459; --loss:#A52A22; --warn:#7A4E00;
+  --display:'Barlow Semi Condensed'; --ui:'IBM Plex Sans'; --num:'IBM Plex Mono';
+  --r-btn:8px; --r-card:6px;
+}
+[data-d="C"]{
+  --paper:#e8e8de; --surface:#fbfaf6; --surface2:#f4f2ea;
+  --ink:#1b1b19; --body:#5b5a50; --muted:#67665b;
+  --rule:#e2e0d4; --rule-strong:#ccc9ba;
+  --action:#0f6b42; --action-strong:#0b5433; --loss:#b52d23; --warn:#856011;
+  --display:'Inter'; --ui:'Inter'; --num:'ui-monospace';
+  --r-btn:10px; --r-card:16px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--ui),system-ui,sans-serif;
+  font-size:15px;line-height:1.5;transition:background-color .2s}
+.switch{position:sticky;top:0;z-index:20;background:#101010;color:#fff;padding:9px 20px;
+  display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-family:Inter,sans-serif;font-size:12.5px}
+.switch b{font-weight:600;margin-right:6px}
+.switch button{font:inherit;font-weight:500;background:#232323;color:#cfcfcf;border:1px solid #333;
+  border-radius:7px;padding:6px 13px;cursor:pointer}
+.switch button.on{background:#fff;color:#101010;border-color:#fff;font-weight:600}
+.switch .aa{margin-left:auto;font-family:ui-monospace,monospace;font-size:11.5px;color:#8f8f8f}
+.switch .aa.bad{color:#ff8a80}
+.wrap{max-width:1180px;margin:0 auto;padding:0 24px}
+
+/* top bar */
+.bar{background:var(--surface);border-bottom:1px solid var(--rule-strong);margin-bottom:34px}
+.bar .wrap{display:flex;align-items:center;gap:22px;padding:12px 24px}
+.mark{font-family:var(--display),sans-serif;font-weight:700;font-size:19px;letter-spacing:-.005em}
+.bar nav{display:flex;gap:18px;margin-left:auto;font-size:13px;color:var(--muted)}
+.bar nav span.cur{color:var(--ink);font-weight:600}
+
+.eyebrow{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
+  font-weight:600;font-family:var(--ui),sans-serif}
+
+/* THE RISK: the calculation is the hero, as an instrument readout */
+.readout{margin:6px 0 4px;font-family:var(--num),monospace;font-variant-numeric:tabular-nums;
+  font-size:33px;font-weight:500;letter-spacing:-.015em;line-height:1.25;color:var(--ink)}
+.readout .arw{color:var(--muted);font-weight:400;padding:0 8px}
+.readout .lo{color:var(--muted)}
+.readout .ok{color:var(--action);font-weight:600}
+.sub{color:var(--body);font-size:14px;margin-top:10px;max-width:56ch}
+.controls{display:flex;gap:10px;align-items:center;margin:20px 0 4px;flex-wrap:wrap}
+.controls input{font-family:var(--num),monospace;font-size:16px;font-variant-numeric:tabular-nums;
+  background:var(--surface);border:1px solid var(--rule-strong);border-radius:var(--r-btn);
+  padding:11px 14px;width:190px;color:var(--ink)}
+.controls input:focus{outline:none;border-color:var(--action);box-shadow:0 0 0 3px color-mix(in srgb,var(--action) 16%,transparent)}
+.btn{background:var(--action);color:#fff;border:1px solid var(--action);border-radius:var(--r-btn);
+  padding:11px 20px;font-family:var(--ui),sans-serif;font-size:14px;font-weight:600;cursor:pointer}
+.btn:hover{background:var(--action-strong)}
+.btn.ghost{background:var(--surface);color:var(--ink);border-color:var(--rule-strong);font-weight:500}
+
+h2{font-family:var(--display),sans-serif;font-size:21px;font-weight:600;margin:40px 0 2px;letter-spacing:-.01em}
+h2+.note{font-size:13px;color:var(--muted);margin-bottom:14px}
+
+/* THE OTHER RISK: holdings are a ledger, not tiles */
+.ledger{background:var(--surface);border:1px solid var(--rule-strong);border-radius:var(--r-card);
+  padding:4px 22px 8px}
+table{width:100%;border-collapse:collapse}
+th{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;
+  text-align:left;padding:14px 0 8px;border-bottom:1px solid var(--rule-strong)}
+th.r{text-align:right}
+td{padding:0;border-bottom:1px solid var(--rule);height:41px;vertical-align:middle;font-size:14px}
+tr:last-child td{border-bottom:none}
+td.r{text-align:right}
+.sym{font-family:var(--ui),sans-serif;font-weight:600;letter-spacing:.01em}
+.n{font-family:var(--num),monospace;font-variant-numeric:tabular-nums}
+.up{color:var(--action);font-weight:600}.dn{color:var(--loss);font-weight:600}
+tfoot td{border-top:1px solid var(--rule-strong);border-bottom:none;height:44px;font-weight:600}
+tfoot .lbl{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+
+.foot{margin:34px 0 60px;padding-top:16px;border-top:1px solid var(--rule);
+  font-size:11.5px;color:var(--muted);display:flex;gap:14px;justify-content:space-between;flex-wrap:wrap}
+.why{background:var(--surface2);border:1px solid var(--rule);border-radius:var(--r-card);
+  padding:15px 19px;margin-top:26px;font-size:13.5px;color:var(--body);max-width:74ch}
+.why b{color:var(--ink)}
+</style></head><body data-d="A">
+
+<div class="switch">
+  <b>Direction</b>
+  <button data-set="A" class="on">A · Sharpen the paper</button>
+  <button data-set="B">B · Mineral + blue (codex)</button>
+  <button data-set="C">C · Today</button>
+  <span class="aa" id="aa">measuring…</span>
+</div>
+
+<div class="bar"><div class="wrap">
+  <span class="mark">Folio Terminal</span>
+  <nav><span class="cur">Baskets</span><span>Dashboard</span><span>Setup</span><span>Guide</span></nav>
+</div></div>
+
+<div class="wrap">
+  <div class="eyebrow">Size this basket</div>
+  <div class="readout">
+    ₹4,00,000<span class="arw">→</span>3 stocks<span class="arw">→</span><span class="ok">₹3,98,835 deployed</span><span class="arw">→</span><span class="lo">₹1,165 left</span>
+  </div>
+  <p class="sub">Defence &amp; Railways Tracker · 3 holdings · reference prices 16 Aug.
+     Minimum for this basket is <span class="n">₹12,720</span>, set by TCS.</p>
+  <div class="controls">
+    <input value="₹4,00,000" spellcheck="false" aria-label="Amount to invest">
+    <button class="btn">Calculate orders</button>
+    <button class="btn ghost">Place in Kite</button>
+  </div>
+
+  <h2>Your orders</h2>
+  <div class="note">Whole shares only. Drift is how far each holding lands from its target once rounded.</div>
+  <div class="ledger">
+    <table>
+      <thead><tr>
+        <th>Stock</th><th class="r">Target</th><th class="r">Shares</th><th class="r">Price</th>
+        <th class="r">Cost</th><th class="r">Weight</th><th class="r">Drift</th>
+      </tr></thead>
+      <tbody>
+        <tr><td class="sym">TCS</td><td class="r n">25.0%</td><td class="r n">31</td><td class="r n">3,180</td>
+            <td class="r n">98,580</td><td class="r n">24.7%</td><td class="r n dn">−0.3</td></tr>
+        <tr><td class="sym">RELIANCE</td><td class="r n">30.0%</td><td class="r n">92</td><td class="r n">1,310</td>
+            <td class="r n">1,20,520</td><td class="r n">30.2%</td><td class="r n up">+0.2</td></tr>
+        <tr><td class="sym">HDFCBANK</td><td class="r n">45.0%</td><td class="r n">103</td><td class="r n">1,745</td>
+            <td class="r n">1,79,735</td><td class="r n">45.1%</td><td class="r n up">+0.1</td></tr>
+      </tbody>
+      <tfoot><tr>
+        <td class="lbl">Deployed</td><td class="r n">100.0%</td><td class="r n">226</td><td></td>
+        <td class="r n">3,98,835</td><td class="r n">99.7%</td><td class="r n">±0.3</td>
+      </tr></tfoot>
+    </table>
+  </div>
+
+  <div class="why">
+    <b>What you are comparing.</b> Same content, same numbers, three visual systems.
+    <b>A</b> keeps your warm paper and commits to it — darker rules so the ledger reads as a document,
+    square-ish corners, condensed wordmark, green kept as the one action colour.
+    <b>B</b> is codex's: a cooler mineral paper and blue as the interaction signal, green reserved for results.
+    <b>C</b> is what is shipped today — Inter everywhere, 16px cards, faint hairlines.
+  </div>
+
+  <div class="foot">
+    <span>Open source · MIT</span>
+    <span>Not investment advice. Verify every order in your broker.</span>
+  </div>
+</div>
+
+<script>
+const lum=h=>{const [r,g,b]=[1,3,5].map(i=>parseInt(h.substr(i,2),16)/255)
+  .map(c=>c<=0.03928?c/12.92:Math.pow((c+0.055)/1.055,2.4));return 0.2126*r+0.7152*g+0.0722*b;};
+const rgb2hex=s=>{const m=s.match(/\d+/g);return m?'#'+m.slice(0,3).map(n=>(+n).toString(16).padStart(2,'0')).join(''):null;};
+const R=(a,b)=>{const [x,y]=[lum(a),lum(b)].sort((m,n)=>n-m);return (x+0.05)/(y+0.05);};
+function audit(){
+  const cs=getComputedStyle(document.body), T=n=>cs.getPropertyValue(n).trim();
+  const paper=T('--paper'), surf=T('--surface');
+  const pairs=[['ink',T('--ink')],['body',T('--body')],['muted',T('--muted')],
+               ['action',T('--action')],['loss',T('--loss')]];
+  let worst=99, worstName='';
+  pairs.forEach(([n,v])=>[['paper',paper],['surface',surf]].forEach(([gn,gv])=>{
+    const r=R(v,gv); if(r<worst){worst=r;worstName=n+' on '+gn;}
+  }));
+  const rule=R(T('--rule'),surf), ruleP=R(T('--rule'),paper);
+  const el=document.getElementById('aa');
+  el.textContent=`worst text ${worst.toFixed(2)}:1 (${worstName}) · rule-on-paper ${ruleP.toFixed(2)}:1 · rule-on-card ${rule.toFixed(2)}:1`;
+  el.className='aa'+(worst<4.5?' bad':'');
+}
+document.querySelectorAll('[data-set]').forEach(b=>b.onclick=()=>{
+  document.body.dataset.d=b.dataset.set;
+  document.querySelectorAll('[data-set]').forEach(x=>x.classList.toggle('on',x===b));
+  requestAnimationFrame(audit);
+});
+audit();
+</script></body></html>
