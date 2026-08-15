@@ -1,52 +1,102 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Folio Terminal</title>
+<title>Folio Terminal — shareable stock baskets, sized to your capital</title>
+<meta name="description" content="Someone shares a stock basket; you get your own buy list. Weights travel, share counts don't. Runs entirely in your browser — no account, no server, nothing uploaded.">
 <style>
 :root{--bg:#e8e8de;--bg2:#f1f0e8;--panel:#fbfaf6;--panel2:#f4f2ea;--hair:#e2e0d4;--hair2:#ccc9ba;
 --tx:#1b1b19;--tx2:#5b5a50;--tx3:#67665b;--em:#0f6b42;--ox:#b52d23;--gold:#856011;--blue:#2b5fc4}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--bg);color:var(--tx);font-family:Inter,system-ui,sans-serif;font-size:15px;
-line-height:1.55;padding:44px 20px 70px;
+line-height:1.55;padding:0 0 70px;
 background-image:linear-gradient(180deg,rgba(0,0,0,.05),transparent 240px)}
-.wrap{max-width:880px;margin:0 auto}
-h1{font-size:34px;font-weight:800;letter-spacing:-.025em}
-.sub{font-size:12px;letter-spacing:.13em;text-transform:uppercase;color:var(--tx2);margin-top:7px}
-.lede{font-size:16.5px;color:var(--tx2);margin-top:20px;max-width:640px}
+.wrap{max-width:880px;margin:0 auto;padding:0 20px}
+.mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums}
+
+/* ---------- hero ---------- */
+h1{font-size:34px;font-weight:800;letter-spacing:-.025em;line-height:1.15;max-width:15em}
+.lede{font-size:16.5px;color:var(--tx2);margin-top:18px;max-width:34em}
 .lede b{color:var(--tx);font-weight:600}
-.cards{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:32px}
-@media(max-width:720px){.cards{grid-template-columns:1fr}}
-a.card{display:block;text-decoration:none;color:inherit;background:var(--panel);
-border:1px solid var(--hair);border-radius:var(--radius-lg);padding:24px 26px;
-box-shadow:0 1px 2px rgba(0,0,0,.04),0 10px 26px -12px rgba(0,0,0,.10);
-transition:transform .16s,border-color .16s,box-shadow .16s}
-a.card:hover{transform:translateY(-2px);border-color:var(--em);
-box-shadow:0 1px 2px rgba(0,0,0,.05),0 16px 34px -14px rgba(0,0,0,.16)}
-.card h2{font-size:20px;font-weight:800;letter-spacing:-.01em}
-.card p{font-size:13.5px;color:var(--tx2);margin-top:8px}
-.card .go{display:inline-block;margin-top:15px;font-size:12px;letter-spacing:.06em;
-text-transform:uppercase;font-weight:700;color:var(--em)}
 .pill{display:inline-block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
-padding:4px 10px;border-radius:var(--radius-full);border:1px solid var(--hair2);color:var(--tx2);margin-bottom:12px}
-.pill.a{border-color:var(--em);color:var(--em)}
-h3{font-size:11.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--tx2);
-display:flex;align-items:center;gap:10px;margin:40px 0 14px}
-h3::after{content:'';flex:1;height:1px;background:var(--hair)}
-.panel{background:var(--panel);border:1px solid var(--hair);border-radius:var(--radius-lg);padding:20px 24px;
+padding:4px 10px;border:1px solid var(--hair2);color:var(--tx2);margin-bottom:14px}
+.pill.a{border-color:var(--em);color:var(--em);font-weight:600}
+.actions{display:flex;gap:11px;flex-wrap:wrap;margin-top:24px;align-items:center}
+.cta{background:var(--em);color:#fff;text-decoration:none}
+.cta:hover{filter:brightness(1.08)}
+.ghost{background:var(--panel);color:var(--tx);text-decoration:none;border:1px solid var(--hair2);
+border-radius:var(--radius);min-height:44px;padding:12px 22px;font-size:15px;font-weight:500;
+display:inline-flex;align-items:center}
+.ghost:hover{border-color:var(--em);color:var(--em)}
+.smallprint{font-size:12.5px;color:var(--tx3);margin-top:16px}
+
+/* ---------- section headings ---------- */
+h2{font-size:11.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--tx2);
+display:flex;align-items:center;gap:10px;margin:46px 0 15px}
+h2::after{content:'';flex:1;height:1px;background:var(--hair)}
+
+/* ---------- cards ---------- */
+.panel{background:var(--panel);border:1px solid var(--hair);padding:21px 24px;
 box-shadow:0 1px 2px rgba(0,0,0,.04),0 10px 26px -12px rgba(0,0,0,.10)}
-.panel p{font-size:13.5px;color:var(--tx2)}.panel p+p{margin-top:9px}
-.panel b{color:var(--tx)}
-code{background:var(--panel2);border:1px solid var(--hair);border-radius:var(--radius-sm);padding:1px 6px;
-font-family:ui-monospace,monospace;font-size:12.5px}
-.foot{font-size:11px;color:var(--tx3);text-align:center;margin-top:44px;line-height:1.8}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
+@media(max-width:760px){.steps{grid-template-columns:1fr}}
+.step{background:var(--panel);border:1px solid var(--hair);border-radius:var(--radius-lg);
+padding:20px 21px;box-shadow:0 1px 2px rgba(0,0,0,.04),0 10px 26px -12px rgba(0,0,0,.10)}
+.step .ic{width:26px;height:26px;stroke:var(--em);fill:none;stroke-width:1.6;
+stroke-linecap:round;stroke-linejoin:round}
+.step b{display:block;font-size:15.5px;margin:12px 0 5px}
+.step p{font-size:13.5px;color:var(--tx2)}
+.n{font-size:10.5px;letter-spacing:.1em;color:var(--tx3);font-weight:600}
+
+/* ---------- the comparison ---------- */
+.cmp{display:grid;grid-template-columns:1fr 1fr;gap:0}
+@media(max-width:700px){.cmp{grid-template-columns:1fr}
+  .cmp>div+div{border-left:none!important;border-top:1px solid var(--hair);padding-top:18px;margin-top:18px}}
+.cmp>div+div{border-left:1px solid var(--hair);padding-left:26px}
+.cmp>div:first-child{padding-right:26px}
+.cap{font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--tx3);font-weight:600}
+.amt{font-size:23px;font-weight:700;letter-spacing:-.02em;margin:3px 0 14px}
+table{width:100%;border-collapse:collapse}
+thead th{font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;text-align:left;
+padding-bottom:7px;border-bottom:1px solid var(--hair2)}
+thead th.r,td.r{text-align:right}
+td{padding:9px 0;border-bottom:1px solid var(--hair);font-size:13.5px}
+tbody tr:last-child td{border-bottom:none}
+.sym{font-weight:600}
+.pct{color:var(--em);font-weight:600}
+.tgt{color:var(--tx3);font-size:12px}
+.punch{font-size:14.5px;color:var(--tx2);margin-top:20px;padding-top:18px;
+border-top:1px solid var(--hair)}
+.punch b{color:var(--tx)}
+
+/* ---------- honest limits ---------- */
+.lim{background:var(--panel);border:1px solid var(--hair);border-radius:var(--radius-lg);
+box-shadow:0 1px 2px rgba(0,0,0,.04),0 10px 26px -12px rgba(0,0,0,.10)}
+.lrow{display:flex;gap:15px;align-items:flex-start;padding:17px 23px;border-bottom:1px solid var(--hair)}
+.lrow:last-child{border-bottom:none}
+.lrow svg{width:20px;height:20px;flex:none;margin-top:2px;stroke:var(--tx3);fill:none;
+stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.lrow b{display:block;font-size:14.5px;margin-bottom:3px}
+.lrow p{font-size:13.5px;color:var(--tx2)}
+a.lnk{text-decoration:none;color:inherit}
+a.lnk b{color:var(--em)}
+a.lnk:hover{background:var(--panel2)}
+a.lnk:hover svg{stroke:var(--em)}
+a{color:var(--em)}
+code{background:var(--panel2);border:1px solid var(--hair);border-radius:var(--radius-sm);
+padding:1px 6px;font-family:ui-monospace,monospace;font-size:12.5px}
+.foot{border-top:1px solid var(--hair);margin-top:48px;padding-top:22px;
+display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between;align-items:baseline;
+font-size:11.5px;color:var(--tx3);line-height:1.8}
 .foot a{color:var(--tx2)}
+.foot .mid{display:flex;gap:14px}
 
 /* ---------- motion system: 160-220ms, ease-out entering, no layout shift ---------- */
 :root{--t:170ms;--e:cubic-bezier(.22,.61,.36,1)}
-a,button,.tab,.fbtn,.atile,.card,.hstep,tbody tr,input,select,textarea,.drop,.setup{
+a,button,.tab,.fbtn,.atile,.card,.hstep,tbody tr,input,select,textarea,.drop,.setup,.step,.ghost{
   transition:background-color var(--t) var(--e),border-color var(--t) var(--e),
   color var(--t) var(--e),box-shadow var(--t) var(--e),transform var(--t) var(--e)}
-button:hover,.setup:hover{transform:translateY(-1px)}          /* lift, never scale */
-button:active,.setup:active{transform:translateY(0)}
-a.card:hover{transform:translateY(-2px)}
+button:hover,.setup:hover,.cta:hover,.ghost:hover{transform:translateY(-1px)}  /* lift, never scale */
+button:active,.setup:active,.cta:active,.ghost:active{transform:translateY(0)}
+a.card:hover,.step:hover{transform:translateY(-2px)}
+.step:hover{border-color:var(--hair2)}
 tbody tr:hover{background:var(--panel2)}
 :focus-visible{outline:2px solid var(--em);outline-offset:2px;border-radius:var(--radius)}
 button,.tab,.fbtn,a.card,.drop,summary{cursor:pointer}
@@ -56,7 +106,7 @@ button,.tab,.fbtn,a.card,.drop,summary{cursor:pointer}
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;
     transition-duration:.01ms!important;scroll-behavior:auto!important}
-  button:hover,.setup:hover,a.card:hover{transform:none}
+  button:hover,.setup:hover,a.card:hover,.step:hover,.cta:hover,.ghost:hover{transform:none}
 }
 /* ---------- nav: fixed inner width so it never reshapes between pages ---------- */
 .ftbar{width:100%;border-bottom:1px solid var(--hair);background:var(--panel);
@@ -105,10 +155,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ring);
 /* cards — shadcn border + subtle shadow, one radius step up */
 .panel,.kpi,.card,.q,.hstep,.cf-card{border-radius:var(--radius-lg);border:1px solid var(--border)}
 /* tables — shadcn data-table rhythm: taller rows, muted uppercase head, no vertical rules */
-thead th{font-weight:500;color:var(--muted-foreground);height:40px;vertical-align:middle}
-tbody td{height:40px;vertical-align:middle}   /* denser than shadcn default: financial tables run long */
-tbody tr{border-bottom:1px solid var(--border)}
-tbody tr:last-child{border-bottom:none}
+thead th{font-weight:500;color:var(--muted-foreground);height:auto;vertical-align:middle}
+tbody td{vertical-align:middle}
 /* badges */
 .tag,.pill,.srcbadge{border-radius:var(--radius-full);font-weight:500;border:1px solid var(--border);
   padding:3px 10px;font-size:11px;line-height:1.5}
@@ -131,55 +179,121 @@ tbody tr:last-child{border-bottom:none}
 document.querySelectorAll('.ftnav a[data-p]').forEach(function(a){
   if(a.getAttribute('data-p')===f){a.classList.add('on');a.setAttribute('aria-current','page');}});})();</script>
 <div class="wrap">
-<div class="pill a">● runs entirely in your browser</div>
-<h1>Folio Terminal</h1>
-<div class="sub">Portfolio analytics · shareable stock baskets</div>
-<p class="lede">Two tools for Indian equity investors. Both run <b>entirely in this page</b> —
-no account, no server, no broker connection, nothing uploaded. Your holdings never leave your device.</p>
 
-<div class="cards">
-  <a class="card" href="basket.html">
-    <h2>Basket Workbench →</h2>
-    <p>Someone shares a stock basket with you. Size it to <i>your</i> capital and get the exact
-       share counts to buy. Or build your own basket from a list of symbols and share it.</p>
-    <span class="go">Open the workbench</span>
-  </a>
-  <a class="card" href="dashboard.html">
-    <h2>Folio Dashboard →</h2>
-    <p>Drop a broker tradebook in and get FIFO-matched realised P&amp;L, an equity curve,
-       basket concentration, and a “what if I never sold” counterfactual.</p>
-    <span class="go">Open the dashboard</span>
-  </a>
+<div class="pill a">Runs entirely in your browser</div>
+<h1>Someone shares a basket. You get your own buy list.</h1>
+<p class="lede">A basket is a list of stocks and <b>target percentages</b> — not share counts.
+Type what you want to invest and Folio Terminal turns those percentages into exact whole-share
+orders at <b>your</b> capital, not theirs.</p>
+<div class="actions">
+  <a class="cta" href="basket.html">Open the workbench</a>
+  <a class="ghost" href="friends.html">I was sent a basket</a>
+</div>
+<p class="smallprint">No account. No server. Nothing uploaded. Not investment advice.</p>
+
+<h2>How it works</h2>
+<div class="steps">
+  <div class="step">
+    <svg class="ic" viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>
+    <span class="n">01</span>
+    <b>Load the sheet</b>
+    <p>Drag the <code>.json</code> a friend sent you onto the page, or paste the text.
+       You immediately see how many stocks it holds and the minimum it needs.</p>
+  </div>
+  <div class="step">
+    <svg class="ic" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h10M7 13h5M7 17h3"/></svg>
+    <span class="n">02</span>
+    <b>Type your amount</b>
+    <p>Get share counts, total cost, and how far each holding lands from its target weight
+       once rounded to whole shares.</p>
+  </div>
+  <div class="step">
+    <svg class="ic" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/><circle cx="4" cy="12" r="1.4"/></svg>
+    <span class="n">03</span>
+    <b>Place the orders</b>
+    <p>Copy them into your broker by hand, or hand the whole basket to Zerodha Kite
+       pre-filled — you review and confirm every order there.</p>
+  </div>
 </div>
 
-<p style="margin-top:18px;font-size:14px;color:var(--tx2)">Been sent a basket and not sure what to do?
-  → <a href="friends.html"><b>Start here</b></a></p>
-
-<h3>How basket sharing works</h3>
+<h2>The idea</h2>
 <div class="panel">
-  <p><b>1 · A basket is just weights.</b> A small <code>.json</code> file listing each stock and
-     what percentage of the basket it should be — plus a reference price.</p>
-  <p><b>2 · Weights travel; share counts don't.</b> You might invest ₹4,00,000 and a friend
-     ₹80,000. The same file works for both, because the page turns weights into whole share
-     counts at whatever amount you type.</p>
-  <p><b>3 · It tells you the truth about size.</b> Every basket has a minimum below which the
-     priciest stock can't get even one share. The page shows that minimum, and shows how far
-     each holding lands from its target weight once rounded.</p>
+  <div class="cmp">
+    <div>
+      <div class="cap">You invest</div><div class="amt mono">₹4,00,000</div>
+      <table><thead><tr><th>Stock</th><th class="r">Shares</th><th class="r">Weight</th></tr></thead>
+      <tbody>
+        <tr><td class="sym">TCS</td><td class="r mono">31</td><td class="r"><span class="pct">24.7%</span></td></tr>
+        <tr><td class="sym">RELIANCE</td><td class="r mono">92</td><td class="r"><span class="pct">30.2%</span></td></tr>
+        <tr><td class="sym">HDFCBANK</td><td class="r mono">103</td><td class="r"><span class="pct">45.1%</span></td></tr>
+      </tbody></table>
+    </div>
+    <div>
+      <div class="cap">Your friend invests</div><div class="amt mono">₹80,000</div>
+      <table><thead><tr><th>Stock</th><th class="r">Shares</th><th class="r">Weight</th></tr></thead>
+      <tbody>
+        <tr><td class="sym">TCS</td><td class="r mono">6</td><td class="r"><span class="pct">24.1%</span></td></tr>
+        <tr><td class="sym">RELIANCE</td><td class="r mono">18</td><td class="r"><span class="pct">29.7%</span></td></tr>
+        <tr><td class="sym">HDFCBANK</td><td class="r mono">21</td><td class="r"><span class="pct">46.2%</span></td></tr>
+      </tbody></table>
+    </div>
+  </div>
+  <p class="punch">Same file, same targets of <span class="tgt mono">25 / 30 / 45%</span> — and
+    <b>completely different share counts</b>. That is the whole trick: percentages travel between
+    people, share counts don't.</p>
+  <p class="punch" style="border-top:none;padding-top:0;margin-top:9px;font-size:13.5px">
+    Notice the weights aren't identical either. Whole shares don't divide evenly, so the smaller
+    amount drifts further from target — <b>1.2 points</b> at ₹80,000 versus <b>0.3</b> at ₹4,00,000.
+    The page shows you that drift rather than hiding it, and below this basket's minimum of
+    <span class="mono">₹12,720</span> it stops you instead of quietly dropping TCS.
+    <span class="note">(Illustrative prices.)</span></p>
 </div>
 
-<h3>Good to know</h3>
-<div class="panel">
-  <p><b>No price feed.</b> A page with no server can't look up live prices, and browsers block
-     calling exchange APIs directly. So prices come from you — type them, or leave them out and
-     the page will ask when you size the basket.</p>
-  <p><b>The dashboard needs your tradebook.</b> Download it from your broker (for Zerodha:
-     Console → Reports → Tradebook) and drag the file onto the page.</p>
-  <p><b>Sharing paid research.</b> If a basket's constituents come from a paid subscription,
-     that provider's terms usually restrict passing them on. Baskets you build yourself are yours.</p>
+<h2>What it will not do</h2>
+<div class="lim">
+  <div class="lrow">
+    <svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m7 14 4-4 3 3 4-6"/><path d="M17 4h4v4" opacity=".4"/></svg>
+    <div><b>Fetch live prices</b>
+      <p>A page with no server can't call an exchange, and browsers block it anyway. Prices come
+         from the sheet you were sent, or you type them from your broker app.</p></div>
+  </div>
+  <div class="lrow">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+    <div><b>Shrink a basket silently</b>
+      <p>Below the minimum, the priciest stock can't get even one share. Rather than drop it and
+         hand you a different portfolio, the page blocks and suggests amounts that work.</p></div>
+  </div>
+  <div class="lrow">
+    <svg viewBox="0 0 24 24"><path d="M12 3 3 7v6c0 4.5 3.8 7.6 9 8.5 5.2-.9 9-4 9-8.5V7l-9-4Z"/><path d="M9 12h6"/></svg>
+    <div><b>Give you advice</b>
+      <p>It does arithmetic. It doesn't know whether a basket is any good, and nothing is placed
+         until you confirm it yourself in your own broker.</p></div>
+  </div>
+</div>
+
+<h2>Also here</h2>
+<div class="panel" style="padding:8px 24px">
+  <a class="lrow lnk" href="dashboard.html" style="padding-left:0;padding-right:0">
+    <svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>
+    <div><b>Folio Dashboard →</b>
+      <p>Drop a broker tradebook in for FIFO-matched realised P&amp;L, an equity curve, basket
+         concentration, and a “what if I never sold” counterfactual.</p></div>
+  </a>
+  <a class="lnk lrow" href="onboarding.html" style="padding-left:0;padding-right:0;border-bottom:none">
+    <svg viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg>
+    <div><b>One-click ordering →</b>
+      <p>Optional, free, about five minutes. Lets the workbench hand a whole basket to Kite
+         pre-filled instead of you typing each order.</p></div>
+  </a>
 </div>
 
 <div class="foot">
-  Open source · <a href="https://github.com/udaysrinu/folio-terminal">github.com/udaysrinu/folio-terminal</a><br>
-  Not investment advice. Verify every order in your broker before placing it.
+  <span>Open source · MIT</span>
+  <span class="mid">
+    <a href="https://github.com/udaysrinu/folio-terminal">Repository</a>
+    <a href="friends.html">Guide</a>
+    <a href="onboarding.html">Setup</a>
+  </span>
+  <span>Not investment advice. Verify every order in your broker before placing it.</span>
 </div>
 </div></body></html>
