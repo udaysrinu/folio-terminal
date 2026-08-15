@@ -2,17 +2,29 @@
 <title>Folio Terminal — shareable stock baskets, sized to your capital</title>
 <meta name="description" content="Someone shares a stock basket; you get your own buy list. Weights travel, share counts don't. Runs entirely in your browser — no account, no server, nothing uploaded.">
 <style>
-:root{--bg:#e8e8de;--bg2:#f1f0e8;--panel:#fbfaf6;--panel2:#f4f2ea;--hair:#e2e0d4;--hair2:#ccc9ba;
---tx:#1b1b19;--tx2:#5b5a50;--tx3:#67665b;--em:#0f6b42;--ox:#b52d23;--gold:#856011;--blue:#2b5fc4}
+/* ---------- type: self-hosted, latin subset. Direction B ---------- */
+@font-face{font-family:'IBM Plex Sans';src:url(fonts/plex-sans-400.woff2)format('woff2');
+  font-weight:400;font-display:swap}
+@font-face{font-family:'IBM Plex Sans';src:url(fonts/plex-sans-600.woff2)format('woff2');
+  font-weight:600;font-display:swap}
+@font-face{font-family:'IBM Plex Mono';src:url(fonts/plex-mono-400.woff2)format('woff2');
+  font-weight:400;font-display:swap}
+@font-face{font-family:'IBM Plex Mono';src:url(fonts/plex-mono-500.woff2)format('woff2');
+  font-weight:500;font-display:swap}
+@font-face{font-family:'Barlow Semi Condensed';src:url(fonts/barlow-sc-600.woff2)format('woff2');
+  font-weight:600;font-display:swap}
+
+:root{--bg:#E9EAE3;--bg2:#F3F4EE;--panel:#FCFCF8;--panel2:#F3F4EE;--hair:#BCC3B8;--hair2:#A6AFA2;
+--tx:#18211D;--tx2:#46534C;--tx3:#5C6A61;--em:#155A78;--gain:#0B5B3A;--action:#155A78;--rule:#BCC3B8;--rule-strong:#A6AFA2;--display:'Barlow Semi Condensed';--ui:'IBM Plex Sans';--num:'IBM Plex Mono';--ox:#A52A22;--gold:#7A4E00;--blue:#2b5fc4}
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--tx);font-family:Inter,system-ui,sans-serif;font-size:15px;
+body{background:var(--bg);color:var(--tx);font-family:var(--ui),'IBM Plex Sans',system-ui,sans-serif;font-size:15px;
 line-height:1.55;padding:0 0 70px;
 background-image:linear-gradient(180deg,rgba(0,0,0,.05),transparent 240px)}
 .wrap{max-width:880px;margin:0 auto;padding:0 20px}
-.mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums}
+.mono{font-family:var(--num),ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums}
 
 /* ---------- hero ---------- */
-h1{font-size:34px;font-weight:800;letter-spacing:-.025em;line-height:1.15;max-width:15em}
+h1{font-family:var(--display),'Barlow Semi Condensed',sans-serif;font-size:34px;font-weight:600;letter-spacing:-.025em;line-height:1.15;max-width:15em}
 .lede{font-size:16.5px;color:var(--tx2);margin-top:18px;max-width:34em}
 .lede b{color:var(--tx);font-weight:600}
 .pill{display:inline-block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;
@@ -81,7 +93,7 @@ a.lnk:hover{background:var(--panel2)}
 a.lnk:hover svg{stroke:var(--em)}
 a{color:var(--em)}
 code{background:var(--panel2);border:1px solid var(--hair);border-radius:var(--radius-sm);
-padding:1px 6px;font-family:ui-monospace,monospace;font-size:12.5px}
+padding:1px 6px;font-family:var(--num),ui-monospace,monospace;font-size:12.5px}
 .foot{border-top:1px solid var(--hair);margin-top:48px;padding-top:22px;
 display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between;align-items:baseline;
 font-size:11.5px;color:var(--tx3);line-height:1.8}
@@ -119,7 +131,7 @@ button,.tab,.fbtn,a.card,.drop,summary{cursor:pointer}
   min-height:34px;line-height:1}   /* line-height:1 — else each page's body lh resizes the bar */
 .ftnav a:hover{background:var(--panel2);color:var(--tx);transform:none}
 .ftnav a.on{background:var(--em);color:#fff;font-weight:600}
-.ftnav a.brand{font-weight:800;font-size:13.5px;color:var(--tx);margin-right:8px;padding-left:0}
+.ftnav a.brand{font-family:var(--display),'Barlow Semi Condensed',sans-serif;font-weight:600;font-size:13.5px;color:var(--tx);margin-right:8px;padding-left:0}
 .ftnav a.brand:hover{background:transparent;color:var(--em)}
 .ftnav svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.9;flex:none}
 
@@ -151,7 +163,7 @@ input,select,textarea{border-radius:var(--radius);border:1px solid var(--input);
 input:not([type=radio]):not([type=checkbox]),select{min-height:36px;padding:8px 12px}
 input::placeholder,textarea::placeholder{color:var(--tx3)}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ring);
-  box-shadow:0 0 0 3px rgba(15,107,66,.14)}
+  box-shadow:0 0 0 3px rgba(21,90,120,.16)}
 /* cards — shadcn border + subtle shadow, one radius step up */
 .panel,.kpi,.card,.q,.hstep,.cf-card{border-radius:var(--radius-lg);border:1px solid var(--border)}
 /* tables — shadcn data-table rhythm: taller rows, muted uppercase head, no vertical rules */

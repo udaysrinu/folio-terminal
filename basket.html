@@ -4,13 +4,25 @@
  integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw"
  crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <style>
-:root{--bg:#e8e8de;--bg2:#f1f0e8;--panel:#fbfaf6;--panel2:#f4f2ea;--hair:#e2e0d4;--hair2:#ccc9ba;--tx:#1b1b19;--tx2:#5b5a50;--tx3:#67665b;--em:#0f6b42;--em2:#0d5c39;--ox:#b52d23;--ox2:#9e2a20;--gold:#856011;--blue:#2b5fc4}
+/* ---------- type: self-hosted, latin subset. Direction B ---------- */
+@font-face{font-family:'IBM Plex Sans';src:url(fonts/plex-sans-400.woff2)format('woff2');
+  font-weight:400;font-display:swap}
+@font-face{font-family:'IBM Plex Sans';src:url(fonts/plex-sans-600.woff2)format('woff2');
+  font-weight:600;font-display:swap}
+@font-face{font-family:'IBM Plex Mono';src:url(fonts/plex-mono-400.woff2)format('woff2');
+  font-weight:400;font-display:swap}
+@font-face{font-family:'IBM Plex Mono';src:url(fonts/plex-mono-500.woff2)format('woff2');
+  font-weight:500;font-display:swap}
+@font-face{font-family:'Barlow Semi Condensed';src:url(fonts/barlow-sc-600.woff2)format('woff2');
+  font-weight:600;font-display:swap}
+
+:root{--bg:#E9EAE3;--bg2:#F3F4EE;--panel:#FCFCF8;--panel2:#F3F4EE;--hair:#BCC3B8;--hair2:#A6AFA2;--tx:#18211D;--tx2:#46534C;--tx3:#5C6A61;--em:#155A78;--gain:#0B5B3A;--action:#155A78;--rule:#BCC3B8;--rule-strong:#A6AFA2;--display:'Barlow Semi Condensed';--ui:'IBM Plex Sans';--num:'IBM Plex Mono';--ox:#A52A22;--ox2:#9e2a20;--gold:#7A4E00;--blue:#2b5fc4}
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--tx);font-family:Inter,system-ui,sans-serif;font-size:15px;
+body{background:var(--bg);color:var(--tx);font-family:var(--ui),'IBM Plex Sans',system-ui,sans-serif;font-size:15px;
 line-height:1.5;padding:24px 20px 60px}
 .wrap{max-width:1000px;margin:0 auto}
-.mono{font-family:ui-monospace,"SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums}
-h1{font-size:26px;font-weight:800;letter-spacing:-.02em}
+.mono{font-family:var(--num),ui-monospace,Menlo,monospace;font-variant-numeric:tabular-nums}
+h1{font-family:var(--display),'Barlow Semi Condensed',sans-serif;font-size:26px;font-weight:600;letter-spacing:-.02em}
 .sub{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--tx2);margin-top:5px}
 h2{font-size:11.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--tx2);
 display:flex;align-items:center;gap:10px;margin:26px 0 12px}
@@ -18,13 +30,13 @@ h2::after{content:'';flex:1;height:1px;background:var(--hair)}
 .panel{background:var(--panel);border:1px solid var(--hair);border-radius:var(--radius-lg);box-shadow:0 1px 2px rgba(0,0,0,.04),0 10px 26px -12px rgba(0,0,0,.10);padding:18px}
 .drop{border:1.5px dashed var(--hair2);border-radius:var(--radius-md);padding:26px 22px;text-align:center;
 background:linear-gradient(160deg,var(--panel),var(--bg2));cursor:pointer;transition:.18s}
-.drop:hover,.drop.over{border-color:var(--em);background:rgba(30,199,125,.05)}
+.drop:hover,.drop.over{border-color:var(--em);background:rgba(21,90,120,.06)}
 .drop b{color:var(--em)}
 .dn{font-size:11.5px;color:var(--tx3);margin-top:7px;font-style:italic}
 textarea{width:100%;min-height:150px;max-height:70vh;overflow:auto;resize:vertical;background:var(--panel2);border:1px solid var(--hair2);
-color:var(--tx);border-radius:var(--radius);padding:11px;font-family:ui-monospace,monospace;font-size:12.5px;line-height:1.5}
+color:var(--tx);border-radius:var(--radius);padding:11px;font-family:var(--num),ui-monospace,monospace;font-size:12.5px;line-height:1.5}
 input[type=number]{background:var(--panel2);border:1px solid var(--hair2);color:var(--tx);
-border-radius:var(--radius);padding:11px 13px;font-family:ui-monospace,monospace;font-size:17px;width:230px}
+border-radius:var(--radius);padding:11px 13px;font-family:var(--num),ui-monospace,monospace;font-size:17px;width:230px}
 button{font-size:12px;letter-spacing:.05em;padding:9px 16px;border-radius:var(--radius);border:1px solid var(--hair2);
 background:var(--panel2);color:var(--tx);cursor:pointer}
 button:hover{border-color:var(--em);color:var(--em)}
@@ -32,17 +44,17 @@ button.pri{background:var(--em);border-color:var(--em);color:#ffffff;font-weight
 .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
 .kpi{background:linear-gradient(160deg,var(--panel),var(--bg2));border:1px solid var(--hair);
-border-radius:var(--radius-lg);padding:15px 17px;border-left:3px solid var(--accent,var(--blue));position:relative;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.04),0 10px 26px -12px rgba(0,0,0,.10)}
+border-radius:var(--radius-lg);padding:15px 17px;border-left:3px solid var(--accent,var(--rule-strong));position:relative;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.04),0 10px 26px -12px rgba(0,0,0,.10)}
 .kpi::after{content:'';position:absolute;top:-26px;right:-18px;width:82px;height:82px;border-radius:50%;background:rgba(0,0,0,.035);pointer-events:none}
 .kpi .k{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--tx2)}
 .kpi .v{font-size:24px;font-weight:800;margin-top:5px;line-height:1}
 .kpi .s{font-size:11px;color:var(--tx2);margin-top:4px}
 .tag{display:inline-block;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;
 padding:4px 10px;border-radius:var(--radius-full);border:1px solid var(--hair2);color:var(--tx2);margin-right:7px}
-.tag.risk-low{border-color:var(--em);color:var(--em)}
+.tag.risk-low{border-color:var(--gain);color:var(--gain)}
 .tag.risk-moderate{border-color:var(--gold);color:var(--gold)}
 .tag.risk-high{border-color:var(--ox);color:var(--ox)}
-.tag.theme{border-color:var(--blue);color:var(--blue)}
+.tag.theme{border-color:var(--hair2);color:var(--tx2)}
 table{width:100%;border-collapse:collapse;margin-top:4px}
 th{font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--tx2);text-align:left;
 padding:10px;border-bottom:1px solid var(--hair2)}
@@ -52,10 +64,10 @@ tr:hover td{background:var(--panel2)}
 td.sym{font-weight:600;font-size:12.5px}
 tr.skip td{opacity:.45}
 tfoot td{font-weight:700;border-top:1px solid var(--hair2);border-bottom:none}
-.wbar{height:6px;border-radius:var(--radius-xs);background:var(--blue);min-width:2px}
-.warn{border:1px solid var(--gold);background:rgba(224,169,46,.08);color:var(--gold);
+.wbar{height:6px;border-radius:var(--radius-xs);background:var(--rule-strong);min-width:2px}
+.warn{border:1px solid var(--gold);background:#F7EEDC;color:var(--gold);
 border-radius:var(--radius);padding:11px 14px;font-size:12.5px;margin-top:12px}
-.err{border-color:var(--ox);background:rgba(255,93,82,.08);color:var(--ox)}
+.err{border-color:var(--ox);background:#F8E9E6;color:var(--ox)}
 .note{font-size:12px;color:var(--tx2);font-style:italic;margin-top:9px;line-height:1.5}
 .foot{font-size:10.5px;color:var(--tx3);text-align:center;margin-top:36px;line-height:1.7}
 .hide{display:none}
@@ -78,7 +90,7 @@ font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:c
 .harr{align-self:center;color:var(--tx3);font-size:17px}
 @media(max-width:780px){.harr{display:none}}
 code{background:var(--panel2);border:1px solid var(--hair);border-radius:var(--radius-sm);padding:1px 5px;
-font-family:ui-monospace,monospace;font-size:12px}
+font-family:var(--num),ui-monospace,monospace;font-size:12px}
 .sendbox{margin-top:12px;background:var(--panel2);border:1px solid var(--hair);border-radius:var(--radius);
 padding:13px 16px;font-size:12.5px;color:var(--tx2)}
 .sendbox b{color:var(--tx)} .sendbox ol{margin:7px 0 7px 20px} .sendbox li{margin:3px 0}
@@ -90,8 +102,8 @@ padding:13px 16px;font-size:12.5px;color:var(--tx2)}
 .otype input[type=number]{width:58px;padding:5px 7px;font-size:12px}
 .setup{font-size:12.5px;color:var(--em);text-decoration:none;border:1px dashed var(--em);
 border-radius:var(--radius);padding:9px 14px}
-.setup:hover{background:rgba(18,120,74,.07)}
-.ok{border:1px solid var(--em);background:rgba(18,120,74,.08);color:var(--em);
+.setup:hover{background:#E4F0E9}
+.ok{border:1px solid var(--gain);background:#E4F0E9;color:var(--gain);
 border-radius:var(--radius);padding:11px 14px;font-size:12.5px;margin-top:12px}
 
 /* ---------- motion system: 160-220ms, ease-out entering, no layout shift ---------- */
@@ -124,7 +136,7 @@ button,.tab,.fbtn,a.card,.drop,summary{cursor:pointer}
   min-height:34px;line-height:1}   /* line-height:1 — else each page's body lh resizes the bar */
 .ftnav a:hover{background:var(--panel2);color:var(--tx);transform:none}
 .ftnav a.on{background:var(--em);color:#fff;font-weight:600}
-.ftnav a.brand{font-weight:800;font-size:13.5px;color:var(--tx);margin-right:8px;padding-left:0}
+.ftnav a.brand{font-family:var(--display),'Barlow Semi Condensed',sans-serif;font-weight:600;font-size:13.5px;color:var(--tx);margin-right:8px;padding-left:0}
 .ftnav a.brand:hover{background:transparent;color:var(--em)}
 .ftnav svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.9;flex:none}
 
@@ -156,7 +168,7 @@ input,select,textarea{border-radius:var(--radius);border:1px solid var(--input);
 input:not([type=radio]):not([type=checkbox]),select{min-height:36px;padding:8px 12px}
 input::placeholder,textarea::placeholder{color:var(--tx3)}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ring);
-  box-shadow:0 0 0 3px rgba(15,107,66,.14)}
+  box-shadow:0 0 0 3px rgba(21,90,120,.16)}
 /* cards — shadcn border + subtle shadow, one radius step up */
 .panel,.kpi,.card,.q,.hstep,.cf-card{border-radius:var(--radius-lg);border:1px solid var(--border)}
 /* tables — shadcn data-table rhythm: taller rows, muted uppercase head, no vertical rules */
@@ -175,6 +187,51 @@ tbody tr:last-child{border-bottom:none}
 /* segmented control (tabs, toggles) */
 .tab,.fbtn,.atog button{border-radius:var(--radius);font-weight:500}
 .tab.on,.fbtn.on{box-shadow:0 1px 2px rgba(0,0,0,.08)}
+
+/* ============ Direction B: instrument readout + ledger ============ */
+/* The money-to-orders calculation is the visual centre. One line, left aligned,
+   monospace tabular — an instrument readout, not a form inside a card. */
+.readout{margin:2px 0 6px;font-family:var(--num),ui-monospace,monospace;
+  font-variant-numeric:tabular-nums;font-size:clamp(19px,2.5vw,31px);font-weight:500;
+  letter-spacing:-.015em;line-height:1.3;color:var(--tx)}
+.readout .arw{color:var(--tx3);font-weight:400;padding:0 .35em}
+.readout .dep{color:var(--tx)}                 /* deployed is a fact, not a gain: ink, never green */
+.readout .lo{color:var(--tx2)}
+.readout .short{color:var(--ox)}
+.rolabel{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3);
+  font-weight:600;margin-bottom:3px}
+.rosub{font-size:13px;color:var(--tx2);margin:8px 0 0;max-width:62ch}
+.rosub b{color:var(--tx);font-weight:600}
+
+/* Holdings read as a ledger: horizontal rules only, no vertical lines, no zebra fill. */
+.ledger{background:var(--panel);border:1px solid var(--rule-strong);
+  border-radius:var(--radius-sm);padding:2px 20px 6px;
+  /* 7 columns cannot fit 375px. Scroll the ledger inside its own card rather than
+     letting it push the whole page sideways, and keep every column readable. */
+  overflow-x:auto;-webkit-overflow-scrolling:touch}
+.ledger table{width:100%;border-collapse:collapse;min-width:430px}
+.ledger thead th{font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--tx3);
+  font-weight:600;text-align:left;padding:13px 0 7px;border-bottom:1px solid var(--rule-strong);
+  height:auto}
+.ledger th.r,.ledger td.r{text-align:right}
+.ledger tbody td{padding:0 0 0 0;height:38px;vertical-align:middle;font-size:13.5px;
+  border-bottom:1px solid var(--rule)}
+.ledger tbody tr:last-child td{border-bottom:none}
+.ledger tbody tr:hover{background:var(--panel2)}
+.ledger td.sym{font-weight:600;letter-spacing:.01em}
+.ledger .mono{font-family:var(--num),ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.ledger tfoot td{border-top:1px solid var(--rule-strong);border-bottom:none;height:40px;
+  font-weight:600;font-size:13px}
+.ledger tfoot .lbl{font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--tx3)}
+.ledger tr.skip td{color:var(--tx3)}
+.up{color:var(--gain);font-weight:600}      /* financial result: green */
+.dn{color:var(--ox);font-weight:600}        /* financial result: red   */
+.flat{color:var(--tx3)}
+@media(max-width:520px){                    /* after the .ledger rules, so it wins the cascade */
+  .ledger{padding:2px 14px 6px}
+  .ledger thead th{font-size:10.5px}        /* 9.5px is unreadable on a phone */
+  .ledger tbody td{font-size:13px}
+}
 </style></head><body>
 <div class="ftbar"><nav class="ftnav" aria-label="Main">
 <a href="index.html" class="brand">Folio Terminal</a>
@@ -404,7 +461,7 @@ function load(obj){
   const top=Object.keys(w).sort((a,b)=>w[b]-w[a]);
   const top3=top.slice(0,3).reduce((a,s)=>a+w[s],0)/tot*100;
   const eN=effN(w);
-  const conc=eN>=10?['Low','var(--em)']:eN>=5?['Moderate','var(--gold)']:['High','var(--ox)'];
+  const conc=eN>=10?['Low','var(--gain)']:eN>=5?['Moderate','var(--gold)']:['High','var(--ox)'];
   const risk=(SHEET.risk||'').toLowerCase();
 
   $('prof').innerHTML=`<div class="panel" style="margin-bottom:12px">
@@ -416,7 +473,7 @@ function load(obj){
       <span class="tag">${n} stocks</span>
     </div></div>
    <div class="kpis">
-    <div class="kpi" style="--accent:var(--blue)"><div class="k">Minimum</div>
+    <div class="kpi" style="--accent:var(--em)"><div class="k">Minimum</div>
       <div class="v mono">${M(mu)}</div><div class="s">for whole shares · binding: ${top.reduce((a,s)=>p[s]/w[s]>p[a]/w[a]?s:a)}</div></div>
     <div class="kpi" style="--accent:${conc[1]}"><div class="k">Concentration</div>
       <div class="v" style="color:${conc[1]}">${conc[0]}</div><div class="s">${eN.toFixed(1)} effective holdings</div></div>
@@ -513,28 +570,35 @@ function calc(){
     if(d>worst){worst=d;worstSym=r.s;}});
   const skipped=rows.filter(r=>r.skip);
   $('orders').className='enter';
+  const nLive=rows.filter(r=>!r.skip).length, over=cost>amt, resid=Math.abs(amt-cost);
   $('orders').innerHTML=`<h2>Step 4 · Place these orders</h2>
    ${amt<min?`<div class="warn"><b>Below the ${M(min)} minimum.</b> ${skipped.length} stock(s) can't
      afford even one share and are skipped — the basket's shape changes. Consider ${M(min)} or more.</div>`:''}
-   <div class="panel"><table>
-    <thead><tr><th>Stock</th><th>Target</th><th class="r">Price</th><th class="r">Qty</th>
-      <th class="r">Value</th><th class="r">Actual</th><th class="r">Drift</th></tr></thead>
-    <tbody>${rows.map(r=>`<tr class="${r.skip?'skip':''}">
+   <div class="rolabel">This basket, sized to you</div>
+   <div class="readout">${M(amt)}<span class="arw">→</span>${nLive} stock${nLive===1?'':'s'}<span
+     class="arw">→</span><span class="dep">${M(cost)} deployed</span><span class="arw">→</span><span
+     class="${over?'short':'lo'}">${M(resid)} ${over?'over' : 'left'}</span></div>
+   <p class="rosub">${(cost/amt*100).toFixed(1)}% of your amount goes in. Whole shares only, so the
+     rounding leaves <b>${M(resid)}</b> ${over?'over-committed':'uninvested'} and pulls the worst
+     holding <b>${worst.toFixed(1)}%</b> off target (${worstSym}).</p>
+   <div class="ledger"><table>
+    <thead><tr><th>Stock</th><th class="r">Target</th><th class="r">Price</th><th class="r">Shares</th>
+      <th class="r">Cost</th><th class="r">Weight</th><th class="r">Drift</th></tr></thead>
+    <tbody>${rows.map(r=>{const d=r.skip?0:r.val/cost*100-r.w;
+      return `<tr class="${r.skip?'skip':''}">
       <td class="sym">${r.s}</td>
-      <td><div class="row" style="gap:7px"><span class="mono" style="font-size:11.5px;color:var(--tx2);min-width:42px">${r.w.toFixed(1)}%</span>
-        <div class="wbar" style="width:${r.w/mx*90}px"></div></div></td>
+      <td class="r mono">${r.w.toFixed(1)}%</td>
       <td class="r mono">${r.px.toLocaleString('en-IN',{maximumFractionDigits:2})}</td>
-      <td class="r mono" style="font-weight:700">${r.skip?'—':r.q}</td>
+      <td class="r mono" style="font-weight:600">${r.skip?'—':r.q}</td>
       <td class="r mono">${r.skip?'skipped':M(r.val)}</td>
       <td class="r mono">${r.skip?'—':(r.val/cost*100).toFixed(1)+'%'}</td>
-      <td class="r mono" style="color:${r.skip?'var(--tx3)':Math.abs(r.val/cost*100-r.w)>1.5?'var(--gold)':'var(--tx2)'}">
-        ${r.skip?'—':(r.val/cost*100-r.w>=0?'+':'')+(r.val/cost*100-r.w).toFixed(1)+'%'}</td></tr>`).join('')}</tbody>
-    <tfoot><tr><td colspan="3">TOTAL</td>
+      <td class="r mono ${r.skip?'flat':d>0.05?'up':d<-0.05?'dn':'flat'}">
+        ${r.skip?'—':(d>=0?'+':'−')+Math.abs(d).toFixed(1)}</td></tr>`}).join('')}</tbody>
+    <tfoot><tr><td class="lbl">Deployed</td><td class="r mono">100.0%</td><td></td>
       <td class="r mono">${rows.reduce((a,r)=>a+r.q,0)}</td>
-      <td class="r mono">${M(cost)}</td><td class="r mono">100.0%</td><td></td></tr></tfoot></table>
-    <div class="note">${(cost/amt*100).toFixed(1)}% of your amount deployed · rounding leaves
-      ${M(Math.abs(amt-cost))} ${cost>amt?'over':'un'}-committed.
-      Worst weight drift <b>${worst.toFixed(1)}%</b> on ${worstSym}.</div>
+      <td class="r mono">${M(cost)}</td><td class="r mono">${(cost/amt*100).toFixed(1)}%</td>
+      <td class="r mono flat">±${worst.toFixed(1)}</td></tr></tfoot></table></div>
+   <div class="panel" style="margin-top:13px">
     ${(()=>{const b=bestNearby(amt);
       return (worst-b.drift>0.25)
         ? `<div class="row" style="margin-top:11px"><button onclick="setAmt(${b.amt})">
@@ -668,7 +732,7 @@ function rebalance(held){
       <td class="r mono">${r.tgt.toFixed(1)}%</td>
       <td class="r mono" style="color:${r.unknown?'var(--tx3)':Math.abs(r.now-r.tgt)>2?'var(--gold)':'var(--tx2)'}">
         ${r.unknown?'—':(r.now-r.tgt>=0?'+':'')+(r.now-r.tgt).toFixed(1)+'%'}</td>
-      <td class="r mono" style="font-weight:700;color:${r.d>0?'var(--em)':r.d<0?'var(--ox)':'var(--tx3)'}">
+      <td class="r mono" style="font-weight:700;color:${r.d>0?'var(--gain)':r.d<0?'var(--ox)':'var(--tx3)'}">
         ${r.d===0?'—':(r.d>0?'BUY ':'SELL ')+Math.abs(r.d)}</td></tr>`).join('')}
     </tbody></table>
     <div class="note">buy ${M(buy)} · sell ${M(sell)} · net ${(buy-sell>=0?'+':'-')}${M(Math.abs(buy-sell))}</div>

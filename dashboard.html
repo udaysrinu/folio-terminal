@@ -1,22 +1,32 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Folio Terminal</title>
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
-:root{--bg:#e8e8de;--bg2:#f1f0e8;--panel:#fbfaf6;--panel2:#f4f2ea;--hair:#e2e0d4;--hair2:#ccc9ba;--tx:#1b1b19;--tx2:#5b5a50;--tx3:#67665b;--em:#0f6b42;--em2:#0d5c39;--ox:#b52d23;--ox2:#9e2a20;--gold:#856011;--blue:#2b5fc4}
+/* ---------- type: self-hosted, latin subset. Direction B ---------- */
+@font-face{font-family:'IBM Plex Sans';src:url(fonts/plex-sans-400.woff2)format('woff2');
+  font-weight:400;font-display:swap}
+@font-face{font-family:'IBM Plex Sans';src:url(fonts/plex-sans-600.woff2)format('woff2');
+  font-weight:600;font-display:swap}
+@font-face{font-family:'IBM Plex Mono';src:url(fonts/plex-mono-400.woff2)format('woff2');
+  font-weight:400;font-display:swap}
+@font-face{font-family:'IBM Plex Mono';src:url(fonts/plex-mono-500.woff2)format('woff2');
+  font-weight:500;font-display:swap}
+@font-face{font-family:'Barlow Semi Condensed';src:url(fonts/barlow-sc-600.woff2)format('woff2');
+  font-weight:600;font-display:swap}
+
+:root{--bg:#E9EAE3;--bg2:#F3F4EE;--panel:#FCFCF8;--panel2:#F3F4EE;--hair:#BCC3B8;--hair2:#A6AFA2;--tx:#18211D;--tx2:#46534C;--tx3:#5C6A61;--em:#155A78;--gain:#0B5B3A;--action:#155A78;--rule:#BCC3B8;--rule-strong:#A6AFA2;--display:'Barlow Semi Condensed';--ui:'IBM Plex Sans';--num:'IBM Plex Mono';--ox:#A52A22;--ox2:#9e2a20;--gold:#7A4E00;--blue:#2b5fc4}
 *{margin:0;padding:0;box-sizing:border-box}
 @media(prefers-reduced-motion:no-preference){.hr,.kpi,tbody tr,.tab,.chip,.fbtn{transition:background .18s,border-color .18s,transform .18s,color .18s}.fade{animation:f .45s ease both}}
 @keyframes f{from{opacity:0;transform:translateY(8px)}to{opacity:1}}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
-body{background:var(--bg);color:var(--tx);font-family:'Inter',sans-serif;font-size:15px;line-height:1.5;padding:24px 20px 60px;background-image:linear-gradient(180deg,rgba(0,0,0,.05),transparent 240px)}
+body{background:var(--bg);color:var(--tx);font-family:var(--ui),'IBM Plex Sans',system-ui,sans-serif;font-size:15px;line-height:1.5;padding:24px 20px 60px;background-image:linear-gradient(180deg,rgba(0,0,0,.05),transparent 240px)}
 .wrap{max-width:1280px;margin:0 auto}
 .mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
 .pos{color:var(--em)} .neg{color:var(--ox)} .dim{color:var(--tx2)}
 .top{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid var(--hair);padding-bottom:16px}
 .brand{display:flex;align-items:center;gap:13px}
-.logo{width:40px;height:40px;border:1.5px solid var(--em);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,rgba(30,199,125,.12),transparent)}
-h1{font-family:'Inter',sans-serif;font-weight:900;font-size:27px;letter-spacing:-.02em;line-height:1}
+.logo{width:40px;height:40px;border:1.5px solid var(--em);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;background:linear-gradient(145deg,#E4F0E9,transparent)}
+h1{font-family:var(--display),'Barlow Semi Condensed',sans-serif;font-weight:600;font-size:27px;letter-spacing:-.02em;line-height:1}
 .sub{font-family:'IBM Plex Mono';font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--tx2);margin-top:5px}
 .refresh{font-family:'IBM Plex Mono';font-size:11px;color:var(--tx2);text-align:right;line-height:1.5}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--em);animation:blink 2s infinite;box-shadow:0 0 8px var(--em);display:inline-block}
@@ -25,7 +35,7 @@ h1{font-family:'Inter',sans-serif;font-weight:900;font-size:27px;letter-spacing:
 /* attention rail */
 .rail{display:flex;gap:9px;flex-wrap:wrap;margin:16px 0 4px}
 .chip{display:flex;align-items:center;gap:7px;font-family:'IBM Plex Mono';font-size:11.5px;padding:7px 12px;border-radius:var(--radius);border:1px solid var(--hair2);background:var(--panel)}
-.chip b{font-weight:600} .chip.hot{border-color:var(--ox2);background:rgba(255,93,82,.08)} .chip.warn{border-color:var(--gold);background:rgba(224,169,46,.07)} .chip.pos{border-color:var(--em2);background:rgba(30,199,125,.07)} .chip.neg{border-color:var(--ox2);background:rgba(255,93,82,.08)}
+.chip b{font-weight:600} .chip.hot{border-color:var(--ox2);background:#F8E9E6} .chip.warn{border-color:var(--gold);color:var(--gold);background:#F7EEDC} .chip.pos{border-color:var(--gain);color:var(--gain);background:#E4F0E9} .chip.neg{border-color:var(--ox2);background:#F8E9E6}
 .chip .cd{width:6px;height:6px;border-radius:50%;flex:none} .hot .cd{background:var(--ox)} .warn .cd{background:var(--gold)} .pos .cd{background:var(--em)} .neg .cd{background:var(--ox)}
 .tabs{display:flex;gap:6px;margin:20px 0}
 .tab{font-family:'IBM Plex Mono';font-size:12px;letter-spacing:.07em;text-transform:uppercase;padding:9px 18px;cursor:pointer;background:var(--panel);border:1px solid var(--hair);color:var(--tx2);border-radius:var(--radius)}
@@ -33,11 +43,11 @@ h1{font-family:'Inter',sans-serif;font-weight:900;font-size:27px;letter-spacing:
 .view{display:none} .view.on{display:block}
 .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:13px}
 .kpi{background:linear-gradient(160deg,var(--panel),var(--bg2));border:1px solid var(--hair);border-radius:var(--radius-lg);padding:17px 19px;position:relative;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.04),0 10px 26px -12px rgba(0,0,0,.10)}
-.kpi::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--accent,var(--blue))}
-.kpi.g{--accent:var(--em)} .kpi.r{--accent:var(--ox)} .kpi.b{--accent:var(--blue)} .kpi.y{--accent:var(--gold)}
+.kpi::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--accent,var(--rule-strong))}
+.kpi.g{--accent:var(--gain)} .kpi.r{--accent:var(--ox)} .kpi.b{--accent:var(--rule-strong)} .kpi.y{--accent:var(--gold)}
 .kpi::after{content:'';position:absolute;top:-26px;right:-18px;width:86px;height:86px;border-radius:50%;background:rgba(0,0,0,.035);pointer-events:none}
 .kpi .k{font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--tx2)}
-.kpi .v{font-family:'Inter',sans-serif;font-weight:900;font-size:32px;letter-spacing:-.01em;margin-top:6px;line-height:1}
+.kpi .v{font-family:var(--display),'Barlow Semi Condensed',sans-serif;font-weight:600;font-size:32px;letter-spacing:-.01em;margin-top:6px;line-height:1}
 .kpi .s{font-size:12px;color:var(--tx2);margin-top:5px}
 .kpi .s b{font-weight:600}
 h2{font-family:'IBM Plex Mono';font-size:11.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--tx2);display:flex;align-items:center;gap:10px;margin:26px 0 13px}
@@ -58,17 +68,17 @@ h2 svg{width:14px;height:14px;stroke:var(--em);flex:none} h2::after{content:'';f
 .atile .lab{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono';font-size:10px;font-weight:600;color:rgba(255,255,255,.92);text-shadow:0 1px 2px rgba(0,0,0,.4);overflow:hidden;padding:0 2px}
 .atog{display:flex;gap:0;border:1px solid var(--hair2);border-radius:var(--radius);overflow:hidden;width:fit-content;margin-left:auto}
 .atog button{font-family:'IBM Plex Mono';font-size:10.5px;letter-spacing:.04em;padding:6px 13px;background:var(--panel);border:none;border-right:1px solid var(--hair);color:var(--tx2);cursor:pointer}
-.atog button:last-child{border-right:none} .atog button.on{background:var(--blue);color:#fff;font-weight:600}
-.atip{position:fixed;pointer-events:none;z-index:50;color:#f5f4ee;background:#1b1b19;border:1px solid var(--hair2);border-radius:var(--radius);padding:8px 11px;font-family:'IBM Plex Mono';font-size:11.5px;color:var(--tx);box-shadow:0 6px 20px rgba(0,0,0,.5);opacity:0;transition:opacity .1s;white-space:nowrap}
+.atog button:last-child{border-right:none} .atog button.on{background:var(--em);color:#fff;font-weight:600}
+.atip{position:fixed;pointer-events:none;z-index:50;color:#f5f4ee;background:#18211D;border:1px solid var(--hair2);border-radius:var(--radius);padding:8px 11px;font-family:'IBM Plex Mono';font-size:11.5px;color:var(--tx);box-shadow:0 6px 20px rgba(0,0,0,.5);opacity:0;transition:opacity .1s;white-space:nowrap}
 .atip b{font-size:12.5px} .atip .tv{margin-top:3px;color:#b9b7ab}
 .atot{display:flex;justify-content:space-between;align-items:center;margin-top:11px}
-.atot .big{font-family:'Inter',sans-serif;font-weight:900;font-size:22px}
+.atot .big{font-family:var(--display),'Barlow Semi Condensed',sans-serif;font-weight:600;font-size:22px}
 /* P&L breakdown: profit + loss = net */
 .pnlbd{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;align-items:center;gap:0;background:var(--panel);border:1px solid var(--hair);border-radius:var(--radius-md);overflow:hidden}
 .pnlbd .cell{padding:18px 22px;text-align:center}
-.pnlbd .op{font-family:'Inter',sans-serif;font-weight:400;font-size:30px;color:var(--tx3);padding:0 4px}
+.pnlbd .op{font-family:var(--ui),'IBM Plex Sans',system-ui,sans-serif;font-weight:400;font-size:30px;color:var(--tx3);padding:0 4px}
 .pnlbd .lbl{font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--tx2)}
-.pnlbd .num{font-family:'Inter',sans-serif;font-weight:900;font-size:30px;line-height:1.1;margin-top:5px;letter-spacing:-.01em}
+.pnlbd .num{font-family:var(--display),'Barlow Semi Condensed',sans-serif;font-weight:600;font-size:30px;line-height:1.1;margin-top:5px;letter-spacing:-.01em}
 .pnlbd .sub{font-size:11.5px;color:var(--tx2);margin-top:4px}
 .pnlbd .cell.net{background:linear-gradient(160deg,var(--panel2),var(--bg2))}
 @media(max-width:760px){.pnlbd{grid-template-columns:1fr;gap:0}.pnlbd .op{display:none}.pnlbd .cell{border-bottom:1px solid var(--hair)}}
@@ -77,7 +87,7 @@ h2 svg{width:14px;height:14px;stroke:var(--em);flex:none} h2::after{content:'';f
 .ctrl input{background:var(--panel2);border:1px solid var(--hair2);color:var(--tx);font-family:'IBM Plex Mono';font-size:12px;padding:8px 12px;border-radius:var(--radius);width:180px;outline:none}
 .ctrl input:focus{border-color:var(--em)}
 .fbtn{font-family:'IBM Plex Mono';font-size:11px;letter-spacing:.05em;padding:7px 13px;border-radius:var(--radius);border:1px solid var(--hair2);background:var(--panel);color:var(--tx2);cursor:pointer}
-.fbtn:hover{color:var(--tx);border-color:var(--hair2)} .fbtn.on{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:600}
+.fbtn:hover{color:var(--tx);border-color:var(--hair2)} .fbtn.on{background:var(--em);border-color:var(--em);color:#fff;font-weight:600}
 .fsep{width:1px;height:22px;background:var(--hair);margin:0 4px}
 /* holding rows */
 .hr{display:grid;grid-template-columns:128px 116px 1fr 92px 96px;align-items:center;gap:12px;padding:8px 10px;border-bottom:1px solid var(--hair);border-radius:var(--radius-sm);outline:none}
@@ -85,7 +95,7 @@ h2 svg{width:14px;height:14px;stroke:var(--em);flex:none} h2::after{content:'';f
 .hr-s{font-family:'IBM Plex Mono';font-size:13px;font-weight:600}
 .hr-q{font-family:'IBM Plex Mono';font-size:11px;color:var(--tx2)}
 .hr-track{position:relative;height:14px;background:linear-gradient(90deg,transparent 49.5%,var(--hair2) 49.5%,var(--hair2) 50.5%,transparent 50.5%)}
-.hr-bar{position:absolute;top:0;height:14px;border-radius:var(--radius-xs)}.hr-bar.e{background:linear-gradient(90deg,var(--em2),var(--em))}.hr-bar.o{background:linear-gradient(90deg,var(--ox),var(--ox2))}
+.hr-bar{position:absolute;top:0;height:14px;border-radius:var(--radius-xs)}.hr-bar.e{background:linear-gradient(90deg,#0d5c39,var(--gain))}.hr-bar.o{background:linear-gradient(90deg,var(--ox),var(--ox2))}
 .hr-day{font-family:'IBM Plex Mono';font-size:11.5px;text-align:right} .hr-day .ar{font-size:9px}
 .hr-v{font-family:'IBM Plex Mono';font-size:13px;font-weight:600;text-align:right} .hr-v small{display:block;font-size:10px;font-weight:400;opacity:.8}
 /* group header */
@@ -104,48 +114,48 @@ thead th.r{text-align:right} thead th:hover{color:var(--em)}
 tbody td{padding:8px 10px;border-bottom:1px solid var(--hair);font-size:13px} tbody tr:hover{background:var(--panel2)}
 td.sym{font-family:'IBM Plex Mono';font-weight:600;font-size:12px} td.r{text-align:right;font-family:'IBM Plex Mono';font-variant-numeric:tabular-nums} td.b{font-weight:700} td.dt{font-family:'IBM Plex Mono';font-size:11px;color:var(--tx2)}
 .arr{margin:0 5px;color:var(--tx3)}
-.donut{width:190px;height:190px;display:block;margin:0 auto}.dn{font-family:'Inter',sans-serif;font-weight:900;font-size:18px;fill:var(--tx)}.dnl{font-family:'IBM Plex Mono';font-size:8px;letter-spacing:.1em;text-transform:uppercase;fill:var(--tx2)}
+.donut{width:190px;height:190px;display:block;margin:0 auto}.dn{font-family:var(--display),'Barlow Semi Condensed',sans-serif;font-weight:600;font-size:18px;fill:var(--tx)}.dnl{font-family:'IBM Plex Mono';font-size:8px;letter-spacing:.1em;text-transform:uppercase;fill:var(--tx2)}
 .legend{margin-top:10px}.lgi{font-family:'IBM Plex Mono';font-size:11px;color:var(--tx2);display:flex;align-items:center;gap:8px;padding:3px 0}.sw{width:10px;height:10px;border-radius:var(--radius-xs);flex:none}
 .big{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-top:4px}
 .bigc{background:var(--panel);border:1px solid var(--hair);border-radius:var(--radius-md);padding:17px 19px}
 .bigc .t{font-family:'IBM Plex Mono';font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--tx2);display:flex;align-items:center;gap:7px}
-.bigc .n{font-family:'Inter',sans-serif;font-weight:900;font-size:22px;margin-top:5px}.bigc .d{font-size:12px;color:var(--tx2);margin-top:3px}
+.bigc .n{font-family:var(--display),'Barlow Semi Condensed',sans-serif;font-weight:600;font-size:22px;margin-top:5px}.bigc .d{font-size:12px;color:var(--tx2);margin-top:3px}
 .verdict{border:1px solid var(--hair);border-left:3px solid var(--gold);background:var(--panel);border-radius:var(--radius-md);padding:19px 23px;margin-top:18px}
-.verdict .q{font-family:'Inter',sans-serif;font-style:italic;font-size:19px;line-height:1.42}.verdict .a{font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--tx2);margin-top:11px}
+.verdict .q{font-family:var(--ui),'IBM Plex Sans',system-ui,sans-serif;font-style:italic;font-size:19px;line-height:1.42}.verdict .a{font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--tx2);margin-top:11px}
 .note{font-size:12px;color:var(--tx2);font-style:italic;margin-top:8px;line-height:1.5}
 .foot{font-family:'IBM Plex Mono';font-size:10px;color:var(--tx3);text-align:center;margin-top:34px;letter-spacing:.04em;line-height:1.7}
 /* story */
 .info-card{max-width:1080px;margin:0 auto;background:linear-gradient(160deg,var(--panel),var(--bg2));border:1px solid var(--hair2);border-radius:var(--radius-lg);display:grid;grid-template-columns:1.15fr 1fr;overflow:hidden}
 .il{padding:40px 38px;border-right:1px solid var(--hair);display:flex;flex-direction:column}
 .ik{font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--tx2);display:flex;justify-content:space-between;border-bottom:1px solid var(--hair2);padding-bottom:12px}
-.ih{font-family:'Inter',sans-serif;font-weight:900;font-size:54px;line-height:.9;letter-spacing:-.025em;margin-top:24px}.ih em{font-style:italic;font-weight:400;color:var(--ox);display:block}
+.ih{font-family:var(--display),'Barlow Semi Condensed',sans-serif;font-weight:600;font-size:54px;line-height:.9;letter-spacing:-.025em;margin-top:24px}.ih em{font-style:italic;font-weight:400;color:var(--ox);display:block}
 .ilede{font-size:16px;line-height:1.55;color:var(--tx2);margin-top:18px}.ilede b{color:var(--tx);font-weight:600}
-.ibn{margin-top:auto;display:flex;align-items:flex-end;gap:15px;padding-top:22px}.ibn .f{font-family:'Inter',sans-serif;font-weight:900;font-size:66px;line-height:.82;letter-spacing:-.03em}.ibn .c{font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--tx2);padding-bottom:10px;max-width:145px;line-height:1.5}
+.ibn{margin-top:auto;display:flex;align-items:flex-end;gap:15px;padding-top:22px}.ibn .f{font-family:var(--display),'Barlow Semi Condensed',sans-serif;font-weight:600;font-size:66px;line-height:.82;letter-spacing:-.03em}.ibn .c{font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--tx2);padding-bottom:10px;max-width:145px;line-height:1.5}
 .ir{padding:36px 34px;background:var(--bg2);display:flex;flex-direction:column}
 .irk{font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--tx2);margin-bottom:4px}
 .ist{padding:15px 0;border-bottom:1px solid var(--hair);display:flex;align-items:baseline;justify-content:space-between}.ist:first-of-type{border-top:1px solid var(--hair2)}
-.ist .l{font-size:14px}.ist .l small{display:block;font-family:'IBM Plex Mono';font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);margin-top:2px}.ist .v{font-family:'Inter',sans-serif;font-weight:900;font-size:28px}
-.iq{font-family:'Inter',sans-serif;font-style:italic;font-size:14px;line-height:1.45;margin-top:16px;padding-left:12px;border-left:3px solid var(--gold);color:var(--tx)}
+.ist .l{font-size:14px}.ist .l small{display:block;font-family:'IBM Plex Mono';font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--tx3);margin-top:2px}.ist .v{font-family:var(--display),'Barlow Semi Condensed',sans-serif;font-weight:600;font-size:28px}
+.iq{font-family:var(--ui),'IBM Plex Sans',system-ui,sans-serif;font-style:italic;font-size:14px;line-height:1.45;margin-top:16px;padding-left:12px;border-left:3px solid var(--gold);color:var(--tx)}
 @media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}.cols2,.cols-d,.info-card{grid-template-columns:1fr}.hr{grid-template-columns:100px 1fr 84px;gap:9px}.hr-q,.hr-day{display:none}.il{border-right:none;border-bottom:1px solid var(--hair)}}
 /* upload dropzone */
 .drop{border:1.5px dashed var(--hair2);border-radius:var(--radius-md);padding:26px 22px;text-align:center;background:linear-gradient(160deg,var(--panel),var(--bg2));cursor:pointer;transition:border-color .18s,background .18s}
-.drop:hover,.drop.over{border-color:var(--em);background:rgba(30,199,125,.05)}
+.drop:hover,.drop.over{border-color:var(--em);background:rgba(21,90,120,.06)}
 .drop .di{font-family:'IBM Plex Mono';font-size:12.5px;color:var(--tx2)}.drop .di b{color:var(--em);font-weight:600}
-.drop .dh{font-family:'Inter',sans-serif;font-weight:900;font-size:19px;margin-bottom:5px}
+.drop .dh{font-family:var(--display),'Barlow Semi Condensed',sans-serif;font-weight:600;font-size:19px;margin-bottom:5px}
 .drop .dn2{font-size:11px;color:var(--tx3);margin-top:7px;font-style:italic}
 .srcbadge{display:inline-flex;align-items:center;gap:6px;font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:var(--radius-sm);border:1px solid var(--hair2);color:var(--tx2);margin-left:10px}
-.srcbadge.live{border-color:var(--em2);color:var(--em)}.srcbadge.file{border-color:var(--blue);color:var(--blue)}
+.srcbadge.live{border-color:var(--em);color:var(--em)}.srcbadge.file{border-color:var(--hair2);color:var(--tx2)}
 /* counterfactual / never-sold view */
 .cf-hero{display:grid;grid-template-columns:1fr 1fr 1fr;gap:13px}
 .cf-card{background:linear-gradient(160deg,var(--panel),var(--bg2));border:1px solid var(--hair);border-radius:var(--radius-md);padding:19px 21px;position:relative;overflow:hidden}
-.cf-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--accent,var(--blue))}
-.cf-card.phantom{--accent:var(--gold)}.cf-card.actual{--accent:var(--blue)}.cf-card.gap{--accent:var(--em)}.cf-card.gap.neg{--accent:var(--ox)}
+.cf-card::before{content:'';position:absolute;top:0;left:0;width:3px;height:100%;background:var(--accent,var(--rule-strong))}
+.cf-card.phantom{--accent:var(--gold)}.cf-card.actual{--accent:var(--rule-strong)}.cf-card.gap{--accent:var(--gain)}.cf-card.gap.neg{--accent:var(--ox)}
 .cf-card .k{font-family:'IBM Plex Mono';font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--tx2)}
-.cf-card .v{font-family:'Inter',sans-serif;font-weight:900;font-size:33px;letter-spacing:-.01em;margin-top:6px;line-height:1}
+.cf-card .v{font-family:var(--display),'Barlow Semi Condensed',sans-serif;font-weight:600;font-size:33px;letter-spacing:-.01em;margin-top:6px;line-height:1}
 .cf-card .s{font-size:12px;color:var(--tx2);margin-top:6px;line-height:1.5}
 .cf-bar{display:flex;height:46px;border-radius:var(--radius);overflow:hidden;border:1px solid var(--hair2);margin-top:6px}
 .cf-seg{display:flex;align-items:center;justify-content:center;font-family:'IBM Plex Mono';font-size:11px;font-weight:600;color:#ffffff;min-width:0}
-.cf-missing{padding:11px 14px;border-radius:var(--radius);border:1px solid var(--gold);background:rgba(224,169,46,.07);font-family:'IBM Plex Mono';font-size:11.5px;color:var(--gold);margin-top:12px}
+.cf-missing{padding:11px 14px;border-radius:var(--radius);border:1px solid var(--gold);background:#F7EEDC;font-family:'IBM Plex Mono';font-size:11.5px;color:var(--gold);margin-top:12px}
 
 /* ---------- motion system: 160-220ms, ease-out entering, no layout shift ---------- */
 :root{--t:170ms;--e:cubic-bezier(.22,.61,.36,1)}
@@ -177,7 +187,7 @@ button,.tab,.fbtn,a.card,.drop,summary{cursor:pointer}
   min-height:34px;line-height:1}   /* line-height:1 — else each page's body lh resizes the bar */
 .ftnav a:hover{background:var(--panel2);color:var(--tx);transform:none}
 .ftnav a.on{background:var(--em);color:#fff;font-weight:600}
-.ftnav a.brand{font-weight:800;font-size:13.5px;color:var(--tx);margin-right:8px;padding-left:0}
+.ftnav a.brand{font-family:var(--display),'Barlow Semi Condensed',sans-serif;font-weight:600;font-size:13.5px;color:var(--tx);margin-right:8px;padding-left:0}
 .ftnav a.brand:hover{background:transparent;color:var(--em)}
 .ftnav svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.9;flex:none}
 
@@ -209,7 +219,7 @@ input,select,textarea{border-radius:var(--radius);border:1px solid var(--input);
 input:not([type=radio]):not([type=checkbox]),select{min-height:36px;padding:8px 12px}
 input::placeholder,textarea::placeholder{color:var(--tx3)}
 input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ring);
-  box-shadow:0 0 0 3px rgba(15,107,66,.14)}
+  box-shadow:0 0 0 3px rgba(21,90,120,.16)}
 /* cards — shadcn border + subtle shadow, one radius step up */
 .panel,.kpi,.card,.q,.hstep,.cf-card{border-radius:var(--radius-lg);border:1px solid var(--border)}
 /* tables — shadcn data-table rhythm: taller rows, muted uppercase head, no vertical rules */
@@ -240,7 +250,7 @@ document.querySelectorAll('.ftnav a[data-p]').forEach(function(a){
   if(a.getAttribute('data-p')===f){a.classList.add('on');a.setAttribute('aria-current','page');}});})();</script>
 <div class="wrap">
 <div class="top">
-  <div class="brand"><div class="logo"><svg width="21" height="21" fill="none" stroke="#0f6b42" stroke-width="2" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8" stroke-linecap="round"/><path d="M21 7v6h-6" stroke-linecap="round"/></svg></div>
+  <div class="brand"><div class="logo"><svg width="21" height="21" fill="none" stroke="#0B5B3A" stroke-width="2" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8" stroke-linecap="round"/><path d="M21 7v6h-6" stroke-linecap="round"/></svg></div>
   <div><h1>The Folio Terminal</h1><div class="sub">Demo Account</div></div></div>
   <div class="refresh"><div style="display:flex;align-items:center;gap:7px;justify-content:flex-end"><span class="dot"></span><span id="upd">loading…</span></div><button class="rbtn" onclick="load()">↻ Refresh</button></div>
 </div>
@@ -271,8 +281,8 @@ function Mfull(v){v=+v;return (v<0?'−₹':'₹')+Math.abs(v).toLocaleString('e
 const cls=v=>v>=0?'pos':'neg', ec=v=>v>=0?'e':'o', sign=v=>v>=0?'+':'−';
 let DATA=null, fState={q:'',grp:'all',sort:'pnl',dir:-1};
 
-function curveSVG(c,w=540,h=200,pad=30){if(c.length<2)c=c.concat(c);const ys=c.map(p=>p.cum).concat([0]),ymin=Math.min(...ys),ymax=Math.max(...ys),yr=(ymax-ymin)||1,n=c.length;const X=i=>pad+(w-2*pad)*i/(n-1),Y=v=>h-pad-(h-2*pad)*(v-ymin)/yr,z=Y(0);const line=c.map((p,i)=>`${X(i).toFixed(1)},${Y(p.cum).toFixed(1)}`).join(' ');const area=`${X(0).toFixed(1)},${z.toFixed(1)} ${line} ${X(n-1).toFixed(1)},${z.toFixed(1)}`;const dots=c.map((p,i)=>`<circle cx="${X(i).toFixed(1)}" cy="${Y(p.cum).toFixed(1)}" r="3.5" fill="${p.cum>=0?'#0f6b42':'#b52d23'}" stroke="#fbfaf6" stroke-width="2"/>`).join('');const vl=c.map((p,i)=>`<text x="${X(i).toFixed(1)}" y="${(Y(p.cum)-11).toFixed(1)}" text-anchor="middle" class="vl">${M(p.cum)}</text>`).join('');const xl=c.map((p,i)=>`<text x="${X(i).toFixed(1)}" y="${h-7}" text-anchor="middle" class="axl">${p.d.slice(5)}</text>`).join('');return `<svg viewBox="0 0 ${w} ${h}" class="chart"><defs><linearGradient id="eg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0f6b42" stop-opacity=".22"/><stop offset="1" stop-color="#0f6b42" stop-opacity="0"/></linearGradient></defs><line x1="${pad}" y1="${z.toFixed(1)}" x2="${w-pad}" y2="${z.toFixed(1)}" stroke="#ccc9ba" stroke-dasharray="2 3"/><polygon points="${area}" fill="url(#eg)"/><polyline points="${line}" fill="none" stroke="#0f6b42" stroke-width="2.5" stroke-linejoin="round"/>${dots}${vl}${xl}</svg>`}
-function monthSVG(mo,w=540,h=200,pad=32){const vmax=Math.max(...mo.map(m=>Math.abs(m.v)))||1,n=mo.length,gap=(w-2*pad)/n,bw=Math.min(70,gap*.5),mid=h/2;let o=mo.map((m,i)=>{const cx=pad+gap*i+gap/2,bh=(h/2-pad+8)*Math.abs(m.v)/vmax,y=m.v>=0?mid-bh:mid,c=m.v>=0?'#0f6b42':'#b52d23';return `<rect x="${(cx-bw/2).toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" fill="${c}" rx="2"/><text x="${cx.toFixed(1)}" y="${(m.v>=0?y-7:y+bh+15).toFixed(1)}" text-anchor="middle" class="vl">${M(m.v)}</text><text x="${cx.toFixed(1)}" y="${h-6}" text-anchor="middle" class="axl">${m.m}</text>`}).join('');return `<svg viewBox="0 0 ${w} ${h}" class="chart"><line x1="${pad}" y1="${mid}" x2="${w-pad}" y2="${mid}" stroke="#ccc9ba"/>${o}</svg>`}
+function curveSVG(c,w=540,h=200,pad=30){if(c.length<2)c=c.concat(c);const ys=c.map(p=>p.cum).concat([0]),ymin=Math.min(...ys),ymax=Math.max(...ys),yr=(ymax-ymin)||1,n=c.length;const X=i=>pad+(w-2*pad)*i/(n-1),Y=v=>h-pad-(h-2*pad)*(v-ymin)/yr,z=Y(0);const line=c.map((p,i)=>`${X(i).toFixed(1)},${Y(p.cum).toFixed(1)}`).join(' ');const area=`${X(0).toFixed(1)},${z.toFixed(1)} ${line} ${X(n-1).toFixed(1)},${z.toFixed(1)}`;const dots=c.map((p,i)=>`<circle cx="${X(i).toFixed(1)}" cy="${Y(p.cum).toFixed(1)}" r="3.5" fill="${p.cum>=0?'#0B5B3A':'#A52A22'}" stroke="#FCFCF8" stroke-width="2"/>`).join('');const vl=c.map((p,i)=>`<text x="${X(i).toFixed(1)}" y="${(Y(p.cum)-11).toFixed(1)}" text-anchor="middle" class="vl">${M(p.cum)}</text>`).join('');const xl=c.map((p,i)=>`<text x="${X(i).toFixed(1)}" y="${h-7}" text-anchor="middle" class="axl">${p.d.slice(5)}</text>`).join('');return `<svg viewBox="0 0 ${w} ${h}" class="chart"><defs><linearGradient id="eg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0B5B3A" stop-opacity=".22"/><stop offset="1" stop-color="#0B5B3A" stop-opacity="0"/></linearGradient></defs><line x1="${pad}" y1="${z.toFixed(1)}" x2="${w-pad}" y2="${z.toFixed(1)}" stroke="#A6AFA2" stroke-dasharray="2 3"/><polygon points="${area}" fill="url(#eg)"/><polyline points="${line}" fill="none" stroke="#0B5B3A" stroke-width="2.5" stroke-linejoin="round"/>${dots}${vl}${xl}</svg>`}
+function monthSVG(mo,w=540,h=200,pad=32){const vmax=Math.max(...mo.map(m=>Math.abs(m.v)))||1,n=mo.length,gap=(w-2*pad)/n,bw=Math.min(70,gap*.5),mid=h/2;let o=mo.map((m,i)=>{const cx=pad+gap*i+gap/2,bh=(h/2-pad+8)*Math.abs(m.v)/vmax,y=m.v>=0?mid-bh:mid,c=m.v>=0?'#0B5B3A':'#A52A22';return `<rect x="${(cx-bw/2).toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${bh.toFixed(1)}" fill="${c}" rx="2"/><text x="${cx.toFixed(1)}" y="${(m.v>=0?y-7:y+bh+15).toFixed(1)}" text-anchor="middle" class="vl">${M(m.v)}</text><text x="${cx.toFixed(1)}" y="${h-6}" text-anchor="middle" class="axl">${m.m}</text>`}).join('');return `<svg viewBox="0 0 ${w} ${h}" class="chart"><line x1="${pad}" y1="${mid}" x2="${w-pad}" y2="${mid}" stroke="#A6AFA2"/>${o}</svg>`}
 // CUMULATIVE realised P&L curve — line OR stepped (toggle), labeled milestones, optional pre-window base
 let cumMode='line';  // line | step
 function setCum(m){cumMode=m;const el=document.getElementById('cumwrap');if(el&&DATA)el.innerHTML=cumChart(DATA.cumcurve);}
@@ -292,20 +302,20 @@ function cumSVG(cc,w=1120,h=240,pad=44){
   }
   const area=`${path} L ${X(n-1).toFixed(1)} ${z.toFixed(1)} L ${X(0).toFixed(1)} ${z.toFixed(1)} Z`;
   const dots=cc.map((p,i)=>{const up=p.day_pnl>=0;
-    return `<circle cx="${X(i).toFixed(1)}" cy="${Y(p.cum).toFixed(1)}" r="4.5" fill="${up?'#0f6b42':'#b52d23'}" stroke="#fbfaf6" stroke-width="2"/>`+
+    return `<circle cx="${X(i).toFixed(1)}" cy="${Y(p.cum).toFixed(1)}" r="4.5" fill="${up?'#0B5B3A':'#A52A22'}" stroke="#FCFCF8" stroke-width="2"/>`+
     `<text x="${X(i).toFixed(1)}" y="${(Y(p.cum)-13).toFixed(1)}" text-anchor="middle" class="vl" style="font-weight:600">${M(p.cum)}</text>`+
-    `<text x="${X(i).toFixed(1)}" y="${(Y(p.cum)+(up?-26:24)).toFixed(1)}" text-anchor="middle" class="axl" fill="${up?'#0f6b42':'#b52d23'}">${p.day_pnl>=0?'+':''}${M(p.day_pnl)}</text>`+
+    `<text x="${X(i).toFixed(1)}" y="${(Y(p.cum)+(up?-26:24)).toFixed(1)}" text-anchor="middle" class="axl" fill="${up?'#0B5B3A':'#A52A22'}">${p.day_pnl>=0?'+':''}${M(p.day_pnl)}</text>`+
     `<text x="${X(i).toFixed(1)}" y="${h-12}" text-anchor="middle" class="axl">${p.d}</text>`}).join('');
-  return `<svg viewBox="0 0 ${w} ${h}" class="chart"><defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0f6b42" stop-opacity=".22"/><stop offset="1" stop-color="#0f6b42" stop-opacity="0"/></linearGradient></defs><line x1="${pad}" y1="${z.toFixed(1)}" x2="${w-pad}" y2="${z.toFixed(1)}" stroke="#ccc9ba" stroke-dasharray="2 3"/><path d="${area}" fill="url(#cg)"/><path d="${path}" fill="none" stroke="#0f6b42" stroke-width="2.5" stroke-linejoin="round"/>${dots}</svg>`;
+  return `<svg viewBox="0 0 ${w} ${h}" class="chart"><defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0B5B3A" stop-opacity=".22"/><stop offset="1" stop-color="#0B5B3A" stop-opacity="0"/></linearGradient></defs><line x1="${pad}" y1="${z.toFixed(1)}" x2="${w-pad}" y2="${z.toFixed(1)}" stroke="#A6AFA2" stroke-dasharray="2 3"/><path d="${area}" fill="url(#cg)"/><path d="${path}" fill="none" stroke="#0B5B3A" stroke-width="2.5" stroke-linejoin="round"/>${dots}</svg>`;
 }
 // concentration horizontal stacked bar (Cleveland-McGill: length beats angle)
-function concBar(grp){const tot=grp.reduce((s,g)=>s+g.val,0)||1;const ink={'Defence':'#c2410c','Cash':'#64748b','Adani':'#b52d23','Infra':'#2b5fc4','Hedge':'#856011','Other':'#5b5a50'};
-  const seg=grp.map(g=>{const p=g.val/tot*100;return `<div class="cseg" style="width:${p}%;background:${ink[g.g]||'#5b5a50'}" title="${g.g} ${p.toFixed(0)}%">${p>9?g.g+' '+p.toFixed(0)+'%':''}</div>`}).join('');
-  const leg=grp.map(g=>`<span><i style="background:${ink[g.g]||'#5b5a50'}"></i>${g.g} · ${M(g.val)} (${(g.val/tot*100).toFixed(0)}%) <span class="${cls(g.pnl)}">${M(g.pnl)}</span></span>`).join('');
+function concBar(grp){const tot=grp.reduce((s,g)=>s+g.val,0)||1;const ink={'Defence':'#c2410c','Cash':'#64748b','Adani':'#A52A22','Infra':'#2b5fc4','Hedge':'#856011','Other':'#46534C'};
+  const seg=grp.map(g=>{const p=g.val/tot*100;return `<div class="cseg" style="width:${p}%;background:${ink[g.g]||'#46534C'}" title="${g.g} ${p.toFixed(0)}%">${p>9?g.g+' '+p.toFixed(0)+'%':''}</div>`}).join('');
+  const leg=grp.map(g=>`<span><i style="background:${ink[g.g]||'#46534C'}"></i>${g.g} · ${M(g.val)} (${(g.val/tot*100).toFixed(0)}%) <span class="${cls(g.pnl)}">${M(g.pnl)}</span></span>`).join('');
   return `<div class="conc">${seg}</div><div class="conclbl">${leg}</div>`}
 // Kite-style allocation bar: one tile PER STOCK, width ∝ chosen metric, colored by basket
 let allocMode='val';  // val | inv | pnl
-const GINK={'Defence':['#c2410c','#ea580c','#9a3412','#d4550a','#b03d0a','#7c2d12'],'Cash':['#64748b','#4b5563'],'Adani':['#2b5fc4','#1e4a9e','#3a78e0','#173a80','#4a86d8','#12306b'],'Infra':['#0f6b42','#0d5c39','#16875a','#0a4a2d','#1a9668','#073a24'],'Hedge':['#856011','#8a6314','#c28f22'],'Other':['#6d4aa8','#5a3d8c','#8159c2']};
+const GINK={'Defence':['#c2410c','#ea580c','#9a3412','#d4550a','#b03d0a','#7c2d12'],'Cash':['#64748b','#4b5563'],'Adani':['#2b5fc4','#1e4a9e','#3a78e0','#173a80','#4a86d8','#12306b'],'Infra':['#0B5B3A','#0d5c39','#16875a','#0a4a2d','#1a9668','#073a24'],'Hedge':['#856011','#8a6314','#c28f22'],'Other':['#6d4aa8','#5a3d8c','#8159c2']};
 function allocBar(H){
   // metric per holding
   const metric=h=>allocMode==='val'?h.q*h.ltp:allocMode==='inv'?h.q*h.avg:Math.abs(h.pnl);
@@ -314,7 +324,7 @@ function allocBar(H){
   // color: P&L mode → green/red by sign; else basket shade (varied per stock)
   const ci={}; const pick=(g)=>{ci[g]=(ci[g]||0); const arr=GINK[g]||GINK.Other; const c=arr[ci[g]%arr.length]; ci[g]++; return c;};
   const tiles=list.map(h=>{const pc=h.m/tot*100;
-    const col=allocMode==='pnl'?(h.pnl>=0?'#0f6b42':'#b52d23'):pick(h.grp);
+    const col=allocMode==='pnl'?(h.pnl>=0?'#0B5B3A':'#A52A22'):pick(h.grp);
     const showLab=pc>4.5;
     const val=allocMode==='val'?h.q*h.ltp:allocMode==='inv'?h.q*h.avg:h.pnl;
     return `<div class="atile" style="width:${pc}%;background:${col}" data-s="${h.s}" data-v="${Math.round(val)}" data-p="${pc.toFixed(1)}" data-g="${h.grp}">${showLab?`<span class="lab">${h.s}</span>`:''}</div>`}).join('');
@@ -336,11 +346,11 @@ function bindAllocTips(){
       const v=+t.dataset.v;tip.innerHTML=`<b>${t.dataset.s}</b> <span class="dim">${t.dataset.g}</span><div class="tv">${allocMode==='pnl'?(v>=0?'+':'−')+'₹'+Math.abs(v).toLocaleString('en-IN'):'₹'+v.toLocaleString('en-IN')} · ${t.dataset.p}%</div>`;};
     t.onmouseleave=()=>tip.style.opacity='0';});
 }
-function donutSVG(grp,mkt){const tot=grp.reduce((s,g)=>s+g.val,0)||1,cx=95,cy=88,r=63;let a=-90;const inks={'Defence':'#c2410c','Cash':'#64748b','Adani':'#b52d23','Infra':'#2b5fc4','Hedge':'#856011','Other':'#5b5a50'};let o=grp.map(g=>{const frac=g.val/tot,ang=frac*360,a2=a+ang,rad=Math.PI/180;const x1=cx+r*Math.cos(a*rad),y1=cy+r*Math.sin(a*rad),x2=cx+r*Math.cos(a2*rad),y2=cy+r*Math.sin(a2*rad),lg=ang>180?1:0;const p=`<path d="M${cx},${cy} L${x1.toFixed(1)},${y1.toFixed(1)} A${r},${r} 0 ${lg},1 ${x2.toFixed(1)},${y2.toFixed(1)} Z" fill="${inks[g.g]||'#5b5a50'}" stroke="#fbfaf6" stroke-width="1.5"/>`;a=a2;return p}).join('');o+=`<circle cx="${cx}" cy="${cy}" r="38" fill="#fbfaf6"/><text x="${cx}" y="${cy-2}" text-anchor="middle" class="dn">${M(mkt)}</text><text x="${cx}" y="${cy+12}" text-anchor="middle" class="dnl">exposure</text>`;const leg=grp.map(g=>`<div class="lgi"><span class="sw" style="background:${inks[g.g]||'#5b5a50'}"></span>${g.g} · <span class="${cls(g.pnl)}">${M(g.pnl)}</span></div>`).join('');return `<svg viewBox="0 0 190 190" class="donut">${o}</svg><div class="legend">${leg}</div>`}
+function donutSVG(grp,mkt){const tot=grp.reduce((s,g)=>s+g.val,0)||1,cx=95,cy=88,r=63;let a=-90;const inks={'Defence':'#c2410c','Cash':'#64748b','Adani':'#A52A22','Infra':'#2b5fc4','Hedge':'#856011','Other':'#46534C'};let o=grp.map(g=>{const frac=g.val/tot,ang=frac*360,a2=a+ang,rad=Math.PI/180;const x1=cx+r*Math.cos(a*rad),y1=cy+r*Math.sin(a*rad),x2=cx+r*Math.cos(a2*rad),y2=cy+r*Math.sin(a2*rad),lg=ang>180?1:0;const p=`<path d="M${cx},${cy} L${x1.toFixed(1)},${y1.toFixed(1)} A${r},${r} 0 ${lg},1 ${x2.toFixed(1)},${y2.toFixed(1)} Z" fill="${inks[g.g]||'#46534C'}" stroke="#FCFCF8" stroke-width="1.5"/>`;a=a2;return p}).join('');o+=`<circle cx="${cx}" cy="${cy}" r="38" fill="#FCFCF8"/><text x="${cx}" y="${cy-2}" text-anchor="middle" class="dn">${M(mkt)}</text><text x="${cx}" y="${cy+12}" text-anchor="middle" class="dnl">exposure</text>`;const leg=grp.map(g=>`<div class="lgi"><span class="sw" style="background:${inks[g.g]||'#46534C'}"></span>${g.g} · <span class="${cls(g.pnl)}">${M(g.pnl)}</span></div>`).join('');return `<svg viewBox="0 0 190 190" class="donut">${o}</svg><div class="legend">${leg}</div>`}
 
 // per-row: dual today/total encoding + distance-to-stop bar
 function holdRow(h,mx){const pos=h.pnl>=0,pct=Math.abs(h.pnl)/mx*50,rp=(h.ltp-h.avg)/h.avg*100;
-  let sl='';if(h.sl){const dist=(h.ltp-h.sl)/h.ltp*100;const col=dist<7?'#b52d23':dist<12?'#856011':'#0f6b42';sl=`<div class="sl-wrap" title="SL ₹${h.sl} · ${dist.toFixed(1)}% away"><div class="sl-fill" style="width:${Math.max(3,Math.min(100,100-dist*3)).toFixed(0)}%;background:${col}"></div></div>`}
+  let sl='';if(h.sl){const dist=(h.ltp-h.sl)/h.ltp*100;const col=dist<7?'#A52A22':dist<12?'#856011':'#0B5B3A';sl=`<div class="sl-wrap" title="SL ₹${h.sl} · ${dist.toFixed(1)}% away"><div class="sl-fill" style="width:${Math.max(3,Math.min(100,100-dist*3)).toFixed(0)}%;background:${col}"></div></div>`}
   return `<div class="hr" tabindex="0"><div><div class="hr-s">${h.s}</div>${sl}</div><div class="hr-q">${h.q} @ ₹${h.avg.toLocaleString('en-IN',{maximumFractionDigits:0})}</div><div class="hr-track"><div class="hr-bar ${ec(h.pnl)}" style="width:${pct.toFixed(1)}%;${pos?'left:50%':'right:50%'}"></div></div><div class="hr-day ${cls(h.day)}">${sign(h.day)}${Math.abs(h.day).toFixed(1)}%<span class="ar"> ${h.day>=0?'▲':'▼'}</span><br><span class="dim" style="font-size:10px">today</span></div><div class="hr-v ${cls(h.pnl)}">${M(h.pnl)}<small>${sign(rp)}${Math.abs(rp).toFixed(1)}%</small></div></div>`}
 function groupedHoldings(H){const mx=Math.max(...H.map(h=>Math.abs(h.pnl)))||1;const META={'Defence':['Smallcase · Defence','15-stock basket'],'Cash':['Liquid / Cash','parked'],'Adani':['Adani Basket','clean-chit conviction'],'Infra':['Smallcase · Infra Tracker','thematic basket — held together'],'Hedge':['Hedges & ETFs','gold · silver'],'Other':['Other','']};const ORD=['Defence','Infra','Hedge','Adani','Cash','Other'];const byg={};H.forEach(h=>(byg[h.grp]=byg[h.grp]||[]).push(h));let out='';ORD.filter(g=>byg[g]).forEach(g=>{const list=byg[g].sort((a,b)=>b.pnl-a.pnl),sub=list.reduce((s,h)=>s+h.pnl,0),val=list.reduce((s,h)=>s+h.q*h.ltp,0),m=META[g];out+=`<div class="ghead"><div><span class="gh-t">${m[0]}</span>${m[1]?`<span class="gh-d">${m[1]}</span>`:''}</div><div class="gh-r"><span class="gh-n">${list.length} · ${M(val)}</span><span class="gh-v ${cls(sub)}">${M(sub)}</span></div></div>`+list.map(h=>holdRow(h,mx)).join('')});return out}
 // filtered/sorted flat list
@@ -358,12 +368,12 @@ function renderLive(){const d=DATA,hw=d.holdings.filter(h=>h.pnl>=0).length;
     <div class="kpi ${d.unreal>=0?'g':'r'}"><div class="k">Open P&L</div><div class="v ${cls(d.unreal)}">${M(d.unreal)}</div><div class="s">${sign(d.unreal/d.invested*100)}${Math.abs(d.unreal/d.invested*100).toFixed(1)}% on cost</div></div>
     <div class="kpi b"><div class="k">Invested</div><div class="v">${M(d.invested)}</div><div class="s">cost basis</div></div>
     <div class="kpi b"><div class="k">Market Value</div><div class="v">${M(d.mkt)}</div><div class="s">at last price</div></div>
-    <div class="kpi y"><div class="k">Win / Loss</div><div class="v">${hw}<span style="color:#67665b"> / </span>${d.holdings.length-hw}</div><div class="s">of ${d.holdings.length} open</div></div></div>
+    <div class="kpi y"><div class="k">Win / Loss</div><div class="v">${hw}<span style="color:var(--tx3)"> / </span>${d.holdings.length-hw}</div><div class="s">of ${d.holdings.length} open</div></div></div>
    <h2 style="margin-top:22px">${I.list}Positions — Filter & Sort</h2>${controls()}<div id="flist">${flatHoldings(d.holdings)}</div>`;
   const s=document.getElementById('srch');if(s)s.oninput=e=>{fState.q=e.target.value;document.getElementById('flist').innerHTML=flatHoldings(DATA.holdings);const ns=document.getElementById('srch');ns.focus();ns.setSelectionRange(ns.value.length,ns.value.length)}}
 function leagueRows(L){const mx=Math.max(...L.map(x=>Math.abs(x.v)))||1;return L.map(x=>{const pos=x.v>=0,pct=Math.abs(x.v)/mx*50;return `<div class="hr" tabindex="0"><div class="hr-s">${x.s}</div><div class="hr-q">${x.n}× trades</div><div class="hr-track"><div class="hr-bar ${ec(x.v)}" style="width:${pct.toFixed(1)}%;${pos?'left:50%':'right:50%'}"></div></div><div class="hr-day"></div><div class="hr-v ${cls(x.v)}">${M(x.v)}</div></div>`}).join('')}
 function rtRows(R){return R.map(t=>`<tr><td class="sym">${t.sym}</td><td class="dt">${t.entry.slice(5)}<span class="arr">→</span>${t.exit.slice(5)}</td><td class="r">${t.qty}</td><td class="r">${t.buy_px.toFixed(1)}</td><td class="r">${t.sell_px.toFixed(1)}</td><td class="r ${cls(t.pnl)}">${sign(t.ret)}${Math.abs(t.ret).toFixed(1)}%</td><td class="r b ${cls(t.pnl)}">${M(t.pnl)}</td><td class="r dim">${t.hold}d</td></tr>`).join('')}
-const I={tr:'<svg fill="none" stroke="#0f6b42" stroke-width="1.7" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8" stroke-linecap="round"/><path d="M21 7v6h-6" stroke-linecap="round"/></svg>',bar:'<svg fill="none" stroke="#0f6b42" stroke-width="1.7" viewBox="0 0 24 24"><rect x="3" y="10" width="4" height="10"/><rect x="10" y="4" width="4" height="16"/><rect x="17" y="13" width="4" height="7"/></svg>',list:'<svg fill="none" stroke="#0f6b42" stroke-width="1.7" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h12" stroke-linecap="round"/></svg>',pie:'<svg fill="none" stroke="#0f6b42" stroke-width="1.7" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v9l6 4"/></svg>',tbl:'<svg fill="none" stroke="#0f6b42" stroke-width="1.7" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 8h8M8 12h8M8 16h5" stroke-linecap="round"/></svg>',warn:'<svg fill="none" stroke="#856011" stroke-width="1.7" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9l-8 14A2 2 0 004 21h16a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" stroke-linecap="round"/></svg>'}
+const I={tr:'<svg fill="none" stroke="#0B5B3A" stroke-width="1.7" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8" stroke-linecap="round"/><path d="M21 7v6h-6" stroke-linecap="round"/></svg>',bar:'<svg fill="none" stroke="#0B5B3A" stroke-width="1.7" viewBox="0 0 24 24"><rect x="3" y="10" width="4" height="10"/><rect x="10" y="4" width="4" height="16"/><rect x="17" y="13" width="4" height="7"/></svg>',list:'<svg fill="none" stroke="#0B5B3A" stroke-width="1.7" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h12" stroke-linecap="round"/></svg>',pie:'<svg fill="none" stroke="#0B5B3A" stroke-width="1.7" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v9l6 4"/></svg>',tbl:'<svg fill="none" stroke="#0B5B3A" stroke-width="1.7" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 8h8M8 12h8M8 16h5" stroke-linecap="round"/></svg>',warn:'<svg fill="none" stroke="#856011" stroke-width="1.7" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9l-8 14A2 2 0 004 21h16a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" stroke-linecap="round"/></svg>'}
 function render(d){DATA=d;document.getElementById('upd').textContent=d.updated;const bw=d.roundtrips[d.roundtrips.length-1],bl=d.roundtrips[0];
   // attention rail
   document.getElementById('rail').innerHTML=d.attention.length?d.attention.map(a=>`<div class="chip ${a.sev}"><span class="cd"></span><b>${a.s}</b> ${a.msg}</div>`).join(''):'';
@@ -397,8 +407,8 @@ function render(d){DATA=d;document.getElementById('upd').textContent=d.updated;c
    <div class="note" style="margin-top:10px"><b>P&L is the NET figure</b> — gross profit minus gross loss. In-window: ${M(d.gross_win)} of wins (${d.nwin} trades) minus ${M(Math.abs(d.gross_loss))} of losses (${d.nloss} trades) = <b class="${cls(d.inwindow)}">${M(d.inwindow)} net</b>. On top sits <b>pre-April booked ${M(d.pre_april)}</b> (positions bought before this window, so excluded from the in-window math) → <b>cumulative ${M(d.cum_realized)}</b>.</div>
    <h2 style="margin-top:18px">${I.bar}In-Window Net by Counter</h2>${leagueRows(d.rtsym)}
    <h2>${I.tbl}Round-Trip Ledger · ${d.nrt} closed</h2><div class="scroll"><table id="lt"><thead><tr><th>Counter</th><th>Held</th><th class="r">Qty</th><th class="r">Buy</th><th class="r">Sell</th><th class="r">Return</th><th class="r">P&L</th><th class="r">Days</th></tr></thead><tbody>${rtRows(d.roundtrips)}</tbody></table></div>
-   <div class="big"><div class="bigc"><div class="t"><svg width="13" height="13" fill="none" stroke="#0f6b42" stroke-width="2.2" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7" stroke-linecap="round"/></svg>Finest Trade</div><div class="n pos">${bw.sym} · ${M(bw.pnl)}</div><div class="d">${sign(bw.ret)}${Math.abs(bw.ret).toFixed(1)}% in ${bw.hold}d</div></div>
-   <div class="bigc"><div class="t"><svg width="13" height="13" fill="none" stroke="#b52d23" stroke-width="2.2" viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7" stroke-linecap="round"/></svg>Heaviest Trade</div><div class="n neg">${bl.sym} · ${M(bl.pnl)}</div><div class="d">${bl.ret.toFixed(1)}% in ${bl.hold}d</div></div></div>`;
+   <div class="big"><div class="bigc"><div class="t"><svg width="13" height="13" fill="none" stroke="#0B5B3A" stroke-width="2.2" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7" stroke-linecap="round"/></svg>Finest Trade</div><div class="n pos">${bw.sym} · ${M(bw.pnl)}</div><div class="d">${sign(bw.ret)}${Math.abs(bw.ret).toFixed(1)}% in ${bw.hold}d</div></div>
+   <div class="bigc"><div class="t"><svg width="13" height="13" fill="none" stroke="#A52A22" stroke-width="2.2" viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7" stroke-linecap="round"/></svg>Heaviest Trade</div><div class="n neg">${bl.sym} · ${M(bl.pnl)}</div><div class="d">${bl.ret.toFixed(1)}% in ${bl.hold}d</div></div></div>`;
   const lt=document.getElementById('lt');if(lt)lt.querySelectorAll('th').forEach((i,ix)=>i.onclick=()=>{const tb=lt.querySelector('tbody'),rows=[...tb.rows],num=ix>=2,asc=i.dataset.a!=='1';i.dataset.a=asc?'1':'0';rows.sort((a,b)=>{let x=a.cells[ix].innerText.replace(/[₹,%dkLCr→ ]/g,'').replace('−','-'),y=b.cells[ix].innerText.replace(/[₹,%dkLCr→ ]/g,'').replace('−','-');if(num)return asc?(+x||0)-(+y||0):(+y||0)-(+x||0);return asc?x.localeCompare(y):y.localeCompare(x)});rows.forEach(r=>tb.appendChild(r))});
   // STORY
   const wo=d.inwindow-bw.pnl;

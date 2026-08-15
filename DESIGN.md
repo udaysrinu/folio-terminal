@@ -1,4 +1,4 @@
-# Folio Terminal — Warm Paper (Light)
+# Folio Terminal — Mineral Paper, Blue Signal (Direction B)
 
 Portfolio analytics and shareable stock baskets for Indian equity investors.
 The feeling is a **printed brokerage statement**, not a trading terminal: warm paper,
@@ -25,59 +25,74 @@ Two hard constraints shape every decision here:
 
 ## Palette
 
-Every value below is measured against the **darkest surface it can land on** (`--bg #e8e8de`),
-because that is the binding constraint. All text tokens clear **WCAG AA 4.5:1**.
+Every value measured against the **darkest surface it can land on** (`--bg #E9EAE3`).
+All text clears **WCAG AA 4.5:1**; verified across all five pages, 0 failures.
 
 ### Surfaces
 | Token | Hex | Role |
 |---|---|---|
-| `--bg` | `#e8e8de` | page — warm grey paper |
-| `--panel` | `#fbfaf6` | cards, nav bar |
-| `--panel2` | `#f4f2ea` | insets, code, table hover |
-| `--hair` | `#e2e0d4` | hairline dividers, card borders |
-| `--hair2` | `#ccc9ba` | input borders (needs to be seen) |
+| `--bg` | `#E9EAE3` | page — cooler mineral paper. **Never `#ffffff`** |
+| `--panel` | `#FCFCF8` | cards, nav, ledger |
+| `--panel2` | `#F3F4EE` | insets, code, row hover |
+| `--rule` / `--hair` | `#BCC3B8` | ledger row rules — 1.75:1, deliberately visible |
+| `--rule-strong` / `--hair2` | `#A6AFA2` | structural rules, input borders — 2.20:1 |
 
-### Ink — all AA-verified
-| Token | Hex | On `--bg` | Role |
-|---|---|---|---|
-| `--tx` | `#1b1b19` | 14.9 | headings, figures, primary text |
-| `--tx2` | `#5b5a50` | **5.63** | body copy, descriptions, labels — the workhorse |
-| `--tx3` | `#67665b` | **4.69** | footers, placeholders, timestamps |
+### Ink
+| Token | Hex | On `--bg` |
+|---|---|---|
+| `--tx` | `#18211D` | 15.0 |
+| `--tx2` | `#46534C` | 6.7 |
+| `--tx3` | `#5C6A61` | 4.7 |
 
-### Accents — one green for action, semantics for money
-| Token | Hex | On `--bg` | White on it | Role |
-|---|---|---|---|---|
-| `--em` | `#0f6b42` | **5.32** | **6.56** | primary action, links, active nav, gains |
-| `--ox` | `#b52d23` | **5.06** | 6.24 | losses, destructive, blocking errors |
-| `--gold` | `#856011` | **4.63** | — | warnings, "below minimum" notices |
-| `--blue` | `#2b5fc4` | 4.9 | — | neutral category fill (charts only) |
+### The core rule: action ≠ outcome
+| Token | Hex | Means |
+|---|---|---|
+| `--em` / `--action` | `#155A78` | **an action is possible** — buttons, focus rings, links, current nav, selected tabs/toggles, imported-file state, step numbers |
+| `--gain` | `#0B5B3A` | **a financial result is positive** — positive drift, gains, success states |
+| `--ox` | `#A52A22` | a financial result is negative, or destructive |
+| `--gold` | `#7A4E00` | warnings ("below minimum") |
 
-> **Do not lighten these.** The previous palette (`--tx2 #87867a`, `--em #12784a`,
-> `--ox #c8352a`, `--gold #a8791a`) looked tasteful and failed AA on every surface —
-> body copy sat at **2.98:1**. Muted-grey-on-cream is the standard way a warm light
-> theme fails accessibility, because the aesthetic goal and the contrast goal pull
-> in opposite directions. Verify with a luminance calculation, never by eye.
+Green must **never** appear on a button, on navigation, or on a focus ring. Blue must never
+mark a gain. This separation is the whole point of the direction — Indian fintech collapses
+action and outcome into one colour, which is why every app in the category reads the same.
+Verified mechanically: 0 green-backgrounded action elements across all pages.
+
+Decorative accents (KPI stripes, source badges) are **neutral**, not a second blue.
+`--blue #2b5fc4` survives only inside categorical chart maps, where multiple hues are the point.
+
+Never colour alone: a negative figure carries a `−`, a positive one a `+`.
 
 ---
 
 ## Type
 
-**Inter** for everything, `system-ui` fallback. **No serif** — a serif display face was
-tried and explicitly rejected; it read as a magazine, not a statement.
-**`ui-monospace`** for money, symbols, tickers, and API keys — anything meant to be
-compared down a column or copied exactly.
+Self-hosted latin subsets in `fonts/` (71 KB total), no CDN, so the pages work offline.
 
-| Role | Size | Weight | Notes |
-|---|---|---|---|
-| Page title | 29–34px | 800 | `letter-spacing:-.02em` |
-| Section label | 11.5px | 600 | uppercase, `.13em` tracking, hairline rule after |
-| Body | 15–16.5px | 400 | `line-height` 1.55–1.6 |
-| Card / step body | 13.5–14px | 400 | `--tx2` |
-| Table cell | 13.5px | 400 | mono for numerals |
-| Micro / footer | 11–12.5px | 400 | `--tx3` |
+| Role | Face | Notes |
+|---|---|---|
+| Headings, wordmark | **Barlow Semi Condensed 600** | compressed, instrument-like; sentence case |
+| Body, labels, UI | **IBM Plex Sans** 400/600 | technical, more deliberate than Inter |
+| Every number | **IBM Plex Mono** 400/500 | `tabular-nums`, right-aligned in columns |
 
-Money always uses **tabular numerals, right-aligned**, with `--em`/`--ox` for sign.
-Never colour alone: a loss shows a `−` as well as red.
+**No serif** and **no Inter** — Inter is the "gave up on typography" signal, and all three
+competitors use a licensed sans, so a default face is what makes a tool look generic.
+
+*Known tradeoff:* a single emailed `basket.html` has no `fonts/` beside it and falls back to
+system sans. Functionality is unaffected. Send the folder, or the hosted URL, to keep the type.
+
+---
+
+## The two risks this direction takes
+
+1. **The calculation is the hero.** `.readout` renders one monospace line —
+   `₹4,00,000 → 4 stocks → ₹3,98,055 deployed → ₹1,945 left` — as an instrument readout, not a
+   form in a card. Every competitor leads with charts and tickers; this leads with the
+   transformation that is the product's actual job. Leftover cash is stated, never hidden.
+2. **Holdings are a ledger, not tiles.** `.ledger` uses horizontal rules only, no vertical
+   rules, no zebra fill, 38px rows, tiny uppercase letterspaced heads, drift shown with a sign.
+   On screens under ~430px the ledger scrolls **inside its own card** so the page never scrolls
+   sideways and no column is dropped.
+
 
 ---
 
