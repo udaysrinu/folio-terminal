@@ -126,6 +126,54 @@ button,.tab,.fbtn,a.card,.drop,summary{cursor:pointer}
 .ftnav a.brand{font-weight:800;font-size:13.5px;color:var(--tx);margin-right:8px;padding-left:0}
 .ftnav a.brand:hover{background:transparent;color:var(--em)}
 .ftnav svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.9;flex:none}
+
+/* ---------- shadcn-style token layer (mapped to the warm cream palette) ---------- */
+:root{
+  --background:var(--bg); --foreground:var(--tx);
+  --card:var(--panel); --card-foreground:var(--tx);
+  --muted:var(--panel2); --muted-foreground:var(--tx2);
+  --border:var(--hair); --input:var(--hair2); --ring:var(--em);
+  --primary:var(--em); --primary-foreground:#fff;
+  --destructive:var(--ox); --destructive-foreground:#fff;
+  --radius:10px;                       /* shadcn's base; cards step up from it */
+  --radius-sm:calc(var(--radius) - 4px); --radius-lg:calc(var(--radius) + 6px);
+  --space-1:4px;--space-2:8px;--space-3:12px;--space-4:16px;--space-6:24px;--space-8:32px;
+}
+/* buttons — shadcn size variants: sm h-8, default h-9, lg h-11 */
+button,.setup{border-radius:var(--radius);font-weight:500;letter-spacing:0;
+  min-height:36px;padding:8px 16px;font-size:13.5px;line-height:1.2}
+button.pri{font-weight:600}
+button.sm{min-height:32px;padding:6px 12px;font-size:12.5px}
+.cta{border-radius:var(--radius);min-height:44px;padding:12px 26px;   /* lg: the page's one primary action */
+  font-size:15px;font-weight:600;display:inline-flex;align-items:center;gap:8px}
+button:disabled{opacity:.5;pointer-events:none}
+/* shadcn's ring, not a browser outline */
+:focus-visible{outline:none;box-shadow:0 0 0 2px var(--background),0 0 0 4px var(--ring)}
+/* inputs — consistent height, ring on focus, muted placeholder */
+input,select,textarea{border-radius:var(--radius);border:1px solid var(--input);
+  background:var(--card);font-size:13.5px}
+input:not([type=radio]):not([type=checkbox]),select{min-height:36px;padding:8px 12px}
+input::placeholder,textarea::placeholder{color:var(--tx3)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ring);
+  box-shadow:0 0 0 3px rgba(18,120,74,.12)}
+/* cards — shadcn border + subtle shadow, one radius step up */
+.panel,.kpi,.card,.q,.hstep,.cf-card{border-radius:var(--radius-lg);border:1px solid var(--border)}
+/* tables — shadcn data-table rhythm: taller rows, muted uppercase head, no vertical rules */
+thead th{font-weight:500;color:var(--muted-foreground);height:40px;vertical-align:middle}
+tbody td{height:40px;vertical-align:middle}   /* denser than shadcn default: financial tables run long */
+tbody tr{border-bottom:1px solid var(--border)}
+tbody tr:last-child{border-bottom:none}
+/* badges */
+.tag,.pill,.srcbadge{border-radius:999px;font-weight:500;border:1px solid var(--border);
+  padding:3px 10px;font-size:11px;line-height:1.5}
+/* alert boxes — shadcn destructive/default variants */
+.warn,.ok,.safe,.sendbox{border-radius:var(--radius);border-width:1px;font-size:13px;
+  padding:12px 15px}
+/* muted helper text */
+.note{color:var(--muted-foreground)}
+/* segmented control (tabs, toggles) */
+.tab,.fbtn,.atog button{border-radius:var(--radius);font-weight:500}
+.tab.on,.fbtn.on{box-shadow:0 1px 2px rgba(0,0,0,.08)}
 </style></head><body>
 <div class="ftbar"><nav class="ftnav" aria-label="Main">
 <a href="index.html" class="brand">Folio Terminal</a>
