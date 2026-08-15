@@ -33,25 +33,50 @@ font-family:ui-monospace,monospace;font-size:13px}
 .warn{border:1px solid var(--gold);background:rgba(168,121,26,.09);color:var(--gold);
 border-radius:11px;padding:14px 17px;font-size:14px;margin-top:18px}
 .foot{font-size:11.5px;color:var(--tx3);text-align:center;margin-top:44px;line-height:1.8}
-.ftnav{display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin:-8px 0 22px;
-padding:7px;background:var(--panel);border:1px solid var(--hair);border-radius:13px;
-box-shadow:0 1px 2px rgba(0,0,0,.04)}
-.ftnav a{font-size:12.5px;color:var(--tx2);text-decoration:none;padding:7px 13px;border-radius:9px}
-.ftnav a:hover{background:var(--panel2);color:var(--tx)}
+
+/* ---------- motion system: 160-220ms, ease-out entering, no layout shift ---------- */
+:root{--t:170ms;--e:cubic-bezier(.22,.61,.36,1)}
+a,button,.tab,.fbtn,.atile,.card,.hstep,tbody tr,input,select,textarea,.drop,.setup{
+  transition:background-color var(--t) var(--e),border-color var(--t) var(--e),
+  color var(--t) var(--e),box-shadow var(--t) var(--e),transform var(--t) var(--e)}
+button:hover,.setup:hover{transform:translateY(-1px)}          /* lift, never scale */
+button:active,.setup:active{transform:translateY(0)}
+a.card:hover{transform:translateY(-2px)}
+tbody tr:hover{background:var(--panel2)}
+:focus-visible{outline:2px solid var(--em);outline-offset:2px;border-radius:8px}
+button,.tab,.fbtn,a.card,.drop,summary{cursor:pointer}
+/* one entrance animation per action, not per element */
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.enter{animation:rise 220ms var(--e) both}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;
+    transition-duration:.01ms!important;scroll-behavior:auto!important}
+  button:hover,.setup:hover,a.card:hover{transform:none}
+}
+/* ---------- nav: fixed inner width so it never reshapes between pages ---------- */
+.ftbar{width:100%;border-bottom:1px solid var(--hair);background:var(--panel);
+  box-shadow:0 1px 2px rgba(0,0,0,.03);margin-bottom:26px}
+.ftnav{max-width:1180px;margin:0 auto;display:flex;gap:2px;align-items:center;
+  flex-wrap:nowrap;overflow-x:auto;padding:9px 20px;-webkit-overflow-scrolling:touch}
+.ftnav::-webkit-scrollbar{display:none}
+.ftnav a{font-size:12.5px;color:var(--tx2);text-decoration:none;padding:8px 13px;
+  border-radius:9px;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;min-height:34px}
+.ftnav a:hover{background:var(--panel2);color:var(--tx);transform:none}
 .ftnav a.on{background:var(--em);color:#fff;font-weight:600}
-.ftnav a.brand{font-weight:800;font-size:13.5px;color:var(--tx);margin-right:6px}
+.ftnav a.brand{font-weight:800;font-size:13.5px;color:var(--tx);margin-right:8px;padding-left:0}
 .ftnav a.brand:hover{background:transparent;color:var(--em)}
-</style></head><body><div class="wrap">
-<nav class="ftnav"><a href="index.html" class="brand">Folio Terminal</a>
-<a href="basket.html" data-p="basket.html">Baskets</a>
-<a href="dashboard.html" data-p="dashboard.html">Dashboard</a>
-<a href="onboarding.html" data-p="onboarding.html">One-click setup</a>
-<a href="friends.html" data-p="friends.html">Guide</a></nav>
+.ftnav svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.9;flex:none}
+</style></head><body>
+<div class="ftbar"><nav class="ftnav" aria-label="Main">
+<a href="index.html" class="brand">Folio Terminal</a>
+<a href="basket.html" data-p="basket.html"><svg viewBox="0 0 24 24"><path d="M3 7h18l-1.6 11.2A2 2 0 0 1 17.4 20H6.6a2 2 0 0 1-2-1.8L3 7Z"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/></svg>Baskets</a>
+<a href="dashboard.html" data-p="dashboard.html"><svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>Dashboard</a>
+<a href="onboarding.html" data-p="onboarding.html"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg>One-click setup</a>
+<a href="friends.html" data-p="friends.html"><svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v18H6a2 2 0 0 1-2-2V5Z"/><path d="M9 3v18"/></svg>Guide</a></nav></div>
 <script>(function(){var f=location.pathname.split('/').pop()||'index.html';
 document.querySelectorAll('.ftnav a[data-p]').forEach(function(a){
-  if(a.getAttribute('data-p')===f)a.className='on';});})();</script>
-
-
+  if(a.getAttribute('data-p')===f){a.classList.add('on');a.setAttribute('aria-current','page');}});})();</script>
+<div class="wrap">
 <div><h1>Someone shared a stock basket with you</h1>
 <div class="sub">What to do with it · about 2 minutes</div></div>
 

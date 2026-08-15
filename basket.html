@@ -60,11 +60,12 @@ border-radius:9px;padding:11px 14px;font-size:12.5px;margin-top:12px}
 .foot{font-size:10.5px;color:var(--tx3);text-align:center;margin-top:36px;line-height:1.7}
 .hide{display:none}
 .tabs{display:flex;gap:7px;margin:20px 0 4px}
-.tab{font-size:12px;letter-spacing:.06em;text-transform:uppercase;padding:9px 18px;cursor:pointer;
+.tab{display:inline-flex;align-items:center;gap:7px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;padding:9px 18px;cursor:pointer;
 background:var(--panel);border:1px solid var(--hair);color:var(--tx2);border-radius:10px}
 .tab:hover{color:var(--tx);border-color:var(--hair2)}
 .tab.on{background:var(--em);color:#fff;border-color:var(--em);font-weight:700}
-.view{display:none}.view.on{display:block}
+.view{display:none}.view.on{display:block;animation:rise 220ms var(--e) both}
+.tab svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.9}
 input[type=text],input:not([type]),select{background:var(--panel2);border:1px solid var(--hair2);
 color:var(--tx);border-radius:9px;padding:10px 12px;font-size:14px;font-family:inherit}
 .how{display:flex;align-items:stretch;gap:10px;margin-top:18px;flex-wrap:wrap}
@@ -92,25 +93,50 @@ border-radius:9px;padding:9px 14px}
 .setup:hover{background:rgba(18,120,74,.07)}
 .ok{border:1px solid var(--em);background:rgba(18,120,74,.08);color:var(--em);
 border-radius:9px;padding:11px 14px;font-size:12.5px;margin-top:12px}
-.ftnav{display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin:-8px 0 22px;
-padding:7px;background:var(--panel);border:1px solid var(--hair);border-radius:13px;
-box-shadow:0 1px 2px rgba(0,0,0,.04)}
-.ftnav a{font-size:12.5px;color:var(--tx2);text-decoration:none;padding:7px 13px;border-radius:9px}
-.ftnav a:hover{background:var(--panel2);color:var(--tx)}
+
+/* ---------- motion system: 160-220ms, ease-out entering, no layout shift ---------- */
+:root{--t:170ms;--e:cubic-bezier(.22,.61,.36,1)}
+a,button,.tab,.fbtn,.atile,.card,.hstep,tbody tr,input,select,textarea,.drop,.setup{
+  transition:background-color var(--t) var(--e),border-color var(--t) var(--e),
+  color var(--t) var(--e),box-shadow var(--t) var(--e),transform var(--t) var(--e)}
+button:hover,.setup:hover{transform:translateY(-1px)}          /* lift, never scale */
+button:active,.setup:active{transform:translateY(0)}
+a.card:hover{transform:translateY(-2px)}
+tbody tr:hover{background:var(--panel2)}
+:focus-visible{outline:2px solid var(--em);outline-offset:2px;border-radius:8px}
+button,.tab,.fbtn,a.card,.drop,summary{cursor:pointer}
+/* one entrance animation per action, not per element */
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.enter{animation:rise 220ms var(--e) both}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;
+    transition-duration:.01ms!important;scroll-behavior:auto!important}
+  button:hover,.setup:hover,a.card:hover{transform:none}
+}
+/* ---------- nav: fixed inner width so it never reshapes between pages ---------- */
+.ftbar{width:100%;border-bottom:1px solid var(--hair);background:var(--panel);
+  box-shadow:0 1px 2px rgba(0,0,0,.03);margin-bottom:26px}
+.ftnav{max-width:1180px;margin:0 auto;display:flex;gap:2px;align-items:center;
+  flex-wrap:nowrap;overflow-x:auto;padding:9px 20px;-webkit-overflow-scrolling:touch}
+.ftnav::-webkit-scrollbar{display:none}
+.ftnav a{font-size:12.5px;color:var(--tx2);text-decoration:none;padding:8px 13px;
+  border-radius:9px;white-space:nowrap;display:inline-flex;align-items:center;gap:6px;min-height:34px}
+.ftnav a:hover{background:var(--panel2);color:var(--tx);transform:none}
 .ftnav a.on{background:var(--em);color:#fff;font-weight:600}
-.ftnav a.brand{font-weight:800;font-size:13.5px;color:var(--tx);margin-right:6px}
+.ftnav a.brand{font-weight:800;font-size:13.5px;color:var(--tx);margin-right:8px;padding-left:0}
 .ftnav a.brand:hover{background:transparent;color:var(--em)}
-</style></head><body><div class="wrap">
-<nav class="ftnav"><a href="index.html" class="brand">Folio Terminal</a>
-<a href="basket.html" data-p="basket.html">Baskets</a>
-<a href="dashboard.html" data-p="dashboard.html">Dashboard</a>
-<a href="onboarding.html" data-p="onboarding.html">One-click setup</a>
-<a href="friends.html" data-p="friends.html">Guide</a></nav>
+.ftnav svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.9;flex:none}
+</style></head><body>
+<div class="ftbar"><nav class="ftnav" aria-label="Main">
+<a href="index.html" class="brand">Folio Terminal</a>
+<a href="basket.html" data-p="basket.html"><svg viewBox="0 0 24 24"><path d="M3 7h18l-1.6 11.2A2 2 0 0 1 17.4 20H6.6a2 2 0 0 1-2-1.8L3 7Z"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/></svg>Baskets</a>
+<a href="dashboard.html" data-p="dashboard.html"><svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>Dashboard</a>
+<a href="onboarding.html" data-p="onboarding.html"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg>One-click setup</a>
+<a href="friends.html" data-p="friends.html"><svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v18H6a2 2 0 0 1-2-2V5Z"/><path d="M9 3v18"/></svg>Guide</a></nav></div>
 <script>(function(){var f=location.pathname.split('/').pop()||'index.html';
 document.querySelectorAll('.ftnav a[data-p]').forEach(function(a){
-  if(a.getAttribute('data-p')===f)a.className='on';});})();</script>
-
-
+  if(a.getAttribute('data-p')===f){a.classList.add('on');a.setAttribute('aria-current','page');}});})();</script>
+<div class="wrap">
 <div><h1>Basket Workbench</h1><div class="sub">Create · size · rebalance stock baskets — entirely in this page, no install</div></div>
 
 <div class="how">
@@ -125,8 +151,8 @@ document.querySelectorAll('.ftnav a[data-p]').forEach(function(a){
 </div>
 
 <div class="tabs">
-  <button class="tab on" data-v="tSize">📥 I received a basket</button>
-  <button class="tab" data-v="tNew">📤 I want to share one</button>
+  <button class="tab on" data-v="tSize"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 20h16"/></svg>I received a basket</button>
+  <button class="tab" data-v="tNew"><svg viewBox="0 0 24 24"><path d="M12 21V9"/><path d="m7 14 5-5 5 5"/><path d="M4 4h16"/></svg>I want to share one</button>
 </div>
 
 <div class="view on" id="tSize">
@@ -134,7 +160,7 @@ document.querySelectorAll('.ftnav a[data-p]').forEach(function(a){
 <div class="drop" id="drop">
   <div style="font-size:18px;font-weight:800;margin-bottom:5px">Drop the basket file here</div>
   <div style="font-size:12.5px;color:var(--tx2)">the file a friend sent you — or one you made yourself
-    in the <b>📤 I want to share one</b> tab</div>
+    in the <b>share</b> tab</div>
   <div style="font-size:12.5px;color:var(--tx2);margin-top:3px">
     or <b>click to browse</b> — or paste the text into the box below</div>
   <div class="dn">Nothing is uploaded. No account, no server, no broker connection needed.</div>
@@ -419,7 +445,8 @@ function calc(){
   const floor=minUnit(SHEET.weights,SHEET.prices);
   if(amt<floor){                      // hard stop: a partial basket is not this basket
     const opts=[1,2,3].map(k=>`<button onclick="setAmt(${Math.ceil(floor*k)})">${M(floor*k)}${k>1?` (${k}×)`:' (minimum)'}</button>`).join('');
-    $('orders').innerHTML=`<h2>Step 4 · Place these orders</h2>
+    $('orders').className='enter';
+  $('orders').innerHTML=`<h2>Step 4 · Place these orders</h2>
       <div class="warn err"><b>₹${(+amt).toLocaleString('en-IN')} is below this basket's minimum
         of ${M(floor)}.</b><br>
         At this amount <b>${missBelow(amt).join(', ')}</b> would get zero shares, so you would not
@@ -436,6 +463,7 @@ function calc(){
   rows.filter(r=>!r.skip).forEach(r=>{const d=Math.abs(r.val/cost*100-r.w);
     if(d>worst){worst=d;worstSym=r.s;}});
   const skipped=rows.filter(r=>r.skip);
+  $('orders').className='enter';
   $('orders').innerHTML=`<h2>Step 4 · Place these orders</h2>
    ${amt<min?`<div class="warn"><b>Below the ${M(min)} minimum.</b> ${skipped.length} stock(s) can't
      afford even one share and are skipped — the basket's shape changes. Consider ${M(min)} or more.</div>`:''}
@@ -476,7 +504,7 @@ function calc(){
       ${localStorage.getItem('ft_kite_api_key')
         ? '<button class="pri" onclick="placeInKite()">Place in Kite →</button>'
         : '<a href="onboarding.html" target="_blank" rel="noopener" class="setup">'
-          + '⚡ Set up one-click ordering — opens in a new tab, free, key stays on your device</a>'}
+          + 'Set up one-click ordering — opens in a new tab, free, key stays on your device</a>'}
       <button onclick="copyOrders()">Copy as text</button>
       <button onclick="copyCSV()">Copy as CSV</button>
     </div></div>
@@ -775,7 +803,7 @@ function fromEmail(){
           Sells: ${r.sells.map(x=>x.sym+' ×'+x.q).join(', ')}<br>
           Buys: ${r.buys.map(x=>x.sym+' ×'+x.q).join(', ')||'none'}<br><br>
           To apply it I need the basket as it was <i>before</i> this rebalance. Load that sheet on the
-          <b>📥 I received a basket</b> tab first (it must be one built from an order email, so it
+          <b>I received a basket</b> tab first (it must be one built from an order email, so it
           carries share counts), then come back and paste this.</div>`;
         say(''); return;
       }
