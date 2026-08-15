@@ -1,0 +1,102 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>How to use a shared basket</title>
+<style>
+:root{--bg:#e8e8de;--panel:#fbfaf6;--panel2:#f4f2ea;--hair:#e2e0d4;--hair2:#ccc9ba;
+--tx:#1b1b19;--tx2:#87867a;--tx3:#a5a498;--em:#12784a;--ox:#c8352a;--gold:#a8791a;--blue:#2b5fc4}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--tx);font-family:Inter,system-ui,sans-serif;font-size:15.5px;
+line-height:1.6;padding:36px 20px 70px;
+background-image:linear-gradient(180deg,rgba(0,0,0,.05),transparent 240px)}
+.wrap{max-width:720px;margin:0 auto}
+h1{font-size:30px;font-weight:800;letter-spacing:-.02em}
+.sub{font-size:12px;letter-spacing:.13em;text-transform:uppercase;color:var(--tx2);margin-top:6px}
+.lede{font-size:16.5px;color:var(--tx2);margin-top:18px}.lede b{color:var(--tx);font-weight:600}
+h2{font-size:11.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;color:var(--tx2);
+display:flex;align-items:center;gap:10px;margin:34px 0 14px}
+h2::after{content:'';flex:1;height:1px;background:var(--hair)}
+.panel{background:var(--panel);border:1px solid var(--hair);border-radius:16px;padding:8px 24px;
+box-shadow:0 1px 2px rgba(0,0,0,.04),0 10px 26px -12px rgba(0,0,0,.10)}
+.step{display:flex;gap:16px;align-items:flex-start;padding:17px 0;border-bottom:1px solid var(--hair)}
+.step:last-child{border-bottom:none}
+.sn{flex:none;width:29px;height:29px;border-radius:50%;background:var(--em);color:#fff;
+font-size:14px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.step b{display:block;font-size:15.5px;margin-bottom:4px}
+.step p{font-size:14px;color:var(--tx2)}
+a{color:var(--em)}
+.cta{display:inline-block;background:var(--em);color:#fff;font-weight:700;text-decoration:none;
+padding:13px 24px;border-radius:11px;font-size:15px;margin-top:6px}
+.cta:hover{filter:brightness(1.08)}
+code{background:var(--panel2);border:1px solid var(--hair);border-radius:5px;padding:1px 6px;
+font-family:ui-monospace,monospace;font-size:13px}
+.q{background:var(--panel);border:1px solid var(--hair);border-radius:14px;padding:17px 21px;margin-top:12px}
+.q b{display:block;margin-bottom:5px}.q p{font-size:14px;color:var(--tx2)}
+.warn{border:1px solid var(--gold);background:rgba(168,121,26,.09);color:var(--gold);
+border-radius:11px;padding:14px 17px;font-size:14px;margin-top:18px}
+.foot{font-size:11.5px;color:var(--tx3);text-align:center;margin-top:44px;line-height:1.8}
+</style></head><body><div class="wrap">
+
+<div><h1>Someone shared a stock basket with you</h1>
+<div class="sub">What to do with it · about 2 minutes</div></div>
+
+<p class="lede">A <b>basket</b> is a list of stocks with a target percentage for each. The file you
+were sent holds those percentages — <b>not</b> a number of shares — so it works no matter how much
+money you're putting in. You could invest ₹50,000 or ₹5,00,000 from the same file.</p>
+
+<h2>What to do</h2>
+<div class="panel">
+  <div class="step"><span class="sn">1</span><div><b>Open the workbench</b>
+    <p>Click the button below. It's a single web page — nothing to install, no sign-up,
+       and it never sees your broker account.</p>
+    <a class="cta" href="basket.html">Open the Basket Workbench →</a></div></div>
+
+  <div class="step"><span class="sn">2</span><div><b>Load the basket</b>
+    <p>Drag the <code>.json</code> file onto the page, or paste the text if it was sent to you in a
+       message. You'll immediately see how many stocks it holds, how concentrated it is, and the
+       <b>minimum amount</b> it needs.</p></div></div>
+
+  <div class="step"><span class="sn">3</span><div><b>Type what you want to invest</b>
+    <p>You get an exact shopping list — how many shares of each stock. If your amount is below the
+       basket's minimum, the page will say so and suggest workable amounts, because a smaller amount
+       would silently drop the expensive stocks and leave you with something different.</p></div></div>
+
+  <div class="step"><span class="sn">4</span><div><b>Place the orders</b>
+    <p>Either <b>Copy as text</b> and enter them in your broker by hand, or — if the sender set up
+       one-click ordering — press <b>Place in Kite</b>, which opens Kite with everything pre-filled
+       for you to review and confirm. Nothing is ever placed without you approving it.</p></div></div>
+</div>
+
+<h2>Already own the basket?</h2>
+<div class="panel"><div class="step"><span class="sn">↻</span><div>
+  <b>Drop your holdings file in Step 5</b>
+  <p>Download your holdings from your broker (Zerodha: Console → Holdings → download) and drop it on
+     the page. It compares what you own against the basket's targets and tells you exactly what to buy
+     or sell to line them up again.</p></div></div></div>
+
+<h2>Questions people ask</h2>
+
+<div class="q"><b>Does this see my broker account or my money?</b>
+  <p>No. It has no login, no password, no API access, and no server. Everything happens inside your
+     browser tab. You place the orders yourself.</p></div>
+
+<div class="q"><b>Why does it need me to type prices sometimes?</b>
+  <p>A page with no server can't look up live prices, and browsers block calls to exchange websites.
+     If the basket arrived without prices, type them from your broker app — they're only used to
+     convert percentages into share counts.</p></div>
+
+<div class="q"><b>Why can't I invest a smaller amount?</b>
+  <p>Indian exchanges only allow whole shares. If one stock in the basket costs ₹10,000 and is meant
+     to be 7% of your money, you need roughly ₹1,50,000 before a single share of it fits. Below that
+     you'd own a different, more lopsided basket.</p></div>
+
+<div class="q"><b>Will my share counts match the sender's?</b>
+  <p>Almost certainly not, and that's correct. You match their <i>percentages</i>, not their share
+     counts. Share counts depend on how much each of you invested and what prices you paid.</p></div>
+
+<div class="warn"><b>This is not advice.</b> Whoever shared this basket is not your financial adviser,
+  and neither is this page. Check every order before you confirm it, and only invest what you've
+  decided to invest yourself.</div>
+
+<div class="foot">
+  <a href="index.html">Folio Terminal</a> · runs entirely in your browser · nothing is uploaded
+</div>
+</div></body></html>

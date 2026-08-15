@@ -157,7 +157,25 @@ border-radius:9px;padding:11px 14px;font-size:12.5px;margin-top:12px}
 </div><!-- /tSize -->
 
 <div class="view" id="tNew">
-  <h2>Type or paste your stocks</h2>
+  <h2>Easiest · paste your order-confirmation email</h2>
+  <div class="panel">
+    <textarea id="mail" style="min-height:140px" placeholder="Open the order email from your basket provider, select all, and paste it here.
+
+It looks for rows like:
+   ZENTEC      12 of 12   BUY    1,826.40
+   DYNAMATECH   3 of 3    BUY   10,587.67
+
+Everything else in the email is ignored. Unfilled rows (0 of N) are dropped."></textarea>
+    <div class="row" style="margin-top:12px">
+      <input id="mlabel" placeholder="Basket name (optional — taken from the email if blank)" style="flex:1;min-width:200px">
+      <button class="pri" onclick="fromEmail()">Read the email</button>
+    </div>
+    <div class="note">Fully offline — the text never leaves this page. This is the easiest route:
+      the email already has the exact stocks, quantities and fill prices.</div>
+  </div>
+  <div id="mout"></div>
+
+  <h2>Or type the stocks yourself</h2>
   <div class="panel">
     <textarea id="nlist" style="min-height:150px" placeholder="Just symbols is enough — one per line:
 
@@ -189,6 +207,7 @@ Commas, tabs or spaces all work — paste straight from Excel."></textarea>
   </div>
   <div id="nout"></div>
 
+
   <h2>Or turn what you already own into a basket</h2>
   <div class="drop" id="idrop" style="padding:20px">
     <div style="font-size:15px;font-weight:700">Drop a holdings <b>XLSX / CSV</b></div>
@@ -201,6 +220,7 @@ Commas, tabs or spaces all work — paste straight from Excel."></textarea>
 </div><!-- /tNew -->
 
 <div class="foot">
+  New to this? <a href="friends.html" style="color:var(--em)">Read the 2-minute guide</a><br>
   Weights, not share counts — so one sheet works at any capital and any price.<br>
   Verify every order in your broker before placing. Not investment advice.
 </div>
@@ -232,6 +252,7 @@ function validate(s){
   if(typeof s!=='object'||!s) throw new Error('Not a JSON object.');
   if(!s.weights||!Object.keys(s.weights).length) throw new Error('Missing "weights".');
   s.prices=s.prices||{};                       // prices may be absent or partial — asked for later
+  if(s.shares) s.shares={...s.shares};         // kept so a later rebalance email can be applied
   s.prices=Object.fromEntries(Object.entries(s.prices).filter(([,v])=>v>0));  // drop bad prices
   const tot=Object.values(s.weights).reduce((a,b)=>a+b,0);
   if(!(tot>0)) throw new Error('Weights must sum to more than zero.');
@@ -538,6 +559,79 @@ function buildNew(){
     say('');
   }catch(e){ say('Could not build that — '+e.message,'warn err'); }
 }
+// ---- parse a basket order-confirmation email ----
+// rows look like:  SYMBOL <ws> "n of m" <ws> BUY|SELL <ws> price
+const MAILROW=/([A-Z][A-Z0-9&.\-]{1,19})\s+(\d+)\s+of\s+(\d+)\s+(BUY|SELL)\s+([\d,]+(?:\.\d+)?)/g;
+function parseEmail(txt){
+  const buys=[], sells=[], unfilled=[];
+  let m; MAILROW.lastIndex=0;
+  while((m=MAILROW.exec(txt))!==null){
+    const [,sym,got,,side,pxs]=m;
+    const q=+got, px=parseFloat(pxs.replace(/,/g,''));
+    if(!(q>0)||!(px>0)){ unfilled.push(sym); continue; }
+    (side==='SELL'?sells:buys).push({sym,q,px});
+  }
+  if(!buys.length&&!sells.length) throw new Error('found no filled order rows — paste the whole email body');
+  const name=(txt.match(/order for ([^\r\n]{2,60})/i)||[])[1];
+  // "Rebalance"/"Repair" adjust an existing basket; "Invest" establishes one
+  const kind=/Rebalance Order/i.test(txt)?'rebalance'
+            :/Repair Order/i.test(txt)?'repair':'invest';
+  return {buys,sells,unfilled,kind,name:name&&name.trim()};
+}
+function sheetFrom(shares,prices,label){
+  const inv=Object.keys(shares).reduce((a,k)=>a+shares[k]*prices[k],0);
+  return {label,asof:new Date().toISOString().slice(0,10),
+    weights:Object.fromEntries(Object.keys(shares).map(k=>[k,+(shares[k]*prices[k]/inv*100).toFixed(2)])),
+    prices:{...prices}, shares:{...shares}};   // shares let a later rebalance be applied
+}
+function fromEmail(){
+  try{
+    const r=parseEmail($('mail').value);
+    const label=$('mlabel').value.trim()||r.name||'From order email';
+    const notes=[];
+
+    if(r.sells.length && r.kind!=='invest'){
+      // a rebalance email carries CHANGES, not the resulting portfolio.
+      // applying it needs the basket as it stood before.
+      if(!SHEET||!SHEET.shares){
+        $('mout').innerHTML=`<div class="warn"><b>This is a ${r.kind} email — it lists changes,
+          not the whole basket.</b><br><br>
+          Sells: ${r.sells.map(x=>x.sym+' ×'+x.q).join(', ')}<br>
+          Buys: ${r.buys.map(x=>x.sym+' ×'+x.q).join(', ')||'none'}<br><br>
+          To apply it I need the basket as it was <i>before</i> this rebalance. Load that sheet on the
+          <b>📥 I received a basket</b> tab first (it must be one built from an order email, so it
+          carries share counts), then come back and paste this.</div>`;
+        say(''); return;
+      }
+      const sh={...SHEET.shares}, px={...SHEET.prices};
+      r.buys.forEach(x=>{ sh[x.sym]=(sh[x.sym]||0)+x.q; px[x.sym]=x.px; });
+      r.sells.forEach(x=>{ sh[x.sym]=(sh[x.sym]||0)-x.q; px[x.sym]=x.px; });
+      const exited=Object.keys(sh).filter(k=>sh[k]<=0);
+      exited.forEach(k=>{ delete sh[k]; delete px[k]; });
+      if(!Object.keys(sh).length) throw new Error('applying that rebalance empties the basket');
+      const entered=r.buys.map(x=>x.sym).filter(x=>!(SHEET.shares[x]>0));
+      showBuilt(sheetFrom(sh,px,label),'mout',
+        `${r.kind} applied to “${SHEET.label}” — ${Object.keys(sh).length} stocks after`);
+      if(entered.length) notes.push(`Entered the basket: <b>${entered.join(', ')}</b>`);
+      if(exited.length)  notes.push(`Exited completely: <b>${exited.join(', ')}</b>`);
+      notes.push(`Prices for touched stocks updated to the rebalance fills; untouched stocks keep
+        their older prices, so refresh those before sizing.`);
+    } else {
+      const shares={}, prices={};
+      r.buys.forEach(x=>{ shares[x.sym]=(shares[x.sym]||0)+x.q; prices[x.sym]=x.px; });
+      const inv=Object.keys(shares).reduce((a,k)=>a+shares[k]*prices[k],0);
+      showBuilt(sheetFrom(shares,prices,label),'mout',
+        `weights from ${r.buys.length} filled orders (₹${Math.round(inv).toLocaleString('en-IN')})`);
+      if(r.sells.length) notes.push(`Ignored ${r.sells.length} SELL row(s) — this email reads as an
+        initial purchase, so only the buys were used.`);
+    }
+    if(r.unfilled.length) notes.push(`Skipped <b>${[...new Set(r.unfilled)].join(', ')}</b> — unfilled
+      in that order, so no fill price. Add by hand if you want them.`);
+    if(notes.length) $('mout').innerHTML+=`<div class="warn">${notes.join('<br><br>')}</div>`;
+    say('');
+  }catch(e){ say('Could not read that email — '+e.message,'warn err'); }
+}
+
 // ---- build a sheet from an uploaded holdings file (weights by current value) ----
 const PXC=['price','last price','ltp','close price','average price','avg price','avg. cost','average cost'];
 function sheetFromHoldings(rows){
