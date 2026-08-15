@@ -62,7 +62,7 @@ th.r,td.r{text-align:right}
 td{padding:8px 10px;border-bottom:1px solid var(--hair);font-size:13.5px}
 tr:hover td{background:var(--panel2)}
 td.sym{font-weight:600;font-size:12.5px}
-tr.skip td{opacity:.45}
+tr.skip td{color:var(--tx3)}
 tfoot td{font-weight:700;border-top:1px solid var(--hair2);border-bottom:none}
 .wbar{height:6px;border-radius:var(--radius-xs);background:var(--rule-strong);min-width:2px}
 .warn{border:1px solid var(--gold);background:#F7EEDC;color:var(--gold);
@@ -71,6 +71,9 @@ border-radius:var(--radius);padding:11px 14px;font-size:12.5px;margin-top:12px}
 .note{font-size:12px;color:var(--tx2);font-style:italic;margin-top:9px;line-height:1.5}
 .foot{font-size:10.5px;color:var(--tx3);text-align:center;margin-top:36px;line-height:1.7}
 .hide{display:none}
+/* visually hidden but still focusable and announced, unlike display:none */
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.sr:focus-visible+*,.drop:focus-within{outline:2px solid var(--ring);outline-offset:2px}
 .tabs{display:flex;gap:7px;margin:20px 0 4px}
 .tab{display:inline-flex;align-items:center;gap:7px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;padding:9px 18px;cursor:pointer;
 background:var(--panel);border:1px solid var(--hair);color:var(--tx2);border-radius:var(--radius)}
@@ -102,7 +105,7 @@ padding:13px 16px;font-size:12.5px;color:var(--tx2)}
 .otype input[type=number]{width:58px;padding:5px 7px;font-size:12px}
 .setup{font-size:12.5px;color:var(--em);text-decoration:none;border:1px dashed var(--em);
 border-radius:var(--radius);padding:9px 14px}
-.setup:hover{background:#E4F0E9}
+.setup:hover{background:rgba(21,90,120,.06)}
 .ok{border:1px solid var(--gain);background:#E4F0E9;color:var(--gain);
 border-radius:var(--radius);padding:11px 14px;font-size:12.5px;margin-top:12px}
 
@@ -224,9 +227,10 @@ tbody tr:last-child{border-bottom:none}
   font-weight:600;font-size:13px}
 .ledger tfoot .lbl{font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--tx3)}
 .ledger tr.skip td{color:var(--tx3)}
-.up{color:var(--gain);font-weight:600}      /* financial result: green */
-.dn{color:var(--ox);font-weight:600}        /* financial result: red   */
-.flat{color:var(--tx3)}
+.ledger .up{color:var(--gain);font-weight:600}   /* financial result: green */
+.ledger .dn{color:var(--ox);font-weight:600}     /* red. NAMESPACED: bare .dn is the
+   drop-zone note at the top of this file, which must stay muted, not read as an error */
+.ledger .flat{color:var(--tx3)}
 @media(max-width:520px){                    /* after the .ledger rules, so it wins the cascade */
   .ledger{padding:2px 14px 6px}
   .ledger thead th{font-size:10.5px}        /* 9.5px is unreadable on a phone */
@@ -256,9 +260,9 @@ document.querySelectorAll('.ftnav a[data-p]').forEach(function(a){
     <div>how many shares of each, to place in your broker</div></div></div>
 </div>
 
-<div class="tabs">
-  <button class="tab on" data-v="tSize"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 20h16"/></svg>I received a basket</button>
-  <button class="tab" data-v="tNew"><svg viewBox="0 0 24 24"><path d="M12 21V9"/><path d="m7 14 5-5 5 5"/><path d="M4 4h16"/></svg>I want to share one</button>
+<div class="tabs" role="tablist">
+  <button class="tab on" data-v="tSize" role="tab" aria-selected="true"><svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 20h16"/></svg>I received a basket</button>
+  <button class="tab" data-v="tNew" role="tab" aria-selected="false"><svg viewBox="0 0 24 24"><path d="M12 21V9"/><path d="m7 14 5-5 5 5"/><path d="M4 4h16"/></svg>I want to share one</button>
 </div>
 
 <div class="view on" id="tSize">
@@ -270,9 +274,9 @@ document.querySelectorAll('.ftnav a[data-p]').forEach(function(a){
   <div style="font-size:12.5px;color:var(--tx2);margin-top:3px">
     or <b>click to browse</b> — or paste the text into the box below</div>
   <div class="dn">Nothing is uploaded. No account, no server, no broker connection needed.</div>
-  <input type="file" id="fin" accept=".json,.txt" class="hide">
+  <input type="file" id="fin" aria-label="Choose a basket sheet file" accept=".json,.txt" class="sr">
 </div>
-<textarea id="paste" placeholder='If it was sent to you as a message rather than a file, paste the text here.
+<textarea id="paste" aria-label="Paste basket sheet JSON" placeholder='If it was sent to you as a message rather than a file, paste the text here.
 It looks like this:
 {"label":"My Basket","theme":"Defence","risk":"high",
  "weights":{"INFY":60,"TCS":40},
@@ -281,7 +285,7 @@ It looks like this:
   <button class="pri" onclick="fromPaste()">Load pasted sheet</button>
   <button onclick="loadDemo()" title="Loads 4 well-known stocks with made-up weights so you can see how the page works without a real basket">Try it with sample data</button>
 </div>
-<div id="msg"></div>
+<div id="msg" role="status" aria-live="polite"></div>
 
 <div id="out" class="hide">
   <h2>Step 2 · What's in it</h2>
@@ -292,7 +296,7 @@ It looks like this:
   <h2>Step 3 · How much do you want to invest?</h2>
   <div class="panel">
     <div class="row">
-      <input type="number" id="amt" placeholder="200000" step="1000">
+      <input type="number" id="amt" aria-label="Amount to invest in rupees" placeholder="200000" step="1000">
       <button class="pri" onclick="calc()">Calculate orders</button>
       <span id="minhint" class="mono" style="font-size:12px;color:var(--tx2)"></span>
     </div>
@@ -311,9 +315,9 @@ It looks like this:
       <b>Zerodha:</b> Kite → Holdings → the download icon (top-right of the table), or
       Console → Portfolio → Holdings → download. Any broker export works if it has an
       instrument/symbol column and a quantity column.</div>
-    <input type="file" id="hfin" accept=".xlsx,.xls,.csv" class="hide">
+    <input type="file" id="hfin" aria-label="Choose your holdings file" accept=".xlsx,.xls,.csv" class="sr">
   </div>
-  <textarea id="hpaste" style="min-height:96px;margin-top:11px" placeholder="…or just copy the holdings table from your broker and paste it here.
+  <textarea id="hpaste" aria-label="Paste your holdings" style="min-height:96px;margin-top:11px" placeholder="…or just copy the holdings table from your broker and paste it here.
 
 Select the rows in Kite → Holdings, copy, paste. One line per stock:
    AXISCADES   32   1,554.93   1,543.40
@@ -328,7 +332,7 @@ Headers optional. It reads the symbol, the quantity, and a price if present."></
 <div class="view" id="tNew">
   <h2>Easiest · paste your order-confirmation email</h2>
   <div class="panel">
-    <textarea id="mail" style="min-height:140px" placeholder="Open the order email from your basket provider, select all, and paste it here.
+    <textarea id="mail" aria-label="Paste the basket order email" style="min-height:140px" placeholder="Open the order email from your basket provider, select all, and paste it here.
 
 It looks for rows like:
    ZENTEC      12 of 12   BUY    1,826.40
@@ -336,7 +340,7 @@ It looks for rows like:
 
 Everything else in the email is ignored. Unfilled rows (0 of N) are dropped."></textarea>
     <div class="row" style="margin-top:12px">
-      <input id="mlabel" placeholder="Basket name (optional — taken from the email if blank)" style="flex:1;min-width:200px">
+      <input id="mlabel" aria-label="Basket name, optional" placeholder="Basket name (optional — taken from the email if blank)" style="flex:1;min-width:200px">
       <button class="pri" onclick="fromEmail()">Read the email</button>
     </div>
     <div class="note">Fully offline — the text never leaves this page. This is the easiest route:
@@ -346,7 +350,7 @@ Everything else in the email is ignored. Unfilled rows (0 of N) are dropped."></
 
   <h2>Or type the stocks yourself</h2>
   <div class="panel">
-    <textarea id="nlist" style="min-height:150px" placeholder="Just symbols is enough — one per line:
+    <textarea id="nlist" aria-label="Stock symbols, one per line" style="min-height:150px" placeholder="Just symbols is enough — one per line:
 
 RELIANCE
 TCS
@@ -361,9 +365,9 @@ RELIANCE, 2965.5, 40
 
 Commas, tabs or spaces all work — paste straight from Excel."></textarea>
     <div class="row" style="margin-top:12px">
-      <input id="nlabel" placeholder="Basket name" style="flex:1;min-width:180px">
-      <input id="ntheme" placeholder="Theme (optional)" style="width:170px">
-      <select id="nrisk"><option value="">Risk (optional)</option>
+      <input id="nlabel" aria-label="Basket name" placeholder="Basket name" style="flex:1;min-width:180px">
+      <input id="ntheme" aria-label="Theme, optional" placeholder="Theme (optional)" style="width:170px">
+      <select id="nrisk" aria-label="Risk label"><option value="">Risk (optional)</option>
         <option value="low">low</option><option value="moderate">moderate</option>
         <option value="high">high</option></select>
     </div>
@@ -383,7 +387,7 @@ Commas, tabs or spaces all work — paste straight from Excel."></textarea>
     <div style="font-size:12px;color:var(--tx2);margin-top:4px">
       Turns what you already own into a basket sheet — weights from current value.
       Needs symbol, quantity and a price column.</div>
-    <input type="file" id="ifin" accept=".xlsx,.xls,.csv" class="hide">
+    <input type="file" id="ifin" aria-label="Choose a holdings file to import" accept=".xlsx,.xls,.csv" class="sr">
   </div>
   <div id="iout"></div>
 </div><!-- /tNew -->
@@ -593,11 +597,11 @@ function calc(){
       <td class="r mono">${r.skip?'skipped':M(r.val)}</td>
       <td class="r mono">${r.skip?'—':(r.val/cost*100).toFixed(1)+'%'}</td>
       <td class="r mono ${r.skip?'flat':d>0.05?'up':d<-0.05?'dn':'flat'}">
-        ${r.skip?'—':(d>=0?'+':'−')+Math.abs(d).toFixed(1)}</td></tr>`}).join('')}</tbody>
+        ${r.skip?'—':(d>=0?'+':'−')+Math.abs(d).toFixed(1)+'%'}</td></tr>`}).join('')}</tbody>
     <tfoot><tr><td class="lbl">Deployed</td><td class="r mono">100.0%</td><td></td>
       <td class="r mono">${rows.reduce((a,r)=>a+r.q,0)}</td>
-      <td class="r mono">${M(cost)}</td><td class="r mono">${(cost/amt*100).toFixed(1)}%</td>
-      <td class="r mono flat">±${worst.toFixed(1)}</td></tr></tfoot></table></div>
+      <td class="r mono">${M(cost)}</td><td class="r mono">100.0%</td>
+      <td class="r mono flat">±${worst.toFixed(1)}%</td></tr></tfoot></table></div>
    <div class="panel" style="margin-top:13px">
     ${(()=>{const b=bestNearby(amt);
       return (worst-b.drift>0.25)
@@ -612,7 +616,7 @@ function calc(){
              <a href="#" onclick="dropKey();return false">remove</a></span>` : ''}
       ${localStorage.getItem('ft_kite_api_key')
         ? `<span class="otype"><label><input type="radio" name="ot" id="olim" checked> limit
-             <input type="number" id="obuf" value="2" min="0" max="10" step="0.5"> % above</label>
+             <input type="number" id="obuf" aria-label="Limit price buffer, percent above last price" value="2" min="0" max="10" step="0.5"> % above</label>
            <label><input type="radio" name="ot" id="omkt"> market</label></span>` : ''}
       ${localStorage.getItem('ft_kite_api_key')
         ? '<button class="pri" onclick="placeInKite()">Place in Kite →</button>'
@@ -1055,7 +1059,9 @@ $('hfin').onchange=e=>{if(!SHEET){say('Load a basket sheet first.','warn err');r
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
   document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));
   document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));
-  t.classList.add('on'); $(t.dataset.v).classList.add('on'); say('');});
+  t.classList.add('on'); $(t.dataset.v).classList.add('on'); say('');
+  // keep the accessible state in step with the visual state
+  document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected',x.classList.contains('on')));});
 const idr=$('idrop');
 idr.onclick=()=>$('ifin').click();
 idr.ondragover=e=>{e.preventDefault();idr.classList.add('over')};
