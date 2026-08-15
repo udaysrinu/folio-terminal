@@ -539,6 +539,7 @@ function copyCSV(){
 // ---- holdings upload -> rebalance (same model as basket.py rebalance) ----
 const num=v=>parseFloat(String(v??'').replace(/[^0-9.\-]/g,''));
 const norm=c=>String(c??'').trim().toLowerCase().replace(/\./g,'').replace(/\s+/g,' ');
+let HELDPX={};        // prices seen alongside uploaded/pasted holdings
 const SYMC=['symbol','tradingsymbol','instrument','scrip','stock','name'];
 const QTYC=['quantity','qty','quantity available','net quantity','holdings qty','free qty'];
 function parseHoldings(rows){
@@ -549,41 +550,54 @@ function parseHoldings(rows){
     if(a>-1&&b>-1){hi=i;si=a;qi=b;break;}
   }
   if(hi<0) throw new Error('no header row with a symbol and a quantity column');
-  const out={};
+  let pi2=-1; { const low=(rows[hi]||[]).map(norm);
+    for(const want of PXC){ const j=low.indexOf(want); if(j>-1){pi2=j;break;} } }
+  const out={}; HELDPX={};
   for(let r=hi+1;r<rows.length;r++){
     const sym=String(rows[r]?.[si]??'').trim().toUpperCase();
     const q=num(rows[r]?.[qi]);
-    if(sym&&q>0) out[sym]=(out[sym]||0)+q;
+    if(!sym||!(q>0)) continue;
+    out[sym]=(out[sym]||0)+q;
+    if(pi2>-1){ const p=num(rows[r]?.[pi2]); if(p>0) HELDPX[sym]=p; }
   }
   if(!Object.keys(out).length) throw new Error('no rows with a symbol and a positive quantity');
   return out;
 }
 function rebalance(held){
-  const w=SHEET.weights,p=SHEET.prices;
-  const syms=Object.keys(w);
+  const w=SHEET.weights,p={...SHEET.prices};
+  // anything you hold that the basket no longer contains must be sold, or it lingers forever
+  const orphans=Object.keys(held).filter(x=>held[x]>0&&!(x in w));
+  orphans.forEach(x=>{ if(HELDPX[x]>0) p[x]=HELDPX[x]; });
+  const syms=[...Object.keys(w),...orphans];
   const value=syms.reduce((a,s)=>a+(held[s]||0)*p[s],0);
   if(value<=0){ $('rebal').innerHTML=`<div class="warn">None of this basket's ${syms.length}
     stocks appear in that file — nothing to rebalance. Use step 4 to buy in.</div>`; return; }
   let buy=0,sell=0;
-  const rows=syms.sort((a,b)=>w[b]-w[a]).map(s=>{
-    const q=held[s]||0, now=q*p[s]/value*100, tgt=Math.round(value*(w[s]/100)/p[s]), d=tgt-q;
-    if(d>0)buy+=d*p[s]; else if(d<0)sell+=-d*p[s];
-    return {s,now,tgt:w[s],d,px:p[s]};
+  const rows=syms.sort((a,b)=>(w[b]||0)-(w[a]||0)).map(s=>{
+    const q=held[s]||0, tw=w[s]||0, px=p[s];
+    if(!(px>0)) return {s,now:NaN,tgt:tw,d:-q,px:0,unknown:true};   // exited, price unknown
+    const now=q*px/value*100, tgt=Math.round(value*(tw/100)/px), d=tgt-q;
+    if(d>0)buy+=d*px; else if(d<0)sell+=-d*px;
+    return {s,now,tgt:tw,d,px,exited:tw===0};
   });
   const missing=syms.filter(s=>!(held[s]>0));
   $('rebal').innerHTML=`<div class="panel"><div class="mono" style="font-size:12.5px;color:var(--tx2)">
      Rebalancing ${M(value)} currently held across ${syms.length-missing.length}/${syms.length} stocks</div>
     <table><thead><tr><th>Stock</th><th class="r">Now</th><th class="r">Target</th>
       <th class="r">Drift</th><th class="r">Action</th></tr></thead><tbody>
-    ${rows.map(r=>`<tr><td class="sym">${r.s}</td>
-      <td class="r mono">${r.now.toFixed(1)}%</td><td class="r mono">${r.tgt.toFixed(1)}%</td>
-      <td class="r mono" style="color:${Math.abs(r.now-r.tgt)>2?'var(--gold)':'var(--tx2)'}">
-        ${(r.now-r.tgt>=0?'+':'')}${(r.now-r.tgt).toFixed(1)}%</td>
+    ${rows.map(r=>`<tr${r.exited||r.unknown?' style="background:rgba(200,53,42,.05)"':''}>
+      <td class="sym">${r.s}${r.exited||r.unknown?' <span style="font-size:10px;color:var(--ox)">EXITED</span>':''}</td>
+      <td class="r mono">${r.unknown?'?':r.now.toFixed(1)+'%'}</td>
+      <td class="r mono">${r.tgt.toFixed(1)}%</td>
+      <td class="r mono" style="color:${r.unknown?'var(--tx3)':Math.abs(r.now-r.tgt)>2?'var(--gold)':'var(--tx2)'}">
+        ${r.unknown?'—':(r.now-r.tgt>=0?'+':'')+(r.now-r.tgt).toFixed(1)+'%'}</td>
       <td class="r mono" style="font-weight:700;color:${r.d>0?'var(--em)':r.d<0?'var(--ox)':'var(--tx3)'}">
         ${r.d===0?'—':(r.d>0?'BUY ':'SELL ')+Math.abs(r.d)}</td></tr>`).join('')}
     </tbody></table>
     <div class="note">buy ${M(buy)} · sell ${M(sell)} · net ${(buy-sell>=0?'+':'-')}${M(Math.abs(buy-sell))}</div>
     ${missing.length?`<div class="warn">Not in your file: <b>${missing.join(', ')}</b> — shown as BUY from zero.</div>`:''}
+    ${orphans.length?`<div class="warn"><b>${orphans.join(', ')}</b> ${orphans.length>1?'are':'is'} no longer
+      in this basket — sell in full to match it. ${orphans.some(x=>!(p[x]>0))?'(No price for some, so they are left out of the totals.)':''}</div>`:''}
     <div class="warn">A stock you hold in <b>more than one</b> basket shows false drift: brokers report
       one merged quantity, so the other basket's shares count against this target. Check before acting
       on a large drift.</div></div>`;
@@ -593,12 +607,14 @@ function holdingsFromText(txt){
   const rows=txt.split(/\r?\n/).map(l=>l.split(/[\t,]+|\s{2,}|\s+/).filter(Boolean));
   const looksHeader=rows.length&&rows[0].some(c=>SYMC.includes(norm(c)));
   if(looksHeader) return parseHoldings(rows);
-  const out={};
+  const out={}; HELDPX={};
   rows.forEach(p=>{
     if(p.length<2) return;
     const sym=p[0].toUpperCase().replace(/[^A-Z0-9&.\-]/g,'');
     const q=num(p[1]);
-    if(sym&&q>0&&Number.isFinite(q)) out[sym]=(out[sym]||0)+q;
+    if(!sym||!(q>0)||!Number.isFinite(q)) return;
+    out[sym]=(out[sym]||0)+q;
+    for(let i=2;i<p.length;i++){ const v=num(p[i]); if(v>0){ HELDPX[sym]=v; break; } }
   });
   if(!Object.keys(out).length) throw new Error('no "SYMBOL quantity" lines found');
   return out;
