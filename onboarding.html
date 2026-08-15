@@ -48,26 +48,9 @@ td{padding:9px;border-bottom:1px solid var(--hair);font-size:13.5px}
 </style></head><body><div class="wrap">
 
 <div><h1>One-click ordering</h1><div class="sub">Optional setup · about 5 minutes</div></div>
-<p class="lede">Without this, you copy the order list and type it into your broker by hand.
-With it, a single button hands the whole basket to Kite — <b>all 15 orders pre-filled</b> —
-and you just review and confirm.</p>
-
-<h2>What it costs</h2>
-<div class="panel">
-  <span class="free">₹0 · free tier</span>
-  <p style="margin-top:11px;font-size:14px">Zerodha's <b>Personal</b> plan is free and covers
-    <i>"full fledged order, GTT, alerts management"</i> — which is all this needs.</p>
-  <table>
-    <thead><tr><th>Plan</th><th>Cost</th><th>You need it for</th></tr></thead>
-    <tbody>
-      <tr><td><b>Personal</b></td><td class="mono">₹0</td><td>Placing orders — <b>this is the one</b></td></tr>
-      <tr><td>Connect</td><td class="mono">₹500/mo</td><td>Live streaming + historical candles — not needed here</td></tr>
-    </tbody>
-  </table>
-  <div class="warn">Confirm the free plan issues a usable key when you sign up. Zerodha's pricing
-    page lists order management under the free tier, but the basket handoff is documented separately —
-    if the button errors with an API-key message, that's the thing to check first.</div>
-</div>
+<p class="lede">Without this you type the orders into your broker by hand. With it, one button hands
+the whole basket to Kite pre-filled, and you review and confirm. <b>Free</b> — Zerodha's Personal
+plan covers order placement.</p>
 
 <h2>Setup</h2>
 <div class="panel">
@@ -98,20 +81,16 @@ and you just review and confirm.</p>
     <a href="basket.html" style="font-size:12.5px">← back to the workbench</a>
   </div>
   <div id="msg"></div>
-  <div class="note">Stored in this browser's localStorage. Clearing site data removes it.
-    Anyone using this page on their own device sets their own key.</div>
+  <div class="note">Stored in this browser only. If the button later errors about the API key,
+    check that the redirect URL matches exactly.</div>
 </div>
 
-<h2>Is it safe to put a key in a web page?</h2>
+<h2>Is this safe?</h2>
 <div class="panel">
-  <p style="font-size:13.5px;color:var(--tx2)">Yes — an <code>api_key</code> alone can't touch your
-  account. It only identifies the <i>app</i>. Placing an order still needs <b>your Zerodha login and
-  2FA</b>, which happens on Kite's own site, and every order is shown to you for approval before
-  anything executes. The dangerous half is the <b>API secret</b> — which this page never asks for
-  and never uses.</p>
-  <p style="font-size:13.5px;color:var(--tx2);margin-top:9px">What actually happens: the page builds
-  a form and posts it to <code>kite.zerodha.com/connect/basket</code>. Your browser goes to Kite,
-  Kite shows the basket, you confirm. The orders are placed by Kite, in your session — not by this page.</p>
+  <p style="font-size:13.5px;color:var(--tx2)">An <code>api_key</code> only identifies the app — it
+  can't touch your account. Orders still need <b>your Zerodha login and 2FA on Kite's own site</b>,
+  and you approve every order there. The sensitive half is the <b>API secret</b>, which this never
+  asks for.</p>
 </div>
 
 <div class="foot">
