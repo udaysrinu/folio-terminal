@@ -939,10 +939,25 @@ function parseEmail(txt){
       +'(the one with a "List Of Orders" table)');
   }
   const name=(txt.match(/order for ([^\r\n]{2,60})/i)||[])[1];
-  // "Rebalance"/"Repair" adjust an existing basket; "Invest" establishes one
-  const kind=/Rebalance Order/i.test(txt)?'rebalance'
-            :/Repair Order/i.test(txt)?'repair':'invest';
-  return {buys,sells,pending,kind,name:name&&name.trim()};
+
+  // "Rebalance"/"Repair" adjust an existing basket; "Invest" establishes one.
+  // Three signals, cheapest and most reliable last, so nothing extra has to be pasted:
+  //  1. the subject line, when the whole email is pasted
+  //  2. the Order Type column's VALUE — the word sits on the row *under* the header,
+  //     so /Rebalance Order/ never matched a real email; it is "Order Type … Rebalance"
+  //  3. any SELL row at all. An initial Invest only ever buys, so a single sell proves
+  //     this is a delta. This one survives pasting just the orders table.
+  // The value sits on the row UNDER the header, so the rest of the header row
+  // ("Buy Value  Sell Value") lies between them — skip it lazily to the first keyword.
+  const declared=(txt.match(
+      /Order\s*Type[\s\S]{0,80}?\b(Invest|Rebalance|Repair|Exit|Withdraw|SIP)\b/i)||[])[1];
+  let kind;
+  if(/Rebalance Order/i.test(txt) || /^rebalance$/i.test(declared||'')) kind='rebalance';
+  else if(/Repair Order/i.test(txt) || /^repair$/i.test(declared||'')) kind='repair';
+  else if(/^(exit|withdraw)$/i.test(declared||'')) kind='exit';
+  else if(sells.length) kind='rebalance';        // sells present but nothing declared it
+  else kind='invest';
+  return {buys,sells,pending,kind,name:name&&name.trim(),declared};
 }
 function sheetFrom(shares,prices,label){
   const inv=Object.keys(shares).reduce((a,k)=>a+shares[k]*prices[k],0);
@@ -978,7 +993,9 @@ function fromEmail(){
     const label=$('mlabel').value.trim()||r.name||'From order email';
     const notes=[];
 
-    if(r.sells.length && r.kind!=='invest'){
+    // Route on KIND, not on the presence of sells: a rebalance that only adds weight has
+    // no sell rows but is still a delta, and building a fresh basket from it would be wrong.
+    if(r.kind!=='invest'){
       // a rebalance email carries CHANGES, not the resulting portfolio.
       // applying it needs the basket as it stood before.
       if(!SHEET||!SHEET.shares){

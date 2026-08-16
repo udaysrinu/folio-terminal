@@ -1,56 +1,160 @@
 # Folio Terminal
 
-Local portfolio analytics for Zerodha Kite, plus a portable format for sharing weighted stock baskets.
+**Someone shares a stock basket. You get your own buy list.**
 
-Three things it does:
+A basket is a list of stocks and *target percentages* — not share counts. Type what you want to
+invest and Folio Terminal turns those percentages into exact whole-share orders at **your**
+capital, not theirs.
 
-1. **Dashboard** — turn a broker tradebook into FIFO-matched realised P&L, an equity curve, basket concentration, and a "what if I never sold" counterfactual. Single HTML file, no build step.
-2. **Basket capture** — work out which holdings belong to which smallcase/basket by reading Kite **order tags** (the only place that link exists).
-3. **Basket interchange** — export a basket as a portable sheet, and size *anyone's* sheet to *your* capital as a concrete order list.
-4. **`basket.html`** — a button-driven page that does #3 *and* creates baskets, with no Python, no server and no broker connection. Send it to someone who has neither MCP nor a terminal.
+Five standalone HTML files. No build step, no server, no account, no telemetry. Nothing you drop
+in ever leaves the tab.
 
-Everything runs on your machine. No account, no server, no telemetry.
+**[Open it →](https://udaysrinu.github.io/folio-terminal/)**  ·  MIT  ·  Not investment advice
+
+![The basket workbench: a monospace readout showing ₹4,00,000 becoming ₹3,98,055 deployed with ₹1,945 left, above a ledger of four stocks with target weight, shares, cost, actual weight and signed drift](docs/img/workbench.png)
+
+---
+
+## Try it in 30 seconds, nothing to install
+
+1. Open **[the workbench](https://udaysrinu.github.io/folio-terminal/basket.html)**
+2. Click **“Try it with sample data”** — loads a fake 4-stock basket
+3. Type an amount, press **Calculate orders**
+
+That's the whole loop. Everything below is detail.
+
+---
+
+## What it actually does
+
+### 1 · Sizes a basket to your capital
+
+Weights travel between people; share counts don't. The same file works whether you put in
+₹80,000 or ₹4,00,000 — it just buys different numbers of shares.
+
+Because Indian exchanges only allow whole shares, the rounding is visible rather than hidden: the
+**Drift** column shows how far each holding lands from its target, signed, and the readout states
+exactly how much cash is left over.
+
+### 2 · Refuses to silently give you a different portfolio
+
+Every basket has a floor — the amount below which its priciest stock can't afford a single share.
+Under it, most tools quietly drop that stock and hand you something more concentrated than what
+you asked for. This one **blocks and offers amounts that work**:
+
+![Below the minimum: the app blocks, explains that TCS would get zero shares so you would own a different more concentrated basket, and offers the minimum, 2× and 3×](docs/img/blocked.png)
+
+### 3 · Hands the orders to your broker
+
+**Copy as text**, **Copy as CSV**, or — with a free Zerodha Publisher key — **Place in Kite**,
+which opens Kite with the whole basket pre-filled for you to review and confirm. Nothing is ever
+placed without you approving it in your broker.
+
+### 4 · Builds baskets, not just consumes them
+
+- Paste a **smallcase order-confirmation email** → a sheet with real fill prices
+- Paste a **rebalance email** → applied as a delta on top of the basket you already had
+- Drop a **holdings export** → a sheet weighted by what you currently own
+- Type **symbols and weights** by hand
+
+### 5 · Reads your tradebook
+
+Drop a Zerodha Console tradebook on the **[dashboard](https://udaysrinu.github.io/folio-terminal/dashboard.html)**
+for FIFO-matched realised P&L, an equity curve, per-basket concentration, and a
+"what if I never sold" counterfactual. Parsed in the browser; the Python path below is optional.
+
+---
+
+## Been sent a basket and not sure what to do?
+
+There's a plain-English page for exactly that — no finance jargon, about two minutes:
+
+![The guide page: what to do with a shared basket, four numbered steps, and answers to common questions](docs/img/guide.png)
+
+**[Read the guide →](https://udaysrinu.github.io/folio-terminal/friends.html)**
+
+---
+
+## Invest vs Rebalance — why it matters
+
+An **Invest** email lists a whole basket. A **Rebalance** email lists only the *changes*, so
+reading it as a basket would give you a fragment. Folio Terminal tells them apart on three
+signals, so you never have to paste anything extra:
+
+| Signal | Example |
+|---|---|
+| The subject line | `Rebalance Order Successful` |
+| The **Order Type** value | `Order Type / Rebalance / ₹38,085.95 / ₹35,914.55` |
+| **Any SELL row at all** | an initial Invest only ever buys, so one sell proves it's a delta |
+
+The last one survives pasting just the orders table with no headers.
+
+A rebalance is then applied as arithmetic on the basket you already had —
+`new = old + bought − sold` — which is why sheets built from an order email carry share counts.
+Fill prices from the rebalance update the stocks it touched; untouched stocks keep their older
+prices, and the page says so rather than pretending the whole sheet is fresh.
+
+---
+
+## What it will not do
+
+- **Fetch live prices.** A page with no server can't call an exchange, and browsers block
+  it anyway. Prices
+  Prices come from the sheet you were sent, or you type them.
+- **Give advice.** It does arithmetic. It doesn't know whether a basket is any good.
+- **Send your data anywhere.** No account, no upload, no analytics. Your Kite API key, if you set
+  one up, is stored only in your own browser.
 
 ---
 
 ## Privacy
 
-This repo contains **tooling and fake samples only**. Your real data — holdings, tradebook, basket constituents — is gitignored and never committed:
+This repo contains **tooling and fake samples only**. Real data — holdings, tradebook, basket
+constituents — is gitignored and never committed:
 
 ```
 _holdings.json  _smallcase_map.json  live.json  *_sheet.json  *_BASKET.md
 tradebook*.xlsx  tradebook*.csv  taxpnl*.xlsx  JOURNAL.md  ...
 ```
 
-If you fork this, keep it that way. Basket constituents from a **paid** subscription are the subscription provider's IP — check their terms before sharing sheets with anyone.
+If you fork this, keep it that way. Basket constituents from a **paid** subscription are that
+provider's IP — check their terms before sharing sheets.
 
 ---
 
-## Requirements
+## Design
 
-Python 3.10+. Only dependency is `openpyxl`, and only if you feed it `.xlsx`:
+The visual system is documented in **[DESIGN.md](DESIGN.md)** and is enforced, not decorative:
 
-```bash
-pip install openpyxl        # skip if you only use CSV
-```
+- **Blue `#155A78` means an action is possible.** Buttons, focus rings, links, current nav.
+- **Green `#0B5B3A` means a financial result is positive.** Gains and positive drift only —
+  never on a button, never on navigation.
+- Every text colour clears **WCAG AA 4.5:1** against the surface it actually sits on, verified by
+  measuring every text node on every page rather than by eye.
+- Mineral paper ground, never pure white. Holdings read as a **ledger**, not dashboard tiles.
+
+Design explorations, including the direction that was rejected and why, are in
+[`designs/`](designs/).
 
 ---
 
-## Quick start
+## The command-line half (optional)
+
+Everything above works in a browser. If you'd rather script it, `basket.py` and
+`build_dashboard.py` do the same jobs, and `basket.py` can read Kite order tags to work out which
+holdings came from which smallcase — the only place that link exists.
 
 ```bash
-# 1. build the data file from a tradebook (+ optional holdings)
+pip install openpyxl                      # only needed for .xlsx
+
+python3 basket.py demo                    # self-check, writes a sample sheet
+python3 basket.py orders sheet.json 400000  # size a sheet to your capital
+python3 basket.py rebalance sheet.json holdings.json
+
 python3 build_dashboard.py samples/sample_tradebook.csv \
         --holdings samples/sample_holdings.json
-
-# 2. serve it — browsers block fetch() over file://
-python3 -m http.server 8787
-
-# 3. open
-open http://localhost:8787/dashboard.html
+python3 -m http.server 8787               # then open dashboard.html
 ```
-
-The page polls `live.json` every 30s. You can also **drag an XLSX/CSV straight onto the page** — it parses and FIFO-matches in the browser, no Python needed.
 
 ---
 
