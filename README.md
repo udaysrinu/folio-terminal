@@ -197,6 +197,12 @@ signals, so you never have to paste anything extra:
 
 The last one survives pasting just the orders table with no headers.
 
+**If someone forwards you *their* rebalance email**, the quantities in it were computed for their
+position, not yours. The workbench refuses it when it asks to sell more than your sheet holds, and
+flags it when it sells a meaningful holding to exactly zero or moves more than ~35% of the basket's
+value — both signatures of an email belonging to a bigger position. Ask for their updated **sheet**
+instead; weights fit any amount of money.
+
 A rebalance is then applied as arithmetic on the basket you already had —
 `new = old + bought − sold` — which is why sheets built from an order email carry share counts.
 Fill prices from the rebalance update the stocks it touched; untouched stocks keep their older

@@ -227,6 +227,22 @@ from, which is why forwarding one to a friend cannot work: his prior state is di
 your updated sheet  (weights)
    ↓ sent to whoever follows you
 their own orders, sized to their own money</pre>
+<h3>What if someone forwards you the email anyway?</h3>
+<p>It is the obvious thing to do, so the workbench checks for it. A rebalance email's quantities
+were computed against one specific position, and there are two detectable signatures when it meets
+a different one:</p>
+<ul>
+  <li><b>It asks to sell more than the sheet holds.</b> Arithmetically impossible — refused
+      outright, with the numbers shown.</li>
+  <li><b>It sells a meaningful holding down to exactly zero</b>, or moves more than about a third
+      of the basket's value. Both are unusual for a real rebalance and strongly suggest the email
+      belongs to a larger position. Flagged, with the advice to ask for the sender's sheet.</li>
+</ul>
+<p>Without those checks the result is not an error message — it is a plausible-looking basket with
+a stock missing. A <span class="mono">SELL 5</span> sized for a 27× holding exactly cancels a 5×
+holder's entire position, so the stock silently disappears and the sheet claims one fewer holding
+than the manager published.</p>
+
 <div class="warn"><b>One thing the sheet cannot fix.</b> A stock held through two different
 baskets appears once in your broker's holdings, as one merged quantity. Any per-basket drift
 calculated from that number is wrong for both baskets. The workbench flags it rather than

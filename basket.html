@@ -1100,7 +1100,35 @@ function fromEmail(){
           carries share counts), then come back and paste this.</div>`;
         say(''); return;
       }
-      const sh={...SHEET.shares}, px={...SHEET.prices};
+      // A rebalance email's quantities were computed against ONE position. Applied to a
+      // different-sized position it produces a plausible-looking sheet that is simply wrong —
+      // a sell sized for a big holding goes through zero on a small one and deletes the stock.
+      // Refuse when the arithmetic proves a mismatch, warn when it strongly suggests one.
+      const prior=SHEET.shares, pxRef=SHEET.prices;
+      const sheetVal=Object.keys(prior).reduce((a,k)=>a+prior[k]*(pxRef[k]||0),0);
+      const turnover=[...r.buys,...r.sells].reduce((a,x)=>a+x.q*x.px,0);
+      const oversold=r.sells.filter(x=>x.q>(prior[x.sym]||0))
+        .map(x=>`${x.sym} (sell ${x.q}, you hold ${prior[x.sym]||0})`);
+      if(oversold.length){
+        $('mout').innerHTML=`<div class="warn err"><b>This email was not computed for this basket.</b><br><br>
+          It asks to sell more than the sheet holds: ${oversold.join('; ')}.<br><br>
+          A rebalance email only fits the exact position it was worked out from. If someone
+          forwarded you theirs, ask them for their updated <b>sheet</b> instead — that carries
+          weights, which fit any amount of money.</div>`;
+        say(''); return;
+      }
+      const zeroed=r.sells.filter(x=>x.q===(prior[x.sym]||0)&&(SHEET.weights[x.sym]||0)>=5)
+        .map(x=>`${x.sym} (${(SHEET.weights[x.sym]||0).toFixed(0)}% of the basket)`);
+      const heavy=sheetVal>0 && turnover/sheetVal>0.35;
+      if(zeroed.length||heavy){
+        notes.push(`<b>This email may have been computed for a different position size.</b>
+          ${zeroed.length?`It sells ${zeroed.join(' and ')} down to exactly zero, which a rebalance
+            rarely does to a holding that size. `:''}
+          ${heavy?`It moves ${M(turnover)} against a ${M(sheetVal)} basket —
+            ${(turnover/sheetVal*100).toFixed(0)}% turnover, unusually high for a rebalance. `:''}
+          If this email is not yours, use the sender's updated <b>sheet</b> instead of their email.`);
+      }
+      const sh={...prior}, px={...pxRef};
       r.buys.forEach(x=>{ sh[x.sym]=(sh[x.sym]||0)+x.q; px[x.sym]=x.px; });
       r.sells.forEach(x=>{ sh[x.sym]=(sh[x.sym]||0)-x.q; px[x.sym]=x.px; });
       const exited=Object.keys(sh).filter(k=>sh[k]<=0);
