@@ -98,9 +98,8 @@ prices, and the page says so rather than pretending the whole sheet is fresh.
 
 ## What it will not do
 
-- **Fetch live prices.** A page with no server can't call an exchange, and browsers block
-  it anyway. Prices
-  Prices come from the sheet you were sent, or you type them.
+- **Fetch live prices.** A page with no server can't call an exchange, and browsers block it
+  anyway. Prices come from the sheet you were sent, or you type them.
 - **Give advice.** It does arithmetic. It doesn't know whether a basket is any good.
 - **Send your data anywhere.** No account, no upload, no analytics. Your Kite API key, if you set
   one up, is stored only in your own browser.
