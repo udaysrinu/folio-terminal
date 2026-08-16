@@ -231,6 +231,25 @@ tbody tr:last-child{border-bottom:none}
 .ledger .dn{color:var(--ox);font-weight:600}     /* red. NAMESPACED: bare .dn is the
    drop-zone note at the top of this file, which must stay muted, not read as an error */
 .ledger .flat{color:var(--tx3)}
+/* "Where do I get this file?" — collapsed by default so it never shouts at someone
+   who already knows, but one click away instead of buried on another tab. */
+.howto{margin-top:10px;border:1px solid var(--rule);border-radius:var(--radius-sm);
+  background:var(--panel);overflow:hidden}
+.howto summary{cursor:pointer;padding:10px 15px;font-size:12.5px;font-weight:600;
+  color:var(--em);list-style:none;display:flex;align-items:center;gap:7px;min-height:40px}
+.howto summary::-webkit-details-marker{display:none}
+.howto summary::before{content:'';width:0;height:0;flex:none;
+  border-left:5px solid currentColor;border-top:4px solid transparent;
+  border-bottom:4px solid transparent;transition:transform var(--t) var(--e)}
+.howto[open] summary::before{transform:rotate(90deg)}
+.howto summary:hover{background:var(--panel2)}
+.howto-body{padding:2px 16px 14px;font-size:12.5px;color:var(--tx2);line-height:1.6;
+  border-top:1px solid var(--rule)}
+.howto-body b{color:var(--tx);display:inline-block;margin-top:9px}
+.howto-body ol{margin:5px 0 4px 19px}
+.howto-body li{margin:3px 0}
+.howto-body a{color:var(--em)}
+
 @media(max-width:520px){                    /* after the .ledger rules, so it wins the cascade */
   .ledger{padding:2px 14px 6px}
   .ledger thead th{font-size:10.5px}        /* 9.5px is unreadable on a phone */
@@ -309,14 +328,33 @@ It looks like this:
   <div id="orders"></div>
 
   <h2>Step 5 · Already own it? <span style="text-transform:none;letter-spacing:0;font-weight:400">— top up to the right weights (optional)</span></h2>
+  <p class="note" style="font-style:normal;margin:0 0 10px">
+    Compares what you already own against the basket above and tells you exactly what to buy or
+    sell to line them up. Only useful once a basket is loaded.</p>
   <div class="drop" id="hdrop" style="padding:20px">
-    <div style="font-size:15px;font-weight:700">Drop your holdings <b>XLSX / CSV</b></div>
+    <div style="font-size:15px;font-weight:700">Drop your holdings file <b>XLSX / CSV</b></div>
     <div style="font-size:12px;color:var(--tx2);margin-top:4px">
-      <b>Zerodha:</b> Kite → Holdings → the download icon (top-right of the table), or
-      Console → Portfolio → Holdings → download. Any broker export works if it has an
-      instrument/symbol column and a quantity column.</div>
+      or click to choose one — nothing is uploaded, it is read in this tab</div>
     <input type="file" id="hfin" aria-label="Choose your holdings file" accept=".xlsx,.xls,.csv" class="sr">
   </div>
+  <details class="howto">
+    <summary>Where do I get this file?</summary>
+    <div class="howto-body">
+      <b>Zerodha, from Kite (quickest)</b>
+      <ol>
+        <li>Open <a href="https://kite.zerodha.com/holdings" target="_blank" rel="noopener">kite.zerodha.com/holdings</a></li>
+        <li>Above the table on the right there is a small <b>download</b> icon (a downward arrow).
+            Click it and choose <b>XLSX</b> or <b>CSV</b>.</li>
+        <li>Drop the downloaded file here.</li>
+      </ol>
+      <b>Zerodha, from Console</b> —
+      <a href="https://console.zerodha.com/portfolio/holdings" target="_blank" rel="noopener">console.zerodha.com/portfolio/holdings</a>,
+      then <b>Download</b> at the top right.
+      <div class="note" style="margin-top:9px">Any broker export works. It needs a <b>symbol</b>
+        column and a <b>quantity</b> column; a price column is used when present. Or skip the
+        file entirely and paste the rows below.</div>
+    </div>
+  </details>
   <textarea id="hpaste" aria-label="Paste your holdings" style="min-height:96px;margin-top:11px" placeholder="…or just copy the holdings table from your broker and paste it here.
 
 Select the rows in Kite → Holdings, copy, paste. One line per stock:
@@ -382,13 +420,42 @@ Commas, tabs or spaces all work — paste straight from Excel."></textarea>
 
 
   <h2>Or turn what you already own into a basket</h2>
+  <p class="note" style="font-style:normal;margin:0 0 10px">
+    Makes a shareable sheet out of your current holdings: each stock's weight is its share of
+    your portfolio's present value. Use this when <b>you</b> are the one sending a basket.
+    <span style="color:var(--tx3)">(Comparing your holdings <i>against</i> a basket someone sent
+    you is Step 5 on the other tab.)</span></p>
+
   <div class="drop" id="idrop" style="padding:20px">
-    <div style="font-size:15px;font-weight:700">Drop a holdings <b>XLSX / CSV</b></div>
+    <div style="font-size:15px;font-weight:700">Drop your holdings file <b>XLSX / CSV</b></div>
     <div style="font-size:12px;color:var(--tx2);margin-top:4px">
-      Turns what you already own into a basket sheet — weights from current value.
-      Needs symbol, quantity and a price column.</div>
+      or click to choose one — nothing is uploaded, it is read in this tab</div>
     <input type="file" id="ifin" aria-label="Choose a holdings file to import" accept=".xlsx,.xls,.csv" class="sr">
   </div>
+
+  <details class="howto">
+    <summary>Where do I get this file?</summary>
+    <div class="howto-body">
+      <b>Zerodha, from Kite (quickest)</b>
+      <ol>
+        <li>Open <a href="https://kite.zerodha.com/holdings" target="_blank" rel="noopener">kite.zerodha.com/holdings</a></li>
+        <li>Above the table on the right there is a small <b>download</b> icon (a downward arrow).
+            Click it and choose <b>XLSX</b> or <b>CSV</b>.</li>
+        <li>Drop the downloaded file here.</li>
+      </ol>
+      <b>Zerodha, from Console (has cost prices too)</b>
+      <ol>
+        <li>Open <a href="https://console.zerodha.com/portfolio/holdings" target="_blank" rel="noopener">console.zerodha.com/portfolio/holdings</a></li>
+        <li>Click <b>Download</b> at the top right of the holdings table.</li>
+      </ol>
+      <b>Any other broker</b> works too. The file needs a <b>symbol</b> column, a
+      <b>quantity</b> column, and a <b>price</b> column — headers can be named anything
+      reasonable (<code>Instrument</code>, <code>Qty.</code>, <code>LTP</code>, <code>Avg. cost</code>…)
+      and extra columns are ignored.
+      <div class="note" style="margin-top:9px">No file? Select the holdings rows in your broker,
+        copy them, and use the paste box in <b>Step 5</b> on the other tab instead.</div>
+    </div>
+  </details>
   <div id="iout"></div>
 </div><!-- /tNew -->
 
