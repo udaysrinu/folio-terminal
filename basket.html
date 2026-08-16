@@ -689,19 +689,45 @@ function showUnits(){
        so rounding matters less and the weights track the target more closely.`
     : '';
 }
-function bestNearby(amt){
-  // scan +/-6% for the amount whose rounded weights sit closest to target
-  const worst=a=>{const {rows,cost}=size(SHEET,a);
-    return rows.filter(r=>!r.skip).reduce((m,r)=>Math.max(m,Math.abs(r.val/cost*100-r.w)),0);};
+// Worst weight deviation at a given amount, or null if the basket would be PARTIAL.
+// A partial basket is never an acceptable answer: if any stock rounds to zero shares you
+// would own a different, more concentrated portfolio than the one you were sent.
+function driftAt(a){
+  const {rows,cost}=size(SHEET,a);
+  if(!(cost>0)) return null;
+  if(rows.some(r=>!(r.q>=1))) return null;              // partial — disqualified outright
+  return rows.reduce((m,r)=>Math.max(m,Math.abs(r.val/cost*100-r.w)),0);
+}
+
+// Find amounts that drive drift toward zero. Whole-share rounding means the target weights
+// sit on an integer lattice: at most amounts you can only approximate them, but at particular
+// amounts the integers land exactly. Those amounts are worth finding rather than stumbling on.
+//
+// The old version scanned +/-6%, which is why it never found the 12.5% jump that took a real
+// basket from 0.751pp to 0.004pp.
+function bestAmounts(amt){
   const floor=minUnit(SHEET.weights,SHEET.prices);
-  let best=amt, bw=worst(amt);
-  for(let i=-60;i<=60;i++){
-    const a=Math.round((amt*(1+i/1000))/100)*100;        // 100-rupee steps
-    if(a<floor) continue;
-    const w=worst(a);
-    if(w<bw-0.001){ bw=w; best=a; }
+  const scan=(lo,hi,step)=>{
+    let best=null;
+    lo=Math.max(floor,lo);
+    for(let a=Math.ceil(lo/step)*step; a<=hi; a+=step){
+      const d=driftAt(a);
+      if(d===null) continue;
+      if(!best||d<best.drift-1e-9){ best={amt:a,drift:d}; if(d<0.005) break; }
+    }
+    return best;
+  };
+  // A sheet built from real share counts has an exact amount: the value it came from.
+  // At that figure the integers reproduce themselves and drift is zero by construction.
+  let natural=null;
+  if(SHEET.shares){
+    const v=Object.keys(SHEET.shares)
+      .reduce((a,k)=>a+SHEET.shares[k]*(SHEET.prices[k]||0),0);
+    if(v>0){ const d=driftAt(Math.round(v)); if(d!==null) natural={amt:Math.round(v),drift:d}; }
   }
-  return {amt:best,drift:bw};
+  return { here:driftAt(amt), floor, natural,
+           tight:scan(amt*0.98, amt*1.02, 100),      // a nudge you would not notice
+           wide :scan(amt*0.72, amt*1.40, 500) };    // if you can flex the amount
 }
 function calc(){
   const amt=parseFloat($('amt').value);
@@ -761,12 +787,31 @@ function calc(){
       <td class="r mono">${M(cost)}</td><td class="r mono">100.0%</td>
       <td class="r mono flat">±${worst.toFixed(1)}%</td></tr></tfoot></table></div>
    <div class="panel" style="margin-top:13px">
-    ${(()=>{const b=bestNearby(amt);
-      return (worst-b.drift>0.25)
-        ? `<div class="row" style="margin-top:11px"><button onclick="setAmt(${b.amt})">
-             Use ${M(b.amt)} instead — drift ${b.drift.toFixed(1)}% not ${worst.toFixed(1)}%</button>
-           <span class="note" style="margin:0">nearest amount that rounds more cleanly</span></div>`
-        : '';})()}
+    ${(()=>{
+      const o=bestAmounts(amt);
+      const opts=[];
+      const add=(c,label)=>{ if(c&&c.amt!==amt&&o.here!=null&&c.drift<o.here-0.02)
+        opts.push({...c,label}); };
+      add(o.natural,'this basket’s exact amount');
+      add(o.tight,'within 2% of what you typed');
+      add(o.wide,'if you can flex the amount');
+      // dedupe by amount, keep the lowest drift, then order by drift
+      const seen={}; opts.forEach(c=>{ if(!seen[c.amt]||c.drift<seen[c.amt].drift) seen[c.amt]=c; });
+      const list=Object.values(seen).sort((a,b)=>a.drift-b.drift).slice(0,3);
+      if(!list.length) return o.here!=null&&o.here<0.05
+        ? `<div class="ok" style="margin-top:11px">Drift is already about zero at this amount —
+             the whole numbers land almost exactly on the target weights.</div>` : '';
+      return `<div class="panel" style="margin-top:12px;padding:14px 17px">
+        <div class="rolabel">Get closer to the target weights</div>
+        <p class="note" style="font-style:normal;margin:4px 0 9px">Whole shares mean most amounts can
+          only approximate the basket. These amounts land closer — every stock still gets at
+          least one share.</p>
+        ${list.map(c=>`<div class="row" style="margin-top:7px">
+          <button class="${c.drift<0.05?'pri':''}" onclick="setAmt(${c.amt})">Use ${M(c.amt)}</button>
+          <span class="mono" style="font-size:12.5px">drift ${c.drift<0.005?'≈0'
+            :'±'+c.drift.toFixed(2)}pp<span style="color:var(--tx3)"> vs ±${o.here.toFixed(2)}pp now</span></span>
+          <span class="note" style="margin:0">${c.label}</span></div>`).join('')}
+      </div>`;})()}
     <div class="row" style="margin-top:13px">
       ${localStorage.getItem('ft_kite_api_key')
         ? `<span class="keyrow">key ${maskKey()}

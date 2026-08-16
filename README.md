@@ -220,6 +220,26 @@ prices, and the page says so rather than pretending the whole sheet is fresh.
 
 ---
 
+## API keys are yours, and none are in this repo
+
+Both optional integrations use **keys you generate yourself**, stored only in your own browser's
+`localStorage`. **No key is committed to this repository** — there is nothing here to leak and
+nothing shared between users:
+
+| Key | For | Where you get it | Free? |
+|---|---|---|---|
+| Kite `api_key` | pre-filling orders in Kite | developers.kite.trade, **Publisher** app | yes |
+| Twelve Data key | current market prices | twelvedata.com, Basic plan | yes, 800 req/day |
+
+Neither is required. Without the Kite key you copy orders by hand; without the price key the app
+uses the prices carried in the sheet.
+
+**Why the price key matters for accuracy:** a sheet's prices are from the day it was made. Stale
+prices mean the computed minimum, the weights and your share counts are all worked out against the
+wrong numbers, so real drift is larger than the app reports. Fetching current prices makes the
+sizing honest — and the workbench then searches for the amount that drives drift closest to zero
+while still giving every stock at least one share.
+
 ## Privacy
 
 This repo contains **tooling and fake samples only**. Real data — holdings, tradebook, basket
