@@ -888,9 +888,30 @@ function rebalance(held){
     {value:Math.round(Object.keys(held).reduce((a,k)=>a+held[k]*(SHEET.prices[k]||0),0))});
   const w=SHEET.weights,p={...SHEET.prices};
   // anything you hold that the basket no longer contains must be sold, or it lingers forever
-  const orphans=Object.keys(held).filter(x=>held[x]>0&&!(x in w));
+  // A held stock that is not in the basket's weights is one of two very different things:
+  //   EXITED    — the basket used to hold it (it is in SHEET.shares) and dropped it -> sell
+  //   UNRELATED — it was never in this basket -> leave it completely alone
+  // They look identical from the weights alone, which is why a whole-portfolio export used to
+  // produce "sell everything you own that isn't in this basket".
+  const prevHeld=SHEET.shares||{};
+  const notInBasket=Object.keys(held).filter(x=>held[x]>0&&!(x in w));
+  const orphans   = notInBasket.filter(x=>prevHeld[x]>0);      // genuinely exited the basket
+  const unrelated = notInBasket.filter(x=>!(prevHeld[x]>0));   // nothing to do with this basket
   orphans.forEach(x=>{ if(HELDPX[x]>0) p[x]=HELDPX[x]; });
   const syms=[...Object.keys(w),...orphans];
+
+  // Are you actually holding this basket at all? Overlap on the BASKET's own stocks is the
+  // test — total held value is not, because unrelated holdings inflate it and let a
+  // first-time buy masquerade as a rebalance.
+  const bs=Object.keys(w), have=bs.filter(x=>(held[x]||0)>0);
+  if(!have.length){
+    $('rebal').innerHTML=`<div class="warn err"><b>You do not hold this basket yet.</b><br><br>
+      None of its ${bs.length} stocks appear in your file${unrelated.length?`, though ${unrelated.length}
+      other holding${unrelated.length>1?'s were':' was'} found and left alone`:''}.
+      Rebalancing needs an existing position to work from — there is nothing to adjust.<br><br>
+      <button class="pri" onclick="route('new')">This is a first-time buy — take me there →</button></div>`;
+    REBAL=null; return;
+  }
   const heldValue=syms.reduce((a,s)=>a+(held[s]||0)*p[s],0);
   // A rebalance has no "amount" to choose — the capital is whatever you already hold.
   // The only real choice is whether you are also adding or taking out cash.
@@ -976,6 +997,14 @@ function rebalance(held){
       At ${M(value)} this basket cannot hold ${starved.length>1?'them':'it'} — its floor is
       about ${M(floor)}. The SELL below is rounding, not a decision to exit. Add cash above, or
       leave ${starved.length>1?'those':'that'} position${starved.length>1?'s':''} alone.</div>`:''}
+    ${have.length<bs.length*0.6?`<div class="warn"><b>You hold only ${have.length} of this
+      basket's ${bs.length} stocks.</b> That looks more like buying in than rebalancing, and the
+      orders below will be dominated by first purchases.
+      <button onclick="route('new')" style="margin-left:6px">Switch to first-time buy</button></div>`:''}
+    ${unrelated.length?`<div class="note" style="font-style:normal"><b>${unrelated.length}
+      holding${unrelated.length>1?'s':''} in your file ${unrelated.length>1?'are':'is'} not part of
+      this basket and ${unrelated.length>1?'were':'was'} ignored</b> — ${unrelated.slice(0,8).join(', ')}${unrelated.length>8?` and ${unrelated.length-8} more`:''}.
+      Only stocks this basket previously held are treated as exits.</div>`:''}
     ${missing.length?`<div class="warn">Not in your file: <b>${missing.join(', ')}</b> — shown as BUY from zero.</div>`:''}
     ${orphans.length?`<div class="warn"><b>${orphans.join(', ')}</b> ${orphans.length>1?'are':'is'} no longer
       in this basket — sell in full to match it. ${orphans.some(x=>!(p[x]>0))?'(No price for some, so they are left out of the totals.)':''}</div>`:''}
