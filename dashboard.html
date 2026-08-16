@@ -142,6 +142,19 @@ td.sym{font-family:'IBM Plex Mono';font-weight:600;font-size:12px} td.r{text-ali
 /* a <label> so clicking opens the picker natively — display:block because labels are inline */
 .drop{display:block;border:1.5px dashed var(--hair2);border-radius:var(--radius-md);padding:26px 22px;text-align:center;background:linear-gradient(160deg,var(--panel),var(--bg2));cursor:pointer;transition:border-color .18s,background .18s}
 .drop:focus-within{outline:2px solid var(--em);outline-offset:2px}
+/* upload status. Blue, not green: green is reserved for a positive financial outcome, and a file
+   having parsed is a system state, not money. Errors render here too rather than in an alert() —
+   the messages name which file to fetch and from where, which is unreadable in a modal. */
+.upst{display:flex;align-items:flex-start;justify-content:center;gap:9px;margin-top:12px;
+  font-family:'IBM Plex Mono';font-size:12px;line-height:1.55;color:var(--tx2);
+  white-space:pre-line;text-align:left;min-height:18px}
+.upst:empty{display:none}
+.upst.busy,.upst.done{color:var(--em)} .upst.err{color:var(--ox)}
+.upst b{font-weight:600}
+.spin{width:13px;height:13px;margin-top:2px;flex:none;border:2px solid var(--hair2);
+  border-top-color:var(--em);border-radius:50%}
+@media(prefers-reduced-motion:no-preference){.spin{animation:sp .7s linear infinite}}
+@keyframes sp{to{transform:rotate(360deg)}}
 .drop:hover,.drop.over{border-color:var(--em);background:rgba(21,90,120,.06)}
 .drop .di{font-family:'IBM Plex Mono';font-size:12.5px;color:var(--tx2)}.drop .di b{color:var(--em);font-weight:600}
 .drop .dh{font-family:var(--display),'Barlow Semi Condensed',sans-serif;font-weight:600;font-size:19px;margin-bottom:5px}
@@ -539,19 +552,25 @@ function parseJSON(txt){
     '"holdings" array.');
 }
 // SheetJS for xlsx; native split for csv.
+// EVERY branch must run inside try/catch. parseRows throws by design (that is how it explains a
+// wrong file), but a throw inside an fr.onload handler does NOT reject this promise — it escapes as
+// an uncaught error, so .catch never ran and the page sat on "reading…" forever with the real
+// explanation visible only in the console. Only the .json branch was guarded; csv and xlsx were not,
+// which meant spreadsheet parse errors reached the user not at all.
 function readFile(file){return new Promise((res,rej)=>{const fr=new FileReader(),ext=file.name.toLowerCase();
   fr.onerror=()=>rej(new Error('Could not read file'));
-  if(ext.endsWith('.json')){fr.onload=e=>{try{res(parseJSON(e.target.result));}catch(err){rej(err);}};
+  const settle=fn=>{ try{ res(fn()); }catch(err){ rej(err); } };
+  if(ext.endsWith('.json')){fr.onload=e=>settle(()=>parseJSON(e.target.result));
     fr.readAsText(file);}
-  else if(ext.endsWith('.csv')){fr.onload=e=>{const txt=e.target.result;
+  else if(ext.endsWith('.csv')){fr.onload=e=>settle(()=>{const txt=e.target.result;
     const rows=txt.split(/\r?\n/).map(l=>{const out=[];let cur='',q=false;
       for(let i=0;i<l.length;i++){const c=l[i];
         if(c==='"'){if(q&&l[i+1]==='"'){cur+='"';i++}else q=!q}
         else if(c===','&&!q){out.push(cur);cur=''}else cur+=c}out.push(cur);return out;});
-    res(parseRows(rows));}; fr.readAsText(file);}
-  else{fr.onload=e=>{const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
+    return parseRows(rows);}); fr.readAsText(file);}
+  else{fr.onload=e=>settle(()=>{const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
     const ws=wb.Sheets[wb.SheetNames[0]];
-    res(parseRows(XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null})));};
+    return parseRows(XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null}));});
     fr.readAsArrayBuffer(file);}});
 }
 
@@ -732,6 +751,15 @@ function renderNeverSold(data){
 // moment someone drops a file actually called live.json — which is the likeliest name for the file
 // this page documents — and the 30s poll then overwrites their upload stamp with a failure message.
 let dataSource='live.json', liveOk=false, uploaded=false;
+// Held in a variable, not just in the DOM, because renderUpbar() rebuilds the whole dropzone —
+// including on the 30s poll — and would otherwise wipe the confirmation the user is still reading.
+let UPST=null;
+const escU=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+function upState(cls,html){
+  UPST=cls?{cls,html}:null;
+  const el=document.getElementById('upst');
+  if(el){ el.className='upst '+(cls||''); el.innerHTML=html||''; }
+}
 function renderUpbar(){const el=document.getElementById('upbar');if(!el)return;
   // A <label> wrapping the input, NOT a div calling fin.click(). The native label activation is
   // immune to the ways a programmatic .click() gets swallowed — a chooser already pending, or an
@@ -751,7 +779,8 @@ function renderUpbar(){const el=document.getElementById('upbar');if(!el)return;
       Source: <span class="srcbadge ${uploaded?'file':liveOk?'live':'file'}">${
         uploaded?'▲ '+dataSource:liveOk?'● live.json':'○ no data loaded'}</span></div>
     <input type="file" id="fin" aria-label="Upload a tradebook (XLSX or CSV) or a holdings file (JSON)"
-      accept=".xlsx,.xls,.csv,.json,application/json" class="sr"></label>`;
+      accept=".xlsx,.xls,.csv,.json,application/json" class="sr">
+    <div class="upst ${UPST?UPST.cls:''}" id="upst" role="status" aria-live="polite">${UPST?UPST.html:''}</div></label>`;
   const drop=document.getElementById('drop'),fin=document.getElementById('fin');
   // No click handler at all: the input is nested inside the label, so the browser opens the picker
   // itself. Adding fin.click() on top would open it twice in some browsers.
@@ -762,6 +791,7 @@ function renderUpbar(){const el=document.getElementById('upbar');if(!el)return;
 }
 function handleFile(file){
   document.getElementById('upd').textContent='parsing '+file.name+'…';
+  upState('busy','<span class="spin"></span>reading <b>'+escU(file.name)+'</b>…');
   readFile(file).then(r=>{
     const stamp='uploaded · '+file.name+' · '+new Date().toLocaleString('en-IN');
     const pre=(DATA&&DATA.pre_april)||0;
@@ -777,8 +807,21 @@ function handleFile(file){
       d=buildData(r.rows,(DATA&&DATA.holdings)||[],pre,stamp);
     }
     dataSource=file.name; uploaded=true; renderUpbar(); render(d); renderNeverSold(d);
-  }).catch(err=>{document.getElementById('upd').textContent='✗ '+err.message;
-    alert('Could not process file:\n'+err.message);});
+    // Name what actually landed rather than asserting "success": the counts are the confirmation,
+    // and they also reveal the case where a file parsed fine but carried less than expected.
+    const bits=[];
+    if(d.holdings.length) bits.push(d.holdings.length+' holding'+(d.holdings.length===1?'':'s'));
+    if(d.roundtrips.length) bits.push(d.roundtrips.length+' closed round-trip'+(d.roundtrips.length===1?'':'s'));
+    if(d._trades&&d._trades.length) bits.push(d._trades.length+' trade row'+(d._trades.length===1?'':'s'));
+    const still=!d.holdings.length ? '\nStill need a holdings JSON for the Live Holdings tab.'
+              : !d.roundtrips.length ? '\nStill need a tradebook for realised P&L.' : '';
+    upState('done','✓ loaded <b>'+escU(file.name)+'</b>'
+      +(bits.length?' — '+bits.join(' · '):' — but it contained nothing usable')+escU(still));
+  }).catch(err=>{
+    document.getElementById('upd').textContent='✗ '+err.message.split('\n')[0];
+    // Inline, not alert(): these messages say which file to fetch and from where, and a modal
+    // truncates them into an unreadable wall that gets dismissed before it is read.
+    upState('err','✗ '+escU(err.message));});
 }
 
 function load(){fetch('live.json?t='+Date.now()).then(r=>r.json()).then(d=>{
