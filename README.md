@@ -25,39 +25,125 @@ That's the whole loop. Everything below is detail.
 
 ---
 
-## What it actually does
+## Walkthrough 1 — buying a basket for the first time
 
-### 1 · Sizes a basket to your capital
+You were sent `defence_basket.json`. Drop it on the workbench, type an amount, press
+**Calculate orders**.
 
-Weights travel between people; share counts don't. The same file works whether you put in
-₹80,000 or ₹4,00,000 — it just buys different numbers of shares.
+![The workbench after sizing: readout reading ₹4,00,000 → 4 stocks → ₹3,98,055 deployed → ₹1,945 left, then a ledger with target weight, price, shares, cost, actual weight and signed drift per stock](docs/img/workbench.png)
 
-Because Indian exchanges only allow whole shares, the rounding is visible rather than hidden: the
-**Drift** column shows how far each holding lands from its target, signed, and the readout states
-exactly how much cash is left over.
+Reading it:
 
-### 2 · Refuses to silently give you a different portfolio
+| | |
+|---|---|
+| **₹3,98,055 deployed** | what actually goes in after rounding to whole shares |
+| **₹1,945 left** | the remainder. Stated, not hidden |
+| **Drift** | how far each holding lands from target. `+0.1%`, `−0.2%` — signed, so it survives greyscale |
+| **`±0.2%` in the footer** | the worst drift in the basket |
+| **Quick pick** | the minimum, and multiples of it. Bigger amounts round more cleanly |
 
-Every basket has a floor — the amount below which its priciest stock can't afford a single share.
-Under it, most tools quietly drop that stock and hand you something more concentrated than what
-you asked for. This one **blocks and offers amounts that work**:
+**Below the minimum it refuses**, rather than quietly dropping the stock it can't afford:
 
-![Below the minimum: the app blocks, explains that TCS would get zero shares so you would own a different more concentrated basket, and offers the minimum, 2× and 3×](docs/img/blocked.png)
+![Below minimum: ₹5,000 is below this basket's minimum of ₹14,809, explaining TCS would get zero shares so you would own a different more concentrated basket, offering ₹14,809 / ₹29,618 / ₹44,427](docs/img/blocked.png)
 
-### 3 · Hands the orders to your broker
+Then either **Copy as text / CSV**, or **Place in Kite**, which opens Kite in a new tab with the
+whole basket pre-filled — every order `NSE · CNC`, tagged with the basket name. You review the
+prices and confirm there. Nothing is placed by this page.
 
-**Copy as text**, **Copy as CSV**, or — with a free Zerodha Publisher key — **Place in Kite**,
-which opens Kite with the whole basket pre-filled for you to review and confirm. Nothing is ever
-placed without you approving it in your broker.
+---
 
-### 4 · Builds baskets, not just consumes them
+## Walkthrough 2 — a rebalance, where there is no amount to choose
+
+This is the part that works differently, and the difference is the point.
+
+**Investing is a choice: you pick the amount.** A rebalance is not — the capital is already
+determined by what you hold. So there is no multiplier to pick. Folio Terminal reads your
+holdings, values them at current prices, applies the *new* target weights to **that** value, and
+the orders are simply the difference:
+
+```
+value      = Σ (shares you hold × price)
+target_qty = round(value × target_weight / price)
+order      = target_qty − shares you hold        → BUY if positive, SELL if negative
+```
+
+![Rebalance view: ₹3,41,740 → ₹3,41,740 at target → 5 orders, with a cash box, then a table of NOW / TARGET / DRIFT / ACTION showing BUY 5 RELIANCE, BUY 3 TCS, SELL 20 HDFCBANK, BUY 44 NTPC and SELL 8 TITAGARH marked EXITED](docs/img/rebalance.png)
+
+- **NOW vs TARGET** — what each stock is today as a share of your holdings, against what the
+  basket now wants
+- **ACTION** — the exact whole-share order. Green buys, red sells
+- **EXITED** — a stock the basket dropped but you still hold. Without this it would sit in your
+  portfolio forever, because a rebalance email never mentions stocks it no longer contains
+- **buy / sell / net** — a rebalance is usually close to cash-neutral. Here: buy ₹41,404,
+  sell ₹40,378, net **+₹1,027**
+
+### The one real choice: are you also adding cash?
+
+There is a box for it, and it changes the answer materially. Same holdings as above, with
+₹2,00,000 added:
+
+| Stock | No extra cash | +₹2,00,000 |
+|---|---|---|
+| RELIANCE | BUY 5 | BUY 25 |
+| TCS | BUY 3 | BUY 17 |
+| HDFCBANK | **SELL 20** | **BUY 9** |
+| NTPC | BUY 44 | BUY 158 |
+| TITAGARH | SELL 8 | SELL 8 *(exited either way)* |
+
+Adding money **turned a sell into a buy.** You reach the same target weights by topping up the
+underweights instead of trimming the overweight — no realised gain, no tax event. Negative
+numbers work too, if you're taking money out.
+
+### When your holding is too small to rebalance
+
+The floor that blocks a first-time buy still exists here, but the capital is given rather than
+chosen, so instead of blocking it names the problem: if a stock's target rounds to **zero**
+shares at your value, the page says so, because `SELL all` on that line is a rounding artefact
+and not a decision to exit.
+
+---
+
+## How the Kite handoff works
+
+With a free Zerodha **Publisher** app (setup takes about five minutes, no paid API needed), the
+page POSTs the order list to `kite.zerodha.com/connect/basket` and Kite opens with everything
+pre-filled.
+
+- **Both directions.** Buys for a first-time purchase, buys *and sells* for a rebalance.
+- **Limit or market.** Limit is default, with a buffer you set — applied *above* the price for a
+  buy and *below* it for a sell, so a limit sell can actually fill.
+- **Everything is `NSE · CNC`** (delivery).
+- **Your API key never leaves your browser.** There is no server to send it to. It is read from
+  `localStorage` only to build the form.
+- **Nothing is placed until you confirm in Kite.** The page cannot place an order.
+
+### Telling baskets apart in Kite
+
+Every order carries a **tag** derived from the basket label, so Kite's order book shows which
+basket each order came from, and you can run several baskets side by side.
+
+Two things to know:
+
+- **Kite hard-caps the tag at 8 characters.** The docs say 20; the API returns
+  `` `tag` should be max 8 characters ``. Labels are truncated, so two baskets whose names share
+  the first 8 alphanumeric characters will collide — give them distinct short names.
+- **Holdings never carry the tag, only orders do** — and the API only returns *today's* orders.
+  That is why a basket's identity has to be recorded on the day it executes; after that the link
+  is gone from the broker's side. The `basket.py` workflows below exist for exactly this.
+
+
+---
+
+## Also in the box
+
+### Builds baskets, not just consumes them
 
 - Paste a **smallcase order-confirmation email** → a sheet with real fill prices
 - Paste a **rebalance email** → applied as a delta on top of the basket you already had
 - Drop a **holdings export** → a sheet weighted by what you currently own
 - Type **symbols and weights** by hand
 
-### 5 · Reads your tradebook
+### Reads your tradebook
 
 Drop a Zerodha Console tradebook on the **[dashboard](https://udaysrinu.github.io/folio-terminal/dashboard.html)**
 for FIFO-matched realised P&L, an equity curve, per-basket concentration, and a

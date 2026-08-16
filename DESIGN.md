@@ -62,6 +62,13 @@ Decorative accents (KPI stripes, source badges) are **neutral**, not a second bl
 
 Never colour alone: a negative figure carries a `−`, a positive one a `+`.
 
+**One deliberate exception.** In the rebalance table the `ACTION` column shows **green BUY /
+red SELL**. Strictly these are instructions, not outcomes, so the rule above would make them
+neutral. Green-buy/red-sell is near-universal in trading interfaces and materially helps
+scanning a mixed order list where mistaking a sell for a buy is expensive and irreversible.
+The exception is limited to that one column; drift in the same table stays amber-on-attention
+rather than green/red, because drift-from-target is a distance, not a direction.
+
 ---
 
 ## Type
