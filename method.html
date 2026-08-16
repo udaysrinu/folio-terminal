@@ -1,0 +1,249 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Method — why Folio Terminal shares weights, not orders</title>
+<meta name="description" content="The reasoning behind Folio Terminal: why a basket must travel as target percentages rather than share counts, why a rebalance has no multiplier, and how far off target whole-share rounding puts you.">
+<style>
+/* ---------- type: self-hosted, latin subset. Direction B ---------- */
+@font-face{font-family:'IBM Plex Sans';src:url(fonts/plex-sans-400.woff2)format('woff2');
+  font-weight:400;font-display:swap}
+@font-face{font-family:'IBM Plex Sans';src:url(fonts/plex-sans-600.woff2)format('woff2');
+  font-weight:600;font-display:swap}
+@font-face{font-family:'IBM Plex Mono';src:url(fonts/plex-mono-400.woff2)format('woff2');
+  font-weight:400;font-display:swap}
+@font-face{font-family:'IBM Plex Mono';src:url(fonts/plex-mono-500.woff2)format('woff2');
+  font-weight:500;font-display:swap}
+@font-face{font-family:'Barlow Semi Condensed';src:url(fonts/barlow-sc-600.woff2)format('woff2');
+  font-weight:600;font-display:swap}
+
+:root{--bg:#E9EAE3;--bg2:#F3F4EE;--panel:#FCFCF8;--panel2:#F3F4EE;--hair:#BCC3B8;--hair2:#A6AFA2;
+--tx:#18211D;--tx2:#46534C;--tx3:#5C6A61;--em:#155A78;--gain:#0B5B3A;--action:#155A78;
+--rule:#BCC3B8;--rule-strong:#A6AFA2;--display:'Barlow Semi Condensed';--ui:'IBM Plex Sans';
+--num:'IBM Plex Mono';--ox:#A52A22;--gold:#7A4E00;--blue:#2b5fc4}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--tx);font-family:var(--ui),'IBM Plex Sans',system-ui,sans-serif;
+font-size:15.5px;line-height:1.6;padding:0 0 70px}
+.wrap{max-width:820px;margin:0 auto;padding:0 22px}
+.mono{font-family:var(--num),ui-monospace,monospace;font-variant-numeric:tabular-nums}
+h1{font-family:var(--display),'Barlow Semi Condensed',sans-serif;font-size:33px;font-weight:600;
+letter-spacing:-.015em;line-height:1.15;max-width:22em}
+.sub{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--tx3);
+font-weight:600;margin-top:8px}
+.lede{font-size:17px;color:var(--tx2);margin-top:18px;max-width:40em}
+.lede b{color:var(--tx);font-weight:600}
+h2{font-family:var(--display),'Barlow Semi Condensed',sans-serif;font-size:23px;font-weight:600;
+margin:46px 0 3px;letter-spacing:-.01em}
+h2 .n{color:var(--tx3);font-family:var(--num),monospace;font-size:15px;font-weight:400;
+margin-right:9px;letter-spacing:0}
+h3{font-size:15.5px;font-weight:600;margin:26px 0 6px}
+p{margin-top:11px;max-width:42em}
+p.q{font-size:16px;color:var(--tx);border-left:3px solid var(--rule-strong);
+padding:2px 0 2px 16px;margin:16px 0;max-width:40em}
+ul,ol{margin:11px 0 0 22px;max-width:41em}li{margin:5px 0}
+.panel{background:var(--panel);border:1px solid var(--hair);border-radius:var(--radius-lg,16px);
+padding:19px 22px;margin-top:16px;box-shadow:0 1px 2px rgba(0,0,0,.04),0 10px 26px -12px rgba(0,0,0,.10)}
+pre{background:var(--panel2);border:1px solid var(--hair);border-radius:6px;padding:13px 15px;
+overflow-x:auto;font-family:var(--num),ui-monospace,monospace;font-size:12.5px;line-height:1.65;
+margin-top:13px}
+code{background:var(--panel2);border:1px solid var(--hair);border-radius:6px;padding:1px 5px;
+font-family:var(--num),ui-monospace,monospace;font-size:13px}
+table{width:100%;border-collapse:collapse;margin-top:14px;font-size:14px}
+th{font-size:9.5px;letter-spacing:.11em;text-transform:uppercase;color:var(--tx3);font-weight:600;
+text-align:left;padding:0 10px 8px 0;border-bottom:1px solid var(--rule-strong)}
+th.r,td.r{text-align:right}
+td{padding:9px 10px 9px 0;border-bottom:1px solid var(--rule);vertical-align:top}
+tr:last-child td{border-bottom:none}
+td.mono,th.mono{font-family:var(--num),monospace;font-variant-numeric:tabular-nums}
+.good{color:var(--gain);font-weight:600}.bad{color:var(--ox);font-weight:600}
+.warn{border:1px solid var(--gold);background:#F7EEDC;color:var(--gold);border-radius:10px;
+padding:13px 16px;font-size:13.5px;margin-top:16px}
+.warn b{color:var(--gold)}
+.key{border:1px solid var(--em);background:rgba(21,90,120,.05);border-radius:10px;
+padding:15px 18px;margin-top:18px;font-size:15px;color:var(--tx)}
+.key b{color:var(--em)}
+a{color:var(--em)}
+.foot{border-top:1px solid var(--rule);margin-top:52px;padding-top:20px;font-size:11.5px;
+color:var(--tx3);line-height:1.8}
+.foot a{color:var(--tx2)}
+
+/* motion + nav, identical to every other page */
+:root{--t:170ms;--e:cubic-bezier(.22,.61,.36,1);--radius:10px;--radius-lg:16px;--radius-sm:6px;
+--ring:var(--em)}
+a,button{transition:background-color var(--t) var(--e),border-color var(--t) var(--e),
+color var(--t) var(--e),box-shadow var(--t) var(--e)}
+:focus-visible{outline:2px solid var(--em);outline-offset:2px;border-radius:var(--radius)}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;
+transition-duration:.01ms!important}}
+.ftbar{width:100%;border-bottom:1px solid var(--hair);background:var(--panel);
+box-shadow:0 1px 2px rgba(0,0,0,.03);margin-bottom:34px}
+.ftnav{max-width:1180px;margin:0 auto;display:flex;gap:2px;align-items:center;
+flex-wrap:nowrap;overflow-x:auto;padding:9px 20px;-webkit-overflow-scrolling:touch}
+.ftnav::-webkit-scrollbar{display:none}
+.ftnav a{font-size:12.5px;color:var(--tx2);text-decoration:none;padding:8px 13px;
+border-radius:var(--radius);white-space:nowrap;display:inline-flex;align-items:center;gap:6px;
+min-height:34px;line-height:1}
+.ftnav a:hover{background:var(--panel2);color:var(--tx)}
+.ftnav a.on{background:var(--em);color:#fff;font-weight:600}
+.ftnav a.brand{font-family:var(--display),sans-serif;font-weight:600;font-size:13.5px;
+color:var(--tx);margin-right:8px;padding-left:0}
+.ftnav a.brand:hover{background:transparent;color:var(--em)}
+.ftnav svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.9;flex:none}
+</style></head><body>
+<div class="ftbar"><nav class="ftnav" aria-label="Main">
+<a href="index.html" class="brand">Folio Terminal</a>
+<a href="basket.html" data-p="basket.html"><svg viewBox="0 0 24 24"><path d="M3 7h18l-1.6 11.2A2 2 0 0 1 17.4 20H6.6a2 2 0 0 1-2-1.8L3 7Z"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/></svg>Baskets</a>
+<a href="dashboard.html" data-p="dashboard.html"><svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>Dashboard</a>
+<a href="onboarding.html" data-p="onboarding.html"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg>One-click setup</a>
+<a href="friends.html" data-p="friends.html"><svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v18H6a2 2 0 0 1-2-2V5Z"/><path d="M9 3v18"/></svg>Guide</a>
+<a href="method.html" data-p="method.html"><svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="9"/></svg>Method</a></nav></div>
+<script>(function(){var f=location.pathname.split('/').pop()||'index.html';
+document.querySelectorAll('.ftnav a[data-p]').forEach(function(a){
+  if(a.getAttribute('data-p')===f){a.classList.add('on');a.setAttribute('aria-current','page');}});})();</script>
+
+<div class="wrap">
+<div class="sub">Method</div>
+<h1>Why a basket travels as percentages, and never as an order list</h1>
+<p class="lede">Two people follow the same basket with different amounts of money. When it
+rebalances, what exactly does one send the other? Getting this wrong doesn't produce a small
+error — it produces <b>somebody else's portfolio</b>. This page is the reasoning, with the
+arithmetic worked out.</p>
+
+<h2><span class="n">01</span>The thing that is actually being shared</h2>
+<p>A basket can be written down two ways.</p>
+<table>
+  <thead><tr><th>As share counts</th><th>As target weights</th></tr></thead>
+  <tbody><tr>
+    <td class="mono">RELIANCE 40<br>TCS 27<br>HDFCBANK 58<br>NTPC 228</td>
+    <td class="mono">RELIANCE 35.0%<br>TCS 20.0%<br>HDFCBANK 25.0%<br>NTPC 20.0%</td>
+  </tr><tr>
+    <td>Only true for one person, at one amount of money, on one day.</td>
+    <td>True for everyone, at any amount, on any day.</td>
+  </tr></tbody>
+</table>
+<p>Share counts are a <i>result</i>. Weights are the <i>instruction</i>. The moment you send
+share counts you have sent an answer computed for your wallet, and the recipient has a different
+wallet.</p>
+<div class="key"><b>So a sheet holds weights and reference prices.</b> Your quantities are derived
+from it, locally, from your own capital. Nobody's share counts ever travel.</div>
+
+<h2><span class="n">02</span>Investing picks an amount. Rebalancing cannot.</h2>
+<p>These look like the same operation and they are not. They are duals — what is free in one is
+determined in the other.</p>
+<table>
+  <thead><tr><th></th><th>First-time buy</th><th>Rebalance</th></tr></thead>
+  <tbody>
+    <tr><td>You supply</td><td>an amount</td><td>your existing holdings</td></tr>
+    <tr><td>Comes out</td><td>share counts</td><td>the difference from target</td></tr>
+    <tr><td>Free to choose</td><td class="mono">amount</td><td class="mono">nothing</td></tr>
+  </tbody>
+</table>
+<pre>first-time buy      qty    = round(amount × weight / price)
+
+rebalance           value  = Σ (shares you hold × price)      ← not a choice
+                    target = round(value × weight / price)
+                    order  = target − shares you hold</pre>
+<p>This is why the workbench offers you multiples of the minimum when you buy in, and offers you
+<b>no multiplier at all</b> when you rebalance. There is nothing to multiply: your capital is
+already whatever your holding is worth.</p>
+<p class="q">"I bought 2× the minimum, my friend bought 1×. The rebalance is 2× of my holdings.
+How does his app know to use 1×?"</p>
+<p>It never needs to know. He isn't given a multiple of anything — he's given weights, and he
+applies them to his own value. The multiplier is not transmitted because it is not a property of
+the basket. It's a property of a wallet, and each wallet supplies its own.</p>
+
+<h2><span class="n">03</span>What happens if you send the order list instead</h2>
+<p>Worth seeing, because it is the intuitive thing to do and it fails hard. Real numbers: a
+four-stock basket with a ₹14,809 floor, one holder at ₹4,00,000 (27×) and one at ₹80,000 (5.4×).
+The manager moves RELIANCE 30% → 35% and TCS 25% → 20%.</p>
+<div class="panel">
+  <h3>The 27× holder's own orders</h3>
+  <pre>RELIANCE  +7      TCS  −5      HDFCBANK  ±0      NTPC  −2</pre>
+  <h3>Sent as weights <span class="good">— correct</span></h3>
+  <p>The 5.4× holder's app sizes those weights to his ₹78,956 and produces
+  <span class="mono">RELIANCE +1, TCS −1, HDFCBANK −1, NTPC −1</span>. He ends up
+  <span class="good">0.78 percentage points</span> from the manager's target.</p>
+  <h3>Sent as that order list <span class="bad">— broken</span></h3>
+  <p>He holds 5 TCS. The instruction says sell 5. <b>His entire TCS position is wiped out</b> and
+  RELIANCE inflates to 55.3% against a 35% target. He lands
+  <span class="bad">20.26 percentage points</span> off.</p>
+  <table>
+    <thead><tr><th>Sent as</th><th class="r">Worst deviation from target</th></tr></thead>
+    <tbody>
+      <tr><td>Weights</td><td class="r mono good">0.78 pp</td></tr>
+      <tr><td>Share-count orders</td><td class="r mono bad">20.26 pp</td></tr>
+    </tbody>
+  </table>
+</div>
+<p>The failure is not proportional. A sell sized for a big holding doesn't shrink gracefully
+against a small one — it goes through zero, and a position vanishes.</p>
+
+<h2><span class="n">04</span>Whole shares are the real enemy</h2>
+<p>Exchanges won't sell you 0.4 of a share, so every basket is an approximation. The size of the
+approximation is set by the priciest stock relative to your capital, and it is why a basket has a
+floor at all:</p>
+<pre>minimum = max over stocks of ( price / target weight )</pre>
+<p>Below that, the priciest stock can't afford a single share. Most tools quietly drop it and
+hand you a more concentrated portfolio than you asked for. This one refuses, and says which stock
+set the floor.</p>
+<h3>How coarse is a basket, exactly?</h3>
+<p>One share is the smallest move you can make, so the priciest stock's share of the total is the
+resolution of the whole basket:</p>
+<pre>resolution (pp per share) = highest price / total value × 100</pre>
+<table>
+  <thead><tr><th>Your holding</th><th class="r">One share of TCS moves the basket</th><th>Verdict</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">₹29,127 (2×)</td><td class="r mono bad">12.71 pp</td><td>unusable as a shared sheet</td></tr>
+    <tr><td class="mono">₹1,48,090 (10×)</td><td class="r mono">2.50 pp</td><td>borderline</td></tr>
+    <tr><td class="mono">₹3,98,055 (27×)</td><td class="r mono good">0.93 pp</td><td>fine to share</td></tr>
+  </tbody>
+</table>
+<p>At 2× the minimum a position is literally <span class="mono">3, 2, 4, 17</span> shares. A five
+point change in target weight produced <b>zero orders</b> — the rounding was larger than the
+rebalance. Small holdings can't express fine instructions.</p>
+
+<h2><span class="n">05</span>Which means the biggest holder should publish</h2>
+<p>A sheet reconstructed from real holdings inherits that holder's rounding. Its weights are not
+the manager's exact intent — they're the closest thing expressible at that wallet size.</p>
+<table>
+  <thead><tr><th>Publisher's holding</th><th class="r">Error baked into the sheet they share</th></tr></thead>
+  <tbody>
+    <tr><td class="mono">2×</td><td class="r mono bad">5.42 pp</td></tr>
+    <tr><td class="mono">5×</td><td class="r mono">0.54 pp</td></tr>
+    <tr><td class="mono">27×</td><td class="r mono good">0.36 pp</td></tr>
+    <tr><td class="mono">200×</td><td class="r mono good">0.04 pp</td></tr>
+  </tbody>
+</table>
+<p>Everyone who sizes that sheet inherits the publisher's error <i>and then adds their own</i>.
+So the rule is counter-intuitive but firm: <b>whoever holds the most should be the one who shares
+the sheet.</b> The workbench states a sheet's resolution when it builds one, and says plainly when
+it is too coarse to pass on.</p>
+
+<h2><span class="n">06</span>State, not events</h2>
+<p>A rebalance email is an <i>event</i> — "I bought these, I sold those." A sheet is <i>state</i> —
+"the basket is now this." Events only make sense against the exact state they were computed
+from, which is why forwarding one to a friend cannot work: his prior state is different.</p>
+<p>So the flow is: you apply the event to <i>your</i> state, which yields new state, and the
+<b>new state</b> is what you pass on.</p>
+<pre>manager's rebalance email
+   ↓ applied to your holdings
+your updated sheet  (weights)
+   ↓ sent to whoever follows you
+their own orders, sized to their own money</pre>
+<div class="warn"><b>One thing the sheet cannot fix.</b> A stock held through two different
+baskets appears once in your broker's holdings, as one merged quantity. Any per-basket drift
+calculated from that number is wrong for both baskets. The workbench flags it rather than
+pretending the number means something.</div>
+
+<h2><span class="n">07</span>What this buys you</h2>
+<ul>
+  <li>One file works at ₹20,000 and at ₹20,00,000, with no versions and no per-person maths.</li>
+  <li>Nobody learns anybody else's position size. Weights reveal proportions, never amounts.</li>
+  <li>Rebalances compose: apply five in a row and you still have valid state, because each step
+      produces state rather than a diff to be replayed.</li>
+  <li>It works with no server, because all of it is arithmetic on two small numbers per stock.</li>
+</ul>
+
+<div class="foot">
+  <a href="index.html">Folio Terminal</a> · <a href="basket.html">Open the workbench</a> ·
+  <a href="friends.html">Plain-English guide</a><br>
+  Not investment advice. Verify every order in your broker before placing it.
+</div>
+</div></body></html>

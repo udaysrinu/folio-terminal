@@ -261,7 +261,8 @@ tbody tr:last-child{border-bottom:none}
 <a href="basket.html" data-p="basket.html"><svg viewBox="0 0 24 24"><path d="M3 7h18l-1.6 11.2A2 2 0 0 1 17.4 20H6.6a2 2 0 0 1-2-1.8L3 7Z"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/></svg>Baskets</a>
 <a href="dashboard.html" data-p="dashboard.html"><svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>Dashboard</a>
 <a href="onboarding.html" data-p="onboarding.html"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg>One-click setup</a>
-<a href="friends.html" data-p="friends.html"><svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v18H6a2 2 0 0 1-2-2V5Z"/><path d="M9 3v18"/></svg>Guide</a></nav></div>
+<a href="friends.html" data-p="friends.html"><svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v18H6a2 2 0 0 1-2-2V5Z"/><path d="M9 3v18"/></svg>Guide</a>
+<a href="method.html" data-p="method.html"><svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="9"/></svg>Method</a></nav></div>
 <script>(function(){var f=location.pathname.split('/').pop()||'index.html';
 document.querySelectorAll('.ftnav a[data-p]').forEach(function(a){
   if(a.getAttribute('data-p')===f){a.classList.add('on');a.setAttribute('aria-current','page');}});})();</script>
@@ -942,12 +943,34 @@ function download(name,text){
   a.href=URL.createObjectURL(new Blob([text],{type:'application/json'}));
   a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),4000);
 }
-function showBuilt(sheet,where,how){
+// How precise are the weights in a sheet reconstructed from real share counts?
+// One share is the smallest change possible, so the priciest stock's share of the
+// total is the granularity of the whole sheet. Below ~2pp it is publishable.
+function grain(sheet){
+  if(!sheet.shares) return null;
+  const v=Object.keys(sheet.shares).reduce((a,k)=>a+sheet.shares[k]*(sheet.prices[k]||0),0);
+  if(!(v>0)) return null;
+  let worst=0, sym='';
+  for(const k in sheet.weights){
+    const pp=(sheet.prices[k]||0)/v*100;
+    if(pp>worst){worst=pp;sym=k;}
+  }
+  return {pp:worst,sym,value:v};
+}
+function showBuilt(sheet,where,how,isUpdate){
   const json=JSON.stringify(sheet,null,1);
   const n=Object.keys(sheet.weights).length;
   const mu=minUnit(sheet.weights,sheet.prices);
+  const g=grain(sheet);
   $(where).innerHTML=`<div class="ok">Built <b>${sheet.label}</b> — ${n} stocks, ${how},
      ${mu>0?`minimum ≈ ${M(mu)}, `:''}${effN(sheet.weights).toFixed(1)} effective holdings.</div>
+   ${g?`<div class="${g.pp>2?'warn':'note'}" style="${g.pp>2?'':'font-style:normal'}">
+     <b>How exact these weights are:</b> they were worked out from ${M(g.value)} of real shares, so
+     one share of ${g.sym} moves this basket by <b>${g.pp.toFixed(2)} percentage points</b> — that is
+     the finest this sheet can be.
+     ${g.pp>2?`That is coarse. Anyone sizing it will inherit that error on top of their own rounding.
+        If someone following this basket holds more than you, their sheet will be more accurate than
+        yours — let them publish it.`:`Fine enough to share.`}</div>`:''}
    <div class="panel" style="margin-top:12px">
      <div class="row">
        <button class="pri" onclick='useBuilt(${JSON.stringify(json)})'>Use it now →</button>
@@ -959,6 +982,10 @@ function showBuilt(sheet,where,how){
        <li>this page — <code>basket.html</code> — or just the link to it</li></ol>
        They open the page, drop the file in, and get orders sized to <i>their</i> money.
        Nothing is uploaded anywhere.</div>
+     ${isUpdate?`<div class="warn"><b>Send this updated sheet — not the rebalance email.</b>
+       The email holds <i>your</i> buy and sell quantities, which only fit your holding. Applied to a
+       smaller one it can oversell a position to zero. This sheet holds weights instead, so each
+       person's own quantities come out of their own value.</div>`:''}
    </div>`;
 }
 function useBuilt(json){
@@ -1081,7 +1108,7 @@ function fromEmail(){
       if(!Object.keys(sh).length) throw new Error('applying that rebalance empties the basket');
       const entered=r.buys.map(x=>x.sym).filter(x=>!(SHEET.shares[x]>0));
       showBuilt(sheetFrom(sh,px,label),'mout',
-        `${r.kind} applied to “${SHEET.label}” — ${Object.keys(sh).length} stocks after`);
+        `${r.kind} applied to “${SHEET.label}” — ${Object.keys(sh).length} stocks after`, true);
       if(entered.length) notes.push(`Entered the basket: <b>${entered.join(', ')}</b>`);
       if(exited.length)  notes.push(`Exited completely: <b>${exited.join(', ')}</b>`);
       notes.push(`Prices for touched stocks updated to the rebalance fills; untouched stocks keep

@@ -103,6 +103,28 @@ and not a decision to exit.
 
 ---
 
+## The reasoning, written down
+
+There's a page for the *why*: what is actually being shared, why investing picks an amount and a
+rebalance cannot, and what happens if you send an order list instead of weights. With the
+arithmetic worked out on real numbers.
+
+![The Method page: why a basket travels as percentages and never as an order list](docs/img/method.png)
+
+**[Read the method →](https://udaysrinu.github.io/folio-terminal/method.html)**
+
+The short version, since it's the question everyone asks:
+
+> *"I bought 2× the minimum, my friend bought 1×. When it rebalances, my orders are sized to my
+> holding. How does his app know to use 1×?"*
+
+It never needs to. He isn't sent a multiple of anything — he's sent **weights**, and applies them
+to his own value. The multiplier isn't a property of the basket, it's a property of a wallet, and
+each wallet supplies its own. Send the order list instead and his TCS position goes to zero:
+**0.78pp** off target the right way, **20.26pp** the wrong way.
+
+---
+
 ## How the Kite handoff works
 
 With a free Zerodha **Publisher** app (setup takes about five minutes, no paid API needed), the
