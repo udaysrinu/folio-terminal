@@ -990,6 +990,7 @@ function holdingsFromText(txt){
 }
 function pasteHoldings(){
   if(!SHEET){ say('Load a basket sheet first.','warn err'); return; }
+  $('rebal').innerHTML=''; HELD=null; REBAL=null;      // a failed parse must not leave old orders up
   try{ rebalance(holdingsFromText($('hpaste').value)); say(''); }
   catch(e){ say('Could not read those holdings — '+e.message,'warn err'); }
 }
@@ -1086,6 +1087,7 @@ function useBuilt(json){
   window.scrollTo({top:0,behavior:'smooth'});
 }
 function buildNew(){
+  if($('nout')) $('nout').innerHTML='';                 // same: no stale sheet on a failed build
   try{
     const {weights,prices,custom,missing}=parseLines($('nlist').value);
     const tot=Object.values(weights).reduce((a,b)=>a+b,0);
@@ -1281,6 +1283,9 @@ function finishEmail(drop){
   }catch(e){ say('Could not read that price — '+e.message,'warn err'); }
 }
 function fromEmail(){
+  // Clear last run's output and state FIRST. If this parse throws or returns early, the old
+  // panel must not survive: its buttons stay live and act on the previous email's data.
+  $('mout').innerHTML=''; PENDING=null;
   try{
     const r=parseEmail($('mail').value);
     // Keep the loaded basket's name when this email is an update to it: a rebalance continues
