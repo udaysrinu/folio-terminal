@@ -74,6 +74,18 @@ border-radius:var(--radius);padding:11px 14px;font-size:12.5px;margin-top:12px}
 /* visually hidden but still focusable and announced, unlike display:none */
 .sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 .sr:focus-visible+*,.drop:focus-within{outline:2px solid var(--ring);outline-offset:2px}
+.pxbar{height:7px;background:var(--panel2);border:1px solid var(--rule);border-radius:99px;
+  overflow:hidden;margin:8px 0 6px}
+.pxbar i{display:block;height:100%;background:var(--em);width:0;
+  transition:width 320ms cubic-bezier(.22,.61,.36,1)}
+.pxgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:4px 12px;
+  margin-top:8px;font-family:var(--num),monospace;font-size:11.5px}
+.pxgrid div{display:flex;justify-content:space-between;gap:8px;padding:2px 0;
+  border-bottom:1px solid var(--rule)}
+.pxgrid .w{color:var(--tx3)}
+.pxgrid .d{color:var(--gain);font-weight:600}
+.pxgrid .u{color:var(--ox);font-weight:600}
+.pxgrid .n{color:var(--tx3)}
 .routes{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:4px}
 @media(max-width:700px){.routes{grid-template-columns:1fr}}
 .rt{display:block;text-align:left;background:var(--panel);border:1px solid var(--hair2);
@@ -370,6 +382,7 @@ It looks like this:
     <div class="note">Enter the total rupees you want to put in. Indian exchanges only allow whole shares, so we round — and tell you the smallest amount that works.</div>
   </div>
 
+  <div id="advice"></div>
   <div id="orders"></div>
   <p class="note"><a href="#" onclick="route('own');return false">Actually, I already hold some of
     this — rebalance instead →</a></p>
@@ -729,6 +742,56 @@ function bestAmounts(amt){
            tight:scan(amt*0.98, amt*1.02, 100),      // a nudge you would not notice
            wide :scan(amt*0.72, amt*1.40, 500) };    // if you can flex the amount
 }
+
+// ---- strict amounts -------------------------------------------------------------------
+// Not every number is a sensible amount for a given basket. Whole shares put the achievable
+// portfolios on a lattice, so most figures can only approximate the target weights. Rather than
+// letting someone type anything and quietly handing back a 1.6pp-off portfolio, say immediately
+// what the nearest workable amounts are — and say so honestly when none nearby is good, which
+// happens close to the floor where every stock holds only one or two shares.
+function amountAdvice(amt){
+  const floor=minUnit(SHEET.weights,SHEET.prices);
+  if(!(amt>0)) return null;
+  if(amt<floor) return {below:true,floor};
+  const o=bestAmounts(amt);
+  if(o.here==null) return {below:true,floor};
+  // is a materially better amount available, and how far away is it?
+  const cand=[o.natural,o.tight,o.wide].filter(Boolean)
+    .filter(c=>c.drift<o.here-0.02)
+    .map(c=>({...c,away:(c.amt-amt)/amt}));
+  cand.sort((a,b)=>a.drift-b.drift);
+  const best=cand[0]||null;
+  // near the floor the lattice is coarse and NOTHING nearby helps — say that plainly
+  const stuck = best ? Math.abs(best.away)>0.15 && o.here>0.5 : o.here>0.5;
+  return {floor, here:o.here, best, cand:cand.slice(0,3), stuck};
+}
+
+function showAdvice(){
+  const el=$('advice'); if(!el) return;
+  if(!SHEET){ el.innerHTML=''; return; }
+  const amt=+($('amt').value||0);
+  const a=amountAdvice(amt);
+  if(!a){ el.innerHTML=''; return; }
+  if(a.below){
+    el.innerHTML=`<div class="warn"><b>${M(amt)} is under this basket's floor of ${M(a.floor)}.</b>
+      Below it the priciest stock cannot afford a single share, so you would own a different,
+      more concentrated basket. <button onclick="setAmt(${a.floor})">Use ${M(a.floor)}</button></div>`;
+    return;
+  }
+  const q=a.here<0.05?'≈0':'±'+a.here.toFixed(2);
+  el.innerHTML=`<div class="${a.here<0.35?'ok':'warn'}" style="margin-top:10px">
+    <b>At ${M(amt)} the worst holding lands ${q}pp from its target.</b>
+    ${a.here<0.35?' That is about as close as whole shares allow.':''}
+    ${a.stuck?`<br><br>Nothing near this amount does better — this close to the floor of ${M(a.floor)}
+      each stock holds only one or two shares, so the weights simply cannot be tracked finely.
+      ${a.best?`The next real improvement is ${M(a.best.amt)} at ${a.best.drift<0.05?'≈0':'±'+a.best.drift.toFixed(2)}pp,
+        which is ${Math.abs(a.best.away*100).toFixed(0)}% ${a.best.away>0?'more':'less'} than you typed.`:''}`:''}
+    ${!a.stuck&&a.cand.length?`<div class="row" style="margin-top:9px">${a.cand.map(c=>
+      `<button class="${c.drift<0.05?'pri':''}" onclick="setAmt(${c.amt})">${M(c.amt)} →
+        ${c.drift<0.05?'≈0':'±'+c.drift.toFixed(2)}pp</button>`).join('')}</div>`:''}
+  </div>`;
+}
+
 function calc(){
   const amt=parseFloat($('amt').value);
   if(!(amt>0)){ say('Enter an amount greater than zero.','warn err'); return; }
@@ -1332,61 +1395,151 @@ function importFollows(file){
 const PXKEY='ft_td_api_key';
 const tdKey=()=>localStorage.getItem(PXKEY)||'';
 
+const PXCACHE='ft_px_cache';
+// Twelve Data charges ONE CREDIT PER SYMBOL, not per request. The free tier allows 8 credits
+// per minute and 800 per day, so a 15-stock basket costs 15 credits and cannot be fetched in
+// one minute however you batch it. Batching saves HTTP round-trips; it does not save credits.
+// So: fetch in chunks of 8, wait out the minute between chunks, and cache what comes back so
+// pressing the button twice costs nothing.
+const PX_PER_MIN=8, PX_TTL=15*60*1000;
+
+function pxCache(){ try{ return JSON.parse(localStorage.getItem(PXCACHE)||'{}'); }catch(e){ return {}; } }
+function pxCachePut(m){
+  const c=pxCache(), now=Date.now();
+  for(const k in m) c[k]={px:m[k],at:now};
+  try{ localStorage.setItem(PXCACHE,JSON.stringify(c)); }catch(e){}
+}
+function pxCacheGet(syms){
+  const c=pxCache(), now=Date.now(), hit={}, miss=[];
+  syms.forEach(s=>{ const e=c[s];
+    if(e&&e.px>0&&now-e.at<PX_TTL) hit[s]=e.px; else miss.push(s); });
+  return {hit,miss};
+}
+
+const pxSay=h=>{ const el=$('pxout'); if(el) el.innerHTML=h; };
+
+// Show every symbol from the start and fill them in as answers arrive, so the wait is legible
+// rather than a spinner: you can see which stocks are done, which are queued, and what changed.
+function pxProgress(all,got,state,note){
+  const done=all.filter(x=>got[x]>0).length;
+  const pct=Math.round(done/all.length*100);
+  const cells=all.map(x=>{
+    if(got[x]>0){
+      const old=(SHEET&&SHEET.prices&&SHEET.prices[x])||0;
+      const cls=!old?'d':(got[x]>old?'d':got[x]<old?'u':'n');
+      const arrow=!old?'':(got[x]>old?'\u2191':got[x]<old?'\u2193':'');
+      return `<div><span>${x}</span><span class="${cls}">${arrow}${M(got[x])}</span></div>`;
+    }
+    return `<div><span class="w">${x}</span><span class="w">${state[x]||'queued'}</span></div>`;
+  }).join('');
+  pxSay(`<div class="panel" style="padding:13px 16px">
+    <div class="rolabel">Fetching market prices — ${done} of ${all.length}</div>
+    <div class="pxbar"><i style="width:${pct}%"></i></div>
+    ${note?`<div class="note" style="font-style:normal;margin:2px 0 0">${note}</div>`:''}
+    <div class="pxgrid">${cells}</div></div>`);
+}
+
+async function fetchChunk(syms,key){
+  const url='https://api.twelvedata.com/price?symbol='+encodeURIComponent(syms.join(','))
+    +'&exchange=NSE&apikey='+encodeURIComponent(key);
+  const j=await (await fetch(url)).json();
+  if(j&&j.code&&j.code!==200){
+    const e=new Error(j.message||('API returned '+j.code)); e.code=j.code; throw e;
+  }
+  const got={};
+  if(syms.length===1&&j&&j.price!=null){ got[syms[0]]=parseFloat(j.price); }
+  else for(const k in j){
+    const v=j[k];
+    const px=v&&v.price!=null?parseFloat(v.price):(typeof v==='string'?parseFloat(v):NaN);
+    if(px>0) got[k.toUpperCase()]=px;
+  }
+  return got;
+}
+
 async function refreshPrices(){
   if(!SHEET){ say('Load a basket first.','warn err'); return; }
   const key=tdKey();
   if(!key){
-    $('pxout').innerHTML=`<div class="warn"><b>No price key set up.</b> Live prices need a free
-      Twelve Data key — about two minutes.
-      <a href="onboarding.html#prices" target="_blank" rel="noopener"><b>Set it up →</b></a></div>`;
+    pxSay(`<div class="warn"><b>No price key set up.</b> Live prices need a free Twelve Data key —
+      about two minutes. <a href="onboarding.html#prices" target="_blank" rel="noopener"><b>Set it up →</b></a></div>`);
     return;
   }
   const syms=Object.keys(SHEET.weights);
-  if(!confirm(`Send these ${syms.length} symbols to api.twelvedata.com to fetch current prices?\n\n`
-    +syms.join(', ')
-    +`\n\nThis is the only request this app ever makes to a third party. They will see which `
-    +`stocks you are looking up. Nothing else is sent — no amounts, no holdings, no identity.`)){
-    return; }
-  $('pxout').innerHTML='<div class="note" style="font-style:normal">Fetching…</div>';
-  try{
-    // NSE symbols; one request for the whole basket
-    const url='https://api.twelvedata.com/price?symbol='+encodeURIComponent(syms.join(','))
-      +'&exchange=NSE&apikey='+encodeURIComponent(key);
-    const r=await fetch(url);
-    const j=await r.json();
-    if(j&&j.code&&j.code!==200) throw new Error(j.message||('API returned '+j.code));
-
-    // Response is {price:"..."} for one symbol and {SYM:{price:"..."}} for several.
-    const got={};
-    if(syms.length===1&&j&&j.price!=null){ got[syms[0]]=parseFloat(j.price); }
-    else for(const k in j){
-      const v=j[k];
-      const px=v&&v.price!=null?parseFloat(v.price):(typeof v==='string'?parseFloat(v):NaN);
-      if(px>0) got[k.toUpperCase()]=px;
-    }
-    const hit=Object.keys(got), miss=syms.filter(x=>!(got[x]>0));
-    if(!hit.length) throw new Error('no usable prices came back — check the key and that these '
-      +'symbols exist on NSE for this provider');
-
-    const before={...SHEET.prices};
-    hit.forEach(k=>{ if(k in SHEET.weights) SHEET.prices[k]=got[k]; });
-    SHEET.asof=new Date().toISOString().slice(0,10);
-    const moved=hit.filter(k=>k in before&&Math.abs(before[k]-got[k])>0.005)
-      .map(k=>`${k} ${M(before[k])}→${M(got[k])}`);
-    load(SHEET);                       // re-run the profile and minimum on the new prices
-    $('pxout').innerHTML=`<div class="ok"><b>Updated ${hit.length} of ${syms.length} prices.</b>
-      ${miss.length?`<br>No price for <b>${miss.join(', ')}</b> — those keep the sheet's own
-        figures.`:''}
-      ${moved.length?`<br><span class="mono" style="font-size:11.5px">${moved.slice(0,6).join(' · ')}
-        ${moved.length>6?` and ${moved.length-6} more`:''}</span>`:'<br>None had moved.'}
-      <br><span class="note" style="margin:0">The minimum and every weight are recomputed from
-      these prices. Re-size the basket to see the effect.</span></div>`;
-    remember();
-  }catch(e){
-    $('pxout').innerHTML=`<div class="warn err"><b>Could not fetch prices.</b> ${e.message}<br><br>
-      Your sheet's prices are unchanged. Common causes: the free tier's 800 requests a day is
-      spent, the key is wrong, or the provider has no NSE listing for one of these symbols.</div>`;
+  const {hit,miss}=pxCacheGet(syms);
+  if(!miss.length){
+    applyPrices(hit,syms,'all from cache, no credits used');
+    return;
   }
+  const chunks=[]; for(let i=0;i<miss.length;i+=PX_PER_MIN) chunks.push(miss.slice(i,i+PX_PER_MIN));
+  const mins=chunks.length-1;
+  if(!confirm(`Fetch prices for ${miss.length} symbol${miss.length>1?'s':''} from api.twelvedata.com?\n\n`
+    +miss.join(', ')
+    +`\n\nThis provider charges ONE CREDIT PER SYMBOL and the free tier allows ${PX_PER_MIN} per minute,`
+    +` so this runs in ${chunks.length} batch${chunks.length>1?'es':''}`
+    +(mins?` and takes about ${mins} minute${mins>1?'s':''}.`:'.')
+    +`\n\nThey will see which stocks you looked up. No amounts, no holdings, no identity.`
+    +(Object.keys(hit).length?`\n\n${Object.keys(hit).length} price(s) are still fresh in cache and will not be refetched.`:''))){
+    return; }
+
+  const got={...hit}, state={};
+  miss.forEach(x=>state[x]='queued');
+  pxProgress(syms,got,state,`${chunks.length} batch${chunks.length>1?'es':''} to go — this provider
+    charges one credit per symbol and allows ${PX_PER_MIN} a minute.`);
+  for(let i=0;i<chunks.length;i++){
+    chunks[i].forEach(x=>state[x]='fetching…');
+    pxProgress(syms,got,state,`Batch ${i+1} of ${chunks.length}…`);
+    try{
+      Object.assign(got, await fetchChunk(chunks[i],key));
+      pxCachePut(got);
+      chunks[i].forEach(x=>{ if(!(got[x]>0)) state[x]='no listing'; });
+      pxProgress(syms,got,state,`Batch ${i+1} of ${chunks.length} done.`);
+    }catch(e){
+      const rate=/credits? for the current minute|rate limit/i.test(e.message||'');
+      if(rate&&i<chunks.length-1){ /* fall through to the wait below */ }
+      else if(rate){
+        applyPrices(got,syms,`stopped at the per-minute limit`);
+        pxSay($('pxout').innerHTML+`<div class="warn"><b>Hit the per-minute limit.</b>
+          ${e.message}<br><br>What arrived has been kept and cached. Press the button again in a
+          minute to finish the rest.</div>`);
+        return;
+      } else {
+        pxSay(`<div class="warn err"><b>Could not fetch prices.</b> ${e.message}<br><br>
+          Your sheet's prices are unchanged.${Object.keys(got).length>Object.keys(hit).length
+            ?' Prices that did arrive were cached.':''}</div>`);
+        return;
+      }
+    }
+    if(i<chunks.length-1){
+      for(let t=62;t>0;t--){
+        chunks.slice(i+1).flat().forEach(x=>{ if(!(got[x]>0)) state[x]=`in ${t}s`; });
+        pxProgress(syms,got,state,`Waiting <b>${t}s</b> for the ${PX_PER_MIN}-per-minute window to
+          reset — leave this tab open.`);
+        await new Promise(r=>setTimeout(r,1000));
+      }
+    }
+  }
+  applyPrices(got,syms,`${chunks.length} batch${chunks.length>1?'es':''}`);
+}
+
+function applyPrices(got,syms,how){
+  const hit=Object.keys(got).filter(k=>got[k]>0), miss=syms.filter(x=>!(got[x]>0));
+  if(!hit.length){
+    pxSay(`<div class="warn err"><b>No usable prices came back.</b> Check the key, and that these
+      symbols exist on NSE for this provider.</div>`);
+    return;
+  }
+  const before={...SHEET.prices};
+  hit.forEach(k=>{ if(k in SHEET.weights) SHEET.prices[k]=got[k]; });
+  SHEET.asof=new Date().toISOString().slice(0,10);
+  const moved=hit.filter(k=>k in before&&Math.abs(before[k]-got[k])>0.005)
+    .map(k=>`${k} ${M(before[k])}→${M(got[k])}`);
+  load(SHEET);
+  pxSay(`<div class="ok"><b>Updated ${hit.length} of ${syms.length} prices</b> (${how}).
+    ${miss.length?`<br>No price for <b>${miss.join(', ')}</b> — those keep the sheet's own figures.`:''}
+    ${moved.length?`<br><span class="mono" style="font-size:11.5px">${moved.slice(0,6).join(' · ')}${moved.length>6?` and ${moved.length-6} more`:''}</span>`:'<br>None had moved.'}
+    <br><span class="note" style="margin:0">Cached for 15 minutes, so pressing again costs no
+    credits. The minimum and every weight are recomputed — re-size to see the effect.</span></div>`);
+  remember();
 }
 
 // ---- parse a basket order-confirmation email ----
@@ -1678,6 +1831,8 @@ d.ondragleave=()=>d.classList.remove('over');
 d.ondrop=e=>{e.preventDefault();d.classList.remove('over');if(e.dataTransfer.files[0])readFile(e.dataTransfer.files[0])};
 $('fin').onchange=e=>{if(e.target.files[0])readFile(e.target.files[0])};
 $('amt').addEventListener('keydown',e=>{if(e.key==='Enter')calc()});
+$('amt').addEventListener('input',()=>{ clearTimeout(window.__adv);
+  window.__adv=setTimeout(showAdvice,260); });   // debounce: the scan is cheap but not free
 const hd=$('hdrop');
 hd.onclick=e=>{ if(e.target!==$('hfin')) $('hfin').click(); };
 $('hfin').onclick=e=>e.stopPropagation();

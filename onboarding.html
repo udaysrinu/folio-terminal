@@ -234,8 +234,9 @@ section entirely and everything else still works.</div>
   or without a key. Of the three that permit it, Alpha Vantage allows only <b>25 requests a day</b>
   (one refresh of a 15-stock basket nearly spends it) and Finnhub's free Indian coverage is thin.</p>
   <p style="font-size:13.5px;color:var(--tx2);margin-top:9px"><b>Twelve Data</b> is the one that
-  fits: free, <b>800 requests a day</b>, covers NSE, and accepts a comma-separated list — so a
-  whole basket costs <b>one</b> request, not fifteen.</p>
+  fits: free, covers NSE, and accepts a comma-separated list. Note carefully how its budget works —
+  it charges <b>one credit per symbol</b>, not per request, so batching saves round-trips but not
+  credits. Basic allows <b>8 credits a minute and 800 a day</b>.</p>
 </div>
 
 <h2>Setup</h2>
@@ -265,11 +266,14 @@ section entirely and everything else still works.</div>
 </div>
 
 <div class="panel" style="margin-top:12px">
-  <p style="font-size:13.5px;color:var(--tx2)"><b>What can go wrong.</b> The free tier is 800
-  requests a day and 8 a minute — generous for a few baskets, easy to exhaust if you hammer it.
-  Some small-caps may have no listing with this provider; those keep the sheet's own price and the
-  page tells you which. And a price is a quote, not a fill: what you actually pay is set when your
-  order executes in your broker.</p>
+  <p style="font-size:13.5px;color:var(--tx2)"><b>What to expect.</b> A basket of more than 8
+  stocks cannot be fetched in one minute — 15 stocks is 15 credits against a limit of 8 per minute.
+  The workbench handles this: it fetches 8, shows a countdown while the window resets, then fetches
+  the rest. Leave the tab open. Prices are then <b>cached for 15 minutes</b>, so pressing the button
+  again costs no credits.</p>
+  <p style="font-size:13.5px;color:var(--tx2);margin-top:9px">Some small-caps may have no listing
+  with this provider; those keep the sheet's own price and the page names them. And a price is a
+  quote, not a fill — what you actually pay is set when your order executes at your broker.</p>
 </div>
 
 <div class="foot">

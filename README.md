@@ -229,7 +229,7 @@ nothing shared between users:
 | Key | For | Where you get it | Free? |
 |---|---|---|---|
 | Kite `api_key` | pre-filling orders in Kite | developers.kite.trade, **Publisher** app | yes |
-| Twelve Data key | current market prices | twelvedata.com, Basic plan | yes, 800 req/day |
+| Twelve Data key | current market prices | twelvedata.com, Basic plan | yes — 8 credits/min, 800/day |
 
 Neither is required. Without the Kite key you copy orders by hand; without the price key the app
 uses the prices carried in the sheet.
@@ -239,6 +239,13 @@ prices mean the computed minimum, the weights and your share counts are all work
 wrong numbers, so real drift is larger than the app reports. Fetching current prices makes the
 sizing honest — and the workbench then searches for the amount that drives drift closest to zero
 while still giving every stock at least one share.
+
+**How the free tier really works.** Twelve Data charges **one credit per symbol**, not per request.
+Batching a comma-separated list saves HTTP round-trips, not credits. Basic allows **8 credits per
+minute** and **800 per day**, so a 15-stock basket costs 15 credits and cannot complete inside one
+minute however it is batched. The app therefore fetches in chunks of 8, waits out the window with a
+visible countdown, and **caches prices for 15 minutes** so pressing the button again costs nothing.
+800/day works out to roughly 50 full refreshes of a 15-stock basket.
 
 ## Privacy
 
