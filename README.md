@@ -127,9 +127,15 @@ each wallet supplies its own. Send the order list instead and his TCS position g
 
 ## How the Kite handoff works
 
-With a free Zerodha **Publisher** app (setup takes about five minutes, no paid API needed), the
-page POSTs the order list to `kite.zerodha.com/connect/basket` and Kite opens with everything
-pre-filled.
+With a free Zerodha app (setup takes about five minutes, no paid API needed), the page POSTs the
+order list to `kite.zerodha.com/connect/basket` and Kite opens with everything pre-filled. This is
+Kite's documented [offsite orders](https://kite.trade/docs/connect/v3/basket/) flow: `POST`, two
+form fields (`api_key` and `data`), submitted from the browser.
+
+**Publisher** is the recommended app type because it has no API access at all — the least privilege
+that does the job — but it is not required. The spec names no app type, and a **Personal** key works
+at the same endpoint. Copy the **API key** field, not the **API secret** beside it; pasting the
+secret returns `Invalid api_key` from Kite.
 
 - **Both directions.** Buys for a first-time purchase, buys *and sells* for a rebalance.
 - **Limit or market.** Limit is default, with a buffer you set — applied *above* the price for a
@@ -228,7 +234,7 @@ nothing shared between users:
 
 | Key | For | Where you get it | Free? |
 |---|---|---|---|
-| Kite `api_key` | pre-filling orders in Kite | developers.kite.trade, **Publisher** app | yes |
+| Kite `api_key` | pre-filling orders in Kite | developers.kite.trade — **Publisher** app recommended, Personal also works | yes |
 | Twelve Data key | current market prices | twelvedata.com, Basic plan | yes — 8 credits/min, 800/day |
 
 Neither is required. Without the Kite key you copy orders by hand; without the price key the app

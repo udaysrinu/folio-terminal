@@ -989,7 +989,8 @@ function maskKey(){ const k=localStorage.getItem(KKEY)||'';
   return k?`<code>${k.slice(0,4)}…${k.slice(-3)}</code>`:''; }
 function editKey(){
   const cur=localStorage.getItem(KKEY)||'';
-  const v=prompt('Kite API key (from your Publisher app at developers.kite.trade).\n'
+  const v=prompt('Kite API key — the "API key" field, not the API secret beside it.\n'
+    +'From your app at developers.kite.trade (Publisher or Personal both work).\n'
     +'Stays in this browser only — there is no server.', cur);
   if(v===null) return;
   const t=v.trim();
@@ -1037,9 +1038,10 @@ function showPayload(reb){
     <div class="pay">api_key = ${esc(p.key)}   <span style="color:var(--tx3)">(${p.key.length} chars)</span>
 data    = ${esc(JSON.stringify(p.orders,null,1))}</div>
     <div class="dn">Kite checks the key only after you log in, so if it answers
-      <code>Invalid api_key</code> the value above is the one it rejected. A Publisher app's key is
-      the only type that may place baskets — a Personal app key is a real key and gets this far,
-      then fails at that check.</div>`,'warn');
+      <code>Invalid api_key</code> the value above is the one it rejected. Check it against the
+      <b>API key</b> field on your app page — not the API secret, which sits beside it and looks
+      alike. Kite's own spec names no required app type for this endpoint, so a Personal app key can
+      work here too; if one type is refused, try the other before assuming the value is wrong.</div>`,'warn');
 }
 function placeInKite(reb){
   if(!localStorage.getItem(KKEY)){ location.href='onboarding.html'; return; }

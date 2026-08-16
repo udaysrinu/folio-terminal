@@ -168,9 +168,16 @@ plan covers it — pick the <b>Publisher</b> app type.</p>
     <p>Pick <b>Publisher</b> — free, and its description is literally
        <i>"HTML/JS buttons for order and basket placement"</i>, which is this.
        Name it anything.</p>
-    <p style="margin-top:6px">Not <b>Personal</b> or <b>Connect</b> — those are for reading your
-       account over the API, which this never does. Publisher has <b>no API access at all</b>,
-       so it is the least-privileged option.</p></div></div>
+    <p style="margin-top:6px">Publisher is the recommendation because it has <b>no API access at
+       all</b>, making it the least-privileged option that does the job. It is <b>not</b> a
+       requirement: Kite's own
+       <a href="https://kite.trade/docs/connect/v3/basket/" target="_blank" rel="noopener">offsite
+       orders spec</a> names no app type, and a <b>Personal</b> key works at the same endpoint. So if
+       one is refused with <code>Invalid api_key</code>, try the other before assuming you copied the
+       wrong string.</p>
+    <p style="margin-top:6px">Copy the field labelled <b>API key</b>. The <b>API secret</b> sits
+       right beside it and looks identical — a long run of letters and numbers — and pasting it here
+       produces exactly that same <code>Invalid api_key</code> error from Kite.</p></div></div>
   <div class="step"><span class="sn">3</span><div><b>Zerodha Client ID</b>
     <p>Your Kite login ID — the one you type to log in, shaped like <code>AB1234</code>.
        Find it in Kite under <b>Profile</b>, or on any Zerodha statement or contract note.</p></div></div>
