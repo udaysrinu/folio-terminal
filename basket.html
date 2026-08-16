@@ -365,6 +365,7 @@ Headers optional. It reads the symbol, the quantity, and a price if present."></
     <button class="pri" onclick="pasteHoldings()">Use pasted holdings</button>
   </div>
   <div id="rebal"></div>
+  <div id="follow"></div>
 </div>
 </div><!-- /tSize -->
 
@@ -493,6 +494,7 @@ function fit(el){
 }
 function fitAll(){ document.querySelectorAll('textarea').forEach(fit); }
 addEventListener('DOMContentLoaded',()=>{
+  try{ followPanel('follow'); }catch(e){}
   document.querySelectorAll('textarea').forEach(t=>{
     t.addEventListener('input',()=>fit(t));
     t.addEventListener('paste',()=>setTimeout(()=>fit(t),0));
@@ -813,6 +815,8 @@ let HELD=null;                       // last parsed holdings, so the cash box ca
 function rebalance(held){
   if(held) HELD=held; else held=HELD;
   if(!held) return;
+  if(SHEET) noteFollow(SHEET,'holdings seen',
+    {value:Math.round(Object.keys(held).reduce((a,k)=>a+held[k]*(SHEET.prices[k]||0),0))});
   const w=SHEET.weights,p={...SHEET.prices};
   // anything you hold that the basket no longer contains must be sold, or it lingers forever
   const orphans=Object.keys(held).filter(x=>held[x]>0&&!(x in w));
@@ -909,6 +913,7 @@ function rebalance(held){
     <div class="warn">A stock you hold in <b>more than one</b> basket shows false drift: brokers report
       one merged quantity, so the other basket's shares count against this target. Check before acting
       on a large drift.</div></div>`;
+  followPanel('follow');
 }
 // tolerant paste: header row optional, price optional
 function holdingsFromText(txt){
@@ -1019,6 +1024,7 @@ function showBuilt(sheet,where,how,isUpdate){
    </div>`;
 }
 function useBuilt(json){
+  try{ noteFollow(JSON.parse(json),'built'); }catch(e){}
   document.querySelector('.tab[data-v="tSize"]').click();
   $('paste').value=json; fit($('paste')); load(JSON.parse(json));
   window.scrollTo({top:0,behavior:'smooth'});
@@ -1039,6 +1045,115 @@ function buildNew(){
     say('');
   }catch(e){ say('Could not build that — '+e.message,'warn err'); }
 }
+
+// ============================ FOLLOW LIST ============================
+// What the app remembers about the baskets you follow: label, the share counts it last
+// believed you held, prices, and a short event log. Used to answer one question a sheet
+// alone cannot: has this rebalance already been executed, or is it still pending?
+//
+// localStorage is a CACHE, never the record. It is wiped by clearing browsing data, by
+// private windows, and by iOS storage pressure, and it never leaves this browser. So every
+// write is exportable to one file, and one click restores it. Nothing here is ever treated
+// as authoritative about your positions — a fresh holdings export always wins.
+const FOLLOWS='ft_follows';
+const slug=t=>String(t||'basket').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+function follows(){ try{ return JSON.parse(localStorage.getItem(FOLLOWS)||'{}'); }catch(e){ return {}; } }
+function saveFollows(o){ try{ localStorage.setItem(FOLLOWS,JSON.stringify(o)); }catch(e){
+  say('Could not save locally — your browser is blocking storage. Export a backup instead.','warn'); } }
+
+function noteFollow(sheet,event,extra){
+  if(!sheet||!sheet.label) return;
+  const all=follows(), k=slug(sheet.label);
+  const prev=all[k]||{};
+  all[k]={ label:sheet.label, asof:sheet.asof||'',
+    shares:sheet.shares?{...sheet.shares}:(prev.shares||null),
+    prices:sheet.prices?{...sheet.prices}:(prev.prices||null),
+    weights:{...sheet.weights},
+    log:(()=>{
+      const prior=(prev.log||[]).slice(-11);
+      const entry={on:new Date().toISOString().slice(0,10),event,...(extra||{})};
+      const last=prior[prior.length-1];
+      // same day, same event, same numbers = the user pasted twice, not two rebalances
+      if(last&&JSON.stringify(last)===JSON.stringify(entry)) return prior;
+      return [...prior,entry];
+    })() };
+  saveFollows(all);
+}
+
+// Compare a parsed rebalance email against REAL holdings to decide where you are in the cycle.
+// Signals, strongest first:
+//  - a stock the email BUYS that you now hold and the old basket did not  -> executed
+//  - a stock the email SELLS ENTIRELY that is gone from your holdings     -> executed
+//  - those stocks still absent / still present                            -> pending
+function cyclePosition(r,held,priorShares){
+  const ev=[];
+  let executed=0, pending=0;
+  r.buys.forEach(x=>{
+    const wasHeld=(priorShares&&priorShares[x.sym])>0;
+    if(wasHeld) return;                                  // not a new entrant, tells us nothing
+    if((held[x.sym]||0)>0){ executed++; ev.push(`${x.sym} is in your holdings and was not in the basket before`); }
+    else { pending++; ev.push(`${x.sym} is not in your holdings yet`); }
+  });
+  r.sells.forEach(x=>{
+    const priorQ=(priorShares&&priorShares[x.sym])||0;
+    if(!priorQ||x.q<priorQ) return;                      // partial trim, inconclusive
+    if(!(held[x.sym]>0)){ executed++; ev.push(`${x.sym} is gone from your holdings`); }
+    else { pending++; ev.push(`${x.sym} is still in your holdings`); }
+  });
+  if(!executed&&!pending) return {state:'unknown',why:['no stock entered or fully exited, so there is nothing decisive to compare']};
+  return {state: executed&&!pending?'executed' : pending&&!executed?'pending' : 'mixed',
+          why:ev, executed, pending};
+}
+
+function followPanel(where){
+  const all=follows(), keys=Object.keys(all);
+  if(!keys.length){ if($(where)) $(where).innerHTML=''; return; }
+  $(where).innerHTML=`<h2>Baskets you follow</h2>
+    <div class="panel">
+      <div class="note" style="font-style:normal;margin:0 0 10px">Remembered in this browser only.
+        <b>Export a backup</b> — clearing browsing data wipes this, and it does not reach your phone.</div>
+      <table><thead><tr><th>Basket</th><th class="r">Stocks</th><th class="r">Share counts</th>
+        <th>Last event</th><th></th></tr></thead><tbody>
+      ${keys.map(k=>{const f=all[k], last=(f.log||[]).slice(-1)[0]||{};
+        return `<tr><td class="sym">${f.label}</td>
+          <td class="r mono">${Object.keys(f.weights||{}).length}</td>
+          <td class="r mono">${f.shares?'yes':'—'}</td>
+          <td class="mono" style="font-size:12px">${last.event||'—'}${last.on?' · '+last.on:''}</td>
+          <td class="r"><button class="sm" onclick="loadFollow('${k}')">Load</button>
+            <button class="sm" onclick="dropFollow('${k}')">Forget</button></td></tr>`}).join('')}
+      </tbody></table>
+      <div class="row" style="margin-top:12px">
+        <button class="pri" onclick="exportFollows()">Export backup</button>
+        <button onclick="$('fimp').click()">Import backup</button>
+        <input type="file" id="fimp" accept=".json" class="sr" aria-label="Import a follow-list backup"
+          onchange="importFollows(this.files[0])">
+      </div>
+    </div>`;
+}
+function loadFollow(k){ const f=follows()[k]; if(!f) return;
+  load({label:f.label,asof:f.asof,weights:f.weights,prices:f.prices||{},
+        ...(f.shares?{shares:f.shares}:{})});
+  window.scrollTo({top:0,behavior:'smooth'}); }
+function dropFollow(k){ const all=follows(); delete all[k]; saveFollows(all); followPanel('follow'); }
+function exportFollows(){
+  download('folio_follows_backup.json', JSON.stringify(follows(),null,1));
+  say('Backup saved to your Downloads folder. Keep it with your sheets.','ok');
+}
+function importFollows(file){
+  if(!file) return;
+  const fr=new FileReader();
+  fr.onload=()=>{ try{
+      const inc=JSON.parse(fr.result);
+      if(typeof inc!=='object'||Array.isArray(inc)) throw new Error('not a follow-list file');
+      const all=follows(), merged={...all};
+      let added=0, updated=0;
+      for(const k in inc){ if(all[k]) updated++; else added++; merged[k]=inc[k]; }
+      saveFollows(merged); followPanel('follow');
+      say(`Restored — ${added} new, ${updated} updated.`,'ok');
+    }catch(e){ say('Could not read that backup — '+e.message,'warn err'); } };
+  fr.readAsText(file);
+}
+
 // ---- parse a basket order-confirmation email ----
 // rows look like:  SYMBOL <ws> "n of m" <ws> BUY|SELL <ws> price
 const MAILROW=/([A-Z][A-Z0-9&.\-]{1,19})\s+(\d+)\s+of\s+(\d+)\s+(BUY|SELL)\s+([\d,]+(?:\.\d+)?)/g;
@@ -1112,7 +1227,11 @@ function finishEmail(drop){
 function fromEmail(){
   try{
     const r=parseEmail($('mail').value);
-    const label=$('mlabel').value.trim()||r.name||'From order email';
+    // Keep the loaded basket's name when this email is an update to it: a rebalance continues
+    // a basket's history, and renaming it would fork the follow list into two half-histories.
+    const isUpd=r.kind!=='invest' && SHEET && SHEET.shares;
+    const label=$('mlabel').value.trim()
+      || (isUpd?SHEET.label:null) || r.name || 'From order email';
     const notes=[];
 
     // Route on KIND, not on the presence of sells: a rebalance that only adds weight has
@@ -1147,6 +1266,20 @@ function fromEmail(){
           weights, which fit any amount of money.</div>`;
         say(''); return;
       }
+      // If real holdings have been dropped in, they beat the sheet's remembered counts:
+      // they can say whether this rebalance has ALREADY been executed in the account.
+      if(HELD){
+        const cyc=cyclePosition(r,HELD,prior);
+        if(cyc.state==='executed'){
+          notes.push(`<b>This rebalance looks already executed in your account.</b>
+            ${cyc.why.slice(0,2).join('; ')}. Applying it again would double the trades — instead,
+            drop your holdings in Step 5 and build the sheet from what you actually own now.`);
+        } else if(cyc.state==='mixed'){
+          notes.push(`<b>Only part of this rebalance shows in your holdings.</b>
+            ${cyc.why.slice(0,3).join('; ')}. Some orders may not have filled. Check the broker
+            before applying it.`);
+        }
+      }
       const zeroed=r.sells.filter(x=>x.q===(prior[x.sym]||0)&&(SHEET.weights[x.sym]||0)>=5)
         .map(x=>`${x.sym} (${(SHEET.weights[x.sym]||0).toFixed(0)}% of the basket)`);
       const heavy=sheetVal>0 && turnover/sheetVal>0.35;
@@ -1165,7 +1298,9 @@ function fromEmail(){
       exited.forEach(k=>{ delete sh[k]; delete px[k]; });
       if(!Object.keys(sh).length) throw new Error('applying that rebalance empties the basket');
       const entered=r.buys.map(x=>x.sym).filter(x=>!(SHEET.shares[x]>0));
-      showBuilt(sheetFrom(sh,px,label),'mout',
+      const updated=sheetFrom(sh,px,label);
+      noteFollow(updated, r.kind, {turnover:Math.round(turnover)});
+      showBuilt(updated,'mout',
         `${r.kind} applied to “${SHEET.label}” — ${Object.keys(sh).length} stocks after`, true);
       if(entered.length) notes.push(`Entered the basket: <b>${entered.join(', ')}</b>`);
       if(exited.length)  notes.push(`Exited completely: <b>${exited.join(', ')}</b>`);
