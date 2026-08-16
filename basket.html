@@ -326,6 +326,12 @@ It looks like this:
   <div id="prof"></div>
 
   <div id="needpx"></div>
+  <div class="row" style="margin:2px 0 4px">
+    <button onclick="refreshPrices()">Refresh prices from the market</button>
+    <span class="note" style="margin:0">optional · one request to Twelve Data · sheet prices are
+      used if you skip it</span>
+  </div>
+  <div id="pxout"></div>
 
   <!-- One question decides which of the two jobs this is. The app routes, rather than making
        you classify yourself up front: buying needs an amount, rebalancing needs your holdings
@@ -1266,6 +1272,76 @@ function importFollows(file){
       say(`Restored — ${added} new, ${updated} updated.`,'ok');
     }catch(e){ say('Could not read that backup — '+e.message,'warn err'); } };
   fr.readAsText(file);
+}
+
+
+// ==================== LIVE PRICES (optional, opt-in) ====================
+// The only free quote API a browser can actually reach for NSE. Yahoo, Stooq, NSE's own
+// endpoint and BSE all refuse cross-origin reads, so they are impossible from a page with
+// no server. Twelve Data sends CORS headers, allows 800 requests/day free, and takes a
+// comma-separated symbol list, so one basket costs one request.
+//
+// This is the ONE place the app talks to a third party. It is never automatic: you press a
+// button, and you are told exactly which symbols are about to be sent and to whom. If it
+// fails, the sheet's own prices stay untouched.
+const PXKEY='ft_td_api_key';
+const tdKey=()=>localStorage.getItem(PXKEY)||'';
+
+async function refreshPrices(){
+  if(!SHEET){ say('Load a basket first.','warn err'); return; }
+  const key=tdKey();
+  if(!key){
+    $('pxout').innerHTML=`<div class="warn"><b>No price key set up.</b> Live prices need a free
+      Twelve Data key — about two minutes.
+      <a href="onboarding.html#prices" target="_blank" rel="noopener"><b>Set it up →</b></a></div>`;
+    return;
+  }
+  const syms=Object.keys(SHEET.weights);
+  if(!confirm(`Send these ${syms.length} symbols to api.twelvedata.com to fetch current prices?\n\n`
+    +syms.join(', ')
+    +`\n\nThis is the only request this app ever makes to a third party. They will see which `
+    +`stocks you are looking up. Nothing else is sent — no amounts, no holdings, no identity.`)){
+    return; }
+  $('pxout').innerHTML='<div class="note" style="font-style:normal">Fetching…</div>';
+  try{
+    // NSE symbols; one request for the whole basket
+    const url='https://api.twelvedata.com/price?symbol='+encodeURIComponent(syms.join(','))
+      +'&exchange=NSE&apikey='+encodeURIComponent(key);
+    const r=await fetch(url);
+    const j=await r.json();
+    if(j&&j.code&&j.code!==200) throw new Error(j.message||('API returned '+j.code));
+
+    // Response is {price:"..."} for one symbol and {SYM:{price:"..."}} for several.
+    const got={};
+    if(syms.length===1&&j&&j.price!=null){ got[syms[0]]=parseFloat(j.price); }
+    else for(const k in j){
+      const v=j[k];
+      const px=v&&v.price!=null?parseFloat(v.price):(typeof v==='string'?parseFloat(v):NaN);
+      if(px>0) got[k.toUpperCase()]=px;
+    }
+    const hit=Object.keys(got), miss=syms.filter(x=>!(got[x]>0));
+    if(!hit.length) throw new Error('no usable prices came back — check the key and that these '
+      +'symbols exist on NSE for this provider');
+
+    const before={...SHEET.prices};
+    hit.forEach(k=>{ if(k in SHEET.weights) SHEET.prices[k]=got[k]; });
+    SHEET.asof=new Date().toISOString().slice(0,10);
+    const moved=hit.filter(k=>k in before&&Math.abs(before[k]-got[k])>0.005)
+      .map(k=>`${k} ${M(before[k])}→${M(got[k])}`);
+    load(SHEET);                       // re-run the profile and minimum on the new prices
+    $('pxout').innerHTML=`<div class="ok"><b>Updated ${hit.length} of ${syms.length} prices.</b>
+      ${miss.length?`<br>No price for <b>${miss.join(', ')}</b> — those keep the sheet's own
+        figures.`:''}
+      ${moved.length?`<br><span class="mono" style="font-size:11.5px">${moved.slice(0,6).join(' · ')}
+        ${moved.length>6?` and ${moved.length-6} more`:''}</span>`:'<br>None had moved.'}
+      <br><span class="note" style="margin:0">The minimum and every weight are recomputed from
+      these prices. Re-size the basket to see the effect.</span></div>`;
+    remember();
+  }catch(e){
+    $('pxout').innerHTML=`<div class="warn err"><b>Could not fetch prices.</b> ${e.message}<br><br>
+      Your sheet's prices are unchanged. Common causes: the free tier's 800 requests a day is
+      spent, the key is wrong, or the provider has no NSE listing for one of these symbols.</div>`;
+  }
 }
 
 // ---- parse a basket order-confirmation email ----

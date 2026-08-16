@@ -214,6 +214,64 @@ plan covers it — pick the <b>Publisher</b> app type.</p>
   asks for.</p>
 </div>
 
+
+<h2 id="prices">Live prices <span style="text-transform:none;letter-spacing:0;font-weight:400">— also optional</span></h2>
+<p class="lede" style="font-size:15px;margin-top:8px">A sheet carries the prices it was built
+with. They go stale. This fetches current ones so the minimum, the weights and your share counts
+are worked out from today's market instead of the day the basket was made.</p>
+
+<div class="warn"><b>Read this before you set it up.</b> Every other feature here runs entirely in
+your browser. This one does not: to get a price the page must ask someone for it, and that someone
+learns <b>which stocks you looked up</b>. Not how much you hold, not who you are — but the ticker
+list, yes. It is never automatic: you press a button and confirm the list each time. Skip this
+section entirely and everything else still works.</div>
+
+<h2>Why this provider</h2>
+<div class="panel">
+  <p style="font-size:13.5px;color:var(--tx2)">Browsers refuse to read from a server that does not
+  invite them, and almost no price source does. I tested eight: <b>Yahoo Finance, Stooq, NSE
+  India's own API and BSE all refuse</b> a request from a web page — they are impossible here, with
+  or without a key. Of the three that permit it, Alpha Vantage allows only <b>25 requests a day</b>
+  (one refresh of a 15-stock basket nearly spends it) and Finnhub's free Indian coverage is thin.</p>
+  <p style="font-size:13.5px;color:var(--tx2);margin-top:9px"><b>Twelve Data</b> is the one that
+  fits: free, <b>800 requests a day</b>, covers NSE, and accepts a comma-separated list — so a
+  whole basket costs <b>one</b> request, not fifteen.</p>
+</div>
+
+<h2>Setup</h2>
+<div class="panel">
+  <div class="step"><span class="sn">1</span><div><b>Make a free account</b>
+    <p>Go to <a href="https://twelvedata.com/pricing" target="_blank" rel="noopener">twelvedata.com/pricing</a>
+       and pick the <b>Basic</b> plan — it is ₹0 and needs no card. Sign up with an email.</p></div></div>
+  <div class="step"><span class="sn">2</span><div><b>Copy the API key</b>
+    <p>After signing in it is on your dashboard at
+       <a href="https://twelvedata.com/account/api-keys" target="_blank" rel="noopener">twelvedata.com/account/api-keys</a>
+       — a long string of letters and numbers. There is no separate secret to worry about.</p></div></div>
+  <div class="step"><span class="sn">3</span><div><b>Paste it below</b>
+    <p>Stored in this browser only, and used only to build that one request. There is no server
+       here to send it to.</p></div></div>
+</div>
+
+<div class="panel" style="margin-top:12px">
+  <input id="pxkey" aria-label="Your Twelve Data API key" placeholder="paste your Twelve Data api key here" spellcheck="false" autocomplete="off">
+  <div class="row">
+    <button class="pri" onclick="savePx()">Save key</button>
+    <button onclick="clearPx()">Remove key</button>
+    <a href="basket.html" style="font-size:12.5px">← back to the workbench</a>
+  </div>
+  <div id="pxmsg"></div>
+  <div class="note">Then in the workbench press <b>Refresh prices from the market</b>. It will show
+    you the symbol list and ask before sending anything.</div>
+</div>
+
+<div class="panel" style="margin-top:12px">
+  <p style="font-size:13.5px;color:var(--tx2)"><b>What can go wrong.</b> The free tier is 800
+  requests a day and 8 a minute — generous for a few baskets, easy to exhaust if you hammer it.
+  Some small-caps may have no listing with this provider; those keep the sheet's own price and the
+  page tells you which. And a price is a quote, not a fill: what you actually pay is set when your
+  order executes in your broker.</p>
+</div>
+
 <div class="foot">
   <a href="index.html">Folio Terminal</a> · not investment advice · verify every order before confirming
 </div>
@@ -239,8 +297,21 @@ function save(){
     Either way, <b>Place in Kite →</b> now appears beside the copy buttons.</div>`;
 }
 function clearKey(){ localStorage.removeItem(K); $('key').value=''; show('Key removed.','warn'); }
+const PX='ft_td_api_key';
+const pxShow=(t,c)=>$('pxmsg').innerHTML=`<div class="${c}">${t}</div>`;
+function savePx(){
+  const v=$('pxkey').value.trim();
+  if(!v){ pxShow('Paste a key first.','warn'); return; }
+  if(!/^[A-Za-z0-9_-]{8,64}$/.test(v)){
+    pxShow('That does not look like a Twelve Data key — expect a long run of letters and numbers, no spaces.','warn'); return; }
+  localStorage.setItem(PX,v);
+  pxShow('Saved. Press <b>Refresh prices</b> in the workbench — it will confirm the symbol list before sending.','ok');
+}
+function clearPx(){ localStorage.removeItem(PX); $('pxkey').value=''; pxShow('Price key removed. The app goes back to using sheet prices only.','warn'); }
 addEventListener('DOMContentLoaded',()=>{
   const v=localStorage.getItem(K);
   if(v){ $('key').value=v; show('A key is already saved in this browser.','ok'); }
+  const pv=localStorage.getItem(PX);
+  if(pv){ $('pxkey').value=pv; pxShow('A price key is already saved in this browser.','ok'); }
 });
 </script></body></html>
