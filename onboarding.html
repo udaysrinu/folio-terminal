@@ -288,6 +288,13 @@ function save(){
   if(!v){ show('Paste a key first.','warn'); return; }
   if(!/^[A-Za-z0-9_-]{6,40}$/.test(v)){
     show('That does not look like an api_key — expect ~16 letters and numbers, no spaces.','warn'); return; }
+  // The two key formats overlap, so a swap between these adjacent fields is otherwise silent —
+  // and Kite's only feedback is "Invalid api_key" from a page you were sent to in a new tab.
+  if(v===localStorage.getItem(PX)){
+    show('That is your <b>Twelve Data</b> price key, not your Kite key. Kite would reject it with '
+        +'“Invalid api_key”. The Kite key comes from developers.kite.trade.','warn'); return; }
+  if(/^[0-9a-f]{32}$/.test(v) && !confirm('That looks like a Twelve Data key (32 hex characters) '
+      +'rather than a Kite api_key (~16 characters). Save it as the Kite key anyway?')) return;
   localStorage.setItem(K,v);
   show('Key saved.','ok');
   $('back').className='';
@@ -308,6 +315,9 @@ function savePx(){
   if(!v){ pxShow('Paste a key first.','warn'); return; }
   if(!/^[A-Za-z0-9_-]{8,64}$/.test(v)){
     pxShow('That does not look like a Twelve Data key — expect a long run of letters and numbers, no spaces.','warn'); return; }
+  if(v===localStorage.getItem(K)){
+    pxShow('That is your <b>Kite</b> api_key, not your Twelve Data key. Get the price key from '
+          +'twelvedata.com/account/api-keys.','warn'); return; }
   localStorage.setItem(PX,v);
   pxShow('Saved. Press <b>Refresh prices</b> in the workbench — it will confirm the symbol list before sending.','ok');
 }

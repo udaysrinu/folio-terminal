@@ -122,6 +122,9 @@ code{background:var(--panel2);border:1px solid var(--hair);border-radius:var(--r
 font-family:var(--num),ui-monospace,monospace;font-size:12px}
 .sendbox{margin-top:12px;background:var(--panel2);border:1px solid var(--hair);border-radius:var(--radius);
 padding:13px 16px;font-size:12.5px;color:var(--tx2)}
+.pay{background:var(--panel2);border:1px solid var(--hair);border-radius:var(--radius-sm);
+padding:10px 12px;margin:9px 0 0;overflow:auto;max-height:340px;white-space:pre;
+font-family:var(--num),ui-monospace,monospace;font-size:11.5px;line-height:1.5;color:var(--tx)}
 .sendbox b{color:var(--tx)} .sendbox ol{margin:7px 0 7px 20px} .sendbox li{margin:3px 0}
 .keyrow{display:inline-flex;gap:9px;align-items:center;font-size:11.5px;color:var(--tx3)}
 .keyrow a{color:var(--tx2);text-decoration:underline}
@@ -259,6 +262,13 @@ tbody tr:last-child{border-bottom:none}
 .ledger .flat{color:var(--tx3)}
 /* "Where do I get this file?" — collapsed by default so it never shouts at someone
    who already knows, but one click away instead of buried on another tab. */
+/* The Kite/Console links existed only inside a collapsed <details>, so the drop zone read as if it
+   never said where to get the file. Surfaced inline instead: a closed accordion is the same as absent
+   for anyone who does not already know the answer is in there.
+   stopPropagation on the anchors is load-bearing — the drop zone is click-to-open-file-picker. */
+.getlink{display:inline-block;margin-top:6px;font-size:12px;font-weight:600;color:var(--action,#155A78);
+  text-decoration:underline;text-underline-offset:2px}
+.getlink:hover{opacity:.75}
 .howto{margin-top:10px;border:1px solid var(--rule);border-radius:var(--radius-sm);
   background:var(--panel);overflow:hidden}
 .howto summary{cursor:pointer;padding:10px 15px;font-size:12.5px;font-weight:600;
@@ -397,7 +407,12 @@ It looks like this:
   <div class="drop" id="hdrop" style="padding:20px">
     <div style="font-size:15px;font-weight:700">Drop your holdings file <b>XLSX / CSV</b></div>
     <div style="font-size:12px;color:var(--tx2);margin-top:4px">
-      or click to choose one — nothing is uploaded, it is read in this tab</div>
+      or click to choose one — nothing is uploaded, it is read in this tab<br>
+      <a href="https://kite.zerodha.com/holdings" target="_blank" rel="noopener"
+         onclick="event.stopPropagation()" class="getlink">get it from Kite&nbsp;&#8599;</a>
+      <span style="opacity:.5">·</span>
+      <a href="https://console.zerodha.com/portfolio/holdings" target="_blank" rel="noopener"
+         onclick="event.stopPropagation()" class="getlink">or Console&nbsp;&#8599;</a></div>
     <input type="file" id="hfin" aria-label="Choose your holdings file" accept=".xlsx,.xls,.csv" class="sr">
   </div>
   <details class="howto">
@@ -509,7 +524,12 @@ Commas, tabs or spaces all work — paste straight from Excel."></textarea>
   <div class="drop" id="idrop" style="padding:20px">
     <div style="font-size:15px;font-weight:700">Drop your holdings file <b>XLSX / CSV</b></div>
     <div style="font-size:12px;color:var(--tx2);margin-top:4px">
-      or click to choose one — nothing is uploaded, it is read in this tab</div>
+      or click to choose one — nothing is uploaded, it is read in this tab<br>
+      <a href="https://kite.zerodha.com/holdings" target="_blank" rel="noopener"
+         onclick="event.stopPropagation()" class="getlink">get it from Kite&nbsp;&#8599;</a>
+      <span style="opacity:.5">·</span>
+      <a href="https://console.zerodha.com/portfolio/holdings" target="_blank" rel="noopener"
+         onclick="event.stopPropagation()" class="getlink">or Console&nbsp;&#8599;</a></div>
     <input type="file" id="ifin" aria-label="Choose a holdings file to import" accept=".xlsx,.xls,.csv" class="sr">
   </div>
 
@@ -588,8 +608,75 @@ const say=(t,cls='warn')=>$('msg').innerHTML=t?`<div class="${cls}">${t}</div>`:
 // ---- the whole sizing model, same maths as basket.py ----
 const priced=(w,p)=>Object.keys(w).filter(s=>p[s]>0);
 const missingPx=(w,p)=>Object.keys(w).filter(s=>!(p[s]>0));
-const minUnit=(w,p)=>{const k=priced(w,p);
-  return k.length?Math.ceil(Math.max(...k.map(s=>p[s]/(w[s]/100)))):0;};  // ceil: a suggested amount must clear its own floor
+// Cheapest amount that still buys one whole share of EVERY stock.
+// max(p/w) is only the notional value at the scale where the priciest-per-weight stock reaches
+// exactly 1 share — every other stock floors DOWN from its fractional target, so the cash actually
+// needed is strictly less. Using max(p/w) directly overstated this basket's floor by 9.2% and
+// wrongly blocked amounts that buy a complete basket. Verified against smallcase's own published
+// minInvestAmount values (385 and 579) — see selfTest().
+const minUnit=(w,p)=>{const k=priced(w,p); if(!k.length) return 0;
+  const tot=k.reduce((a,s)=>a+w[s],0); if(!(tot>0)) return 0;
+  const f=s=>w[s]/tot;                                     // normalise: callers may pass raw weights
+  const scale=Math.max(...k.map(s=>p[s]/f(s)));            // binding stock hits exactly 1 share here
+  // ceil, not floor: a minimum that rounds DOWN is short of its own basket by construction.
+  // (smallcase's true cost 384.72 is published as 385, not 384.) The convention is not documented
+  // in any primary source — this is the only self-consistent inference, not a confirmed fact.
+  return Math.ceil(k.reduce((a,s)=>a+p[s]*Math.floor(scale*f(s)/p[s]),0));};
+// Run selfTest() in the console. Guards the two things that were actually wrong once:
+// the minimum overstating itself, and a "minimum" that cannot buy a whole basket.
+function selfTest(){
+  const eq=(got,want,what)=>{ if(got!==want) throw new Error(`${what}: got ${got}, want ${want}`); };
+  // THE discriminating case: smallcase's Equity & Gold, published minInvestAmount 385.
+  // Prices derived from three independently published fields (weight, fractional shares,
+  // lastCloseIndex 292.6426) — never from fill prices, which are post-trade and include slippage,
+  // so a floor computed from them is circular. True cost 384.7156: only ceil reaches 385.
+  eq(minUnit({A:70,B:30},{A:282.2892,B:20.4853}),385,'Equity & Gold = 385');
+  // raw (un-normalised) weights must give the same answer as normalised ones
+  eq(minUnit({A:35,B:15},{A:282.2892,B:20.4853}),385,'half-scale weights normalise');
+  // Second sample (ICICINIFTY+JUNIORBEES, published 579) can't pin the rounding rule — the two
+  // available price snapshots straddle the integer. Assert only what is snapshot-independent:
+  // the allocation is one share of each.
+  {const w={A:29.19,B:70.81},p={A:169.00,B:410.02};
+   size({weights:w,prices:p},minUnit(w,p)).rows.forEach(r=>eq(r.q,1,`ICICINIFTY+JUNIORBEES ${r.s} qty`));}
+  // the minimum must actually buy a complete basket under size()'s own rounding
+  const w={A:7.03,B:5.97,C:11.01,D:75.99},p={A:10587.67,B:1687.05,C:155.60,D:410.02};
+  const m=minUnit(w,p);
+  size({weights:w,prices:p},m).rows.forEach(r=>{ if(r.q<1) throw new Error(`min ${m} leaves ${r.s} at ${r.q} shares`); });
+  // and it must not overstate: max(p/w) is the notional scale, never the cash required
+  const notional=Math.max(...Object.keys(w).map(s=>p[s]/(w[s]/100)));
+  if(!(m<notional)) throw new Error(`min ${m} is not below the notional scale ${notional}`);
+  // ---- multiplier ----
+  const sh={A:3,B:7,C:12};
+  eq(multiplier({A:9,B:21,C:36},sh).near,3,'exact 3x detected');
+  eq(multiplier({A:9,B:21,C:36},sh).clean,true,'exact 3x is clean');
+  eq(multiplier({A:9,B:21,C:36},sh).spread,0,'exact multiple has zero spread');
+  eq(multiplier({A:4,B:18,C:20},sh).clean,false,'drifted position is not clean');
+  eq(multiplier({A:3},{A:3}),null,'one stock is not enough to infer a multiple');
+  // a multiple must never be inferred as 0 — that would target selling everything
+  if(multiplier({A:1,B:1,C:1},{A:9,B:21,C:36}).near===0)
+    throw new Error('rounded a fractional multiple down to 0x');
+  // Why snapping exists at all. When you hold a clean multiple, the exact target IS m × the share
+  // counts; sizing THROUGH 2-decimal weights loses information and can miss by a share. Real case
+  // from the Defence sheet — JWL 86 @ ₹261.98 stores as 4.98%, and at 8 copies value-based sizing
+  // says 687 where the truth is 688: a spurious 1-share SELL on a position that should not move.
+  // It is a rounding repair, not a drift fix — with exact weights the two agree everywhere.
+  {const sq={A:86,B:429456}, spx={A:261.98,B:1}, swt={A:4.98,B:95.02};
+   const book=Object.keys(sq).reduce((a,s)=>a+sq[s]*spx[s],0), val=8*book;
+   eq(Math.round(val*(swt.A/100)/spx.A),687,'value-based sizing loses a share to weight rounding');
+   eq(8*sq.A,688,'snapping to the multiple keeps it');}
+  // ---- forwarded rebalance email ----
+  const prior={A:10,B:20};
+  eq(emailMultiplier([{sym:'A',q:30}],prior).bound,3,'sell 30 of 10 held => bound 3');
+  eq(emailMultiplier([{sym:'A',q:30},{sym:'B',q:60}],prior).agree.m,3,'agreeing ratios => 3x');
+  // the direction the oversell check cannot see
+  const small=emailMultiplier([{sym:'A',q:3},{sym:'B',q:6}],prior);
+  eq(small.agree.m,0.3,'fractional sender detected at 0.3x');
+  if(small.bound>1) throw new Error('a smaller sender must not trip the oversell bound');
+  // a genuine same-size rebalance must NOT be flagged
+  if(emailMultiplier([{sym:'A',q:2},{sym:'B',q:8}],prior).agree)
+    throw new Error('flagged a same-size rebalance as a size mismatch');
+  return 'selfTest ok';
+}
 function size(sheet,amount){
   const w=sheet.weights,p=sheet.prices;
   const rows=priced(w,p).sort((a,b)=>w[b]-w[a]).map(s=>{
@@ -886,6 +973,7 @@ function calc(){
            <label><input type="radio" name="ot" id="omkt"> market</label></span>` : ''}
       ${localStorage.getItem('ft_kite_api_key')
         ? '<button class="pri" onclick="placeInKite()">Place in Kite →</button>'
+          + '<a href="#" class="dn" style="margin:0 0 0 4px" onclick="showPayload();return false">show what gets sent</a>'
         : '<a href="onboarding.html" target="_blank" rel="noopener" class="setup">'
           + 'Set up one-click ordering — opens in a new tab, free, key stays on your device</a>'}
       <button onclick="copyOrders()">Copy as text</button>
@@ -907,23 +995,29 @@ function editKey(){
   const t=v.trim();
   if(!t){ dropKey(); return; }
   if(!/^[A-Za-z0-9_-]{6,40}$/.test(t)){ say('That does not look like an api_key.','warn err'); return; }
+  if(t===localStorage.getItem('ft_td_api_key')){ say('That is your Twelve Data <b>price</b> key. Kite rejects '
+    +'it with “Invalid api_key” — the Kite key comes from developers.kite.trade.','warn err'); return; }
   localStorage.setItem(KKEY,t); say('Key updated.','ok'); calc();
 }
 function dropKey(){
   if(!confirm('Remove the saved API key from this browser?')) return;
   localStorage.removeItem(KKEY); say('Key removed — the copy buttons still work.','ok'); calc();
 }
-function placeInKite(reb){
-  const key=localStorage.getItem('ft_kite_api_key');
-  if(!key){ location.href='onboarding.html'; return; }
+// The single source of truth for what leaves this page. placeInKite() posts exactly this and
+// nothing else, and showPayload() renders exactly this — so the preview cannot drift from the
+// request. Kite validates the api_key only AFTER you log in, so a wrong key surfaces as a raw
+// "Invalid api_key" on Kite's own page with no clue which value was sent. This is that clue.
+const KITE_BASKET_URL='https://kite.zerodha.com/connect/basket';
+function kitePayload(reb){
+  const key=localStorage.getItem(KKEY);
   const rows=reb?REBAL:lines();
-  if(!rows||!rows.length){ say('Nothing to place — size the basket first.','warn err'); return; }
+  if(!key||!rows||!rows.length) return null;
   // One tag per basket, so Kite's order book shows which basket an order belongs to.
   // Kite hard-rejects anything over 8 characters (the docs say 20; the API disagrees).
   const tag=(SHEET.label||'basket').replace(/[^A-Za-z0-9]/g,'').slice(0,8);
   const mkt=$('omkt')&&$('omkt').checked;
   const buf=1+(parseFloat($('obuf')&&$('obuf').value)||2)/100;   // headroom over the sheet price
-  const data=rows.map(r=>{
+  const orders=rows.map(r=>{
     const side=r.side||'BUY';
     const o={variety:'regular',exchange:'NSE',tradingsymbol:r.s,transaction_type:side,
              product:'CNC',quantity:r.q,readonly:false,tag};
@@ -931,12 +1025,35 @@ function placeInKite(reb){
     // a limit BUY needs headroom ABOVE the price; a limit SELL needs it BELOW, or it never fills
     else { o.order_type='LIMIT'; o.price=+(r.px*(side==='SELL'?2-buf:buf)).toFixed(1); }
     return o;});
+  return {key,tag,mkt,orders,rows};
+}
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+function showPayload(reb){
+  if(!localStorage.getItem(KKEY)){ location.href='onboarding.html'; return; }
+  const p=kitePayload(reb);
+  if(!p){ say('Nothing to send yet — size the basket first.','warn err'); return; }
+  say(`<b>Exactly what gets POSTed to Kite</b>
+    <div class="dn">${KITE_BASKET_URL} · form POST · these two fields and nothing else.</div>
+    <div class="pay">api_key = ${esc(p.key)}   <span style="color:var(--tx3)">(${p.key.length} chars)</span>
+data    = ${esc(JSON.stringify(p.orders,null,1))}</div>
+    <div class="dn">Kite checks the key only after you log in, so if it answers
+      <code>Invalid api_key</code> the value above is the one it rejected. A Publisher app's key is
+      the only type that may place baskets — a Personal app key is a real key and gets this far,
+      then fails at that check.</div>`,'warn');
+}
+function placeInKite(reb){
+  if(!localStorage.getItem(KKEY)){ location.href='onboarding.html'; return; }
+  const p=kitePayload(reb);
+  if(!p){ say('Nothing to place — size the basket first.','warn err'); return; }
+  const {key,tag,mkt,orders,rows}=p;
+  const body=JSON.stringify(orders);
   const f=document.createElement('form');
-  f.method='POST'; f.action='https://kite.zerodha.com/connect/basket'; f.target='_blank';
-  for(const [n,v] of [['api_key',key],['data',JSON.stringify(data)]]){
+  f.method='POST'; f.action=KITE_BASKET_URL; f.target='_blank';
+  for(const [n,v] of [['api_key',key],['data',body]]){
     const i=document.createElement('input'); i.type='hidden'; i.name=n; i.value=v; f.appendChild(i);
   }
   document.body.appendChild(f); f.submit(); f.remove();
+  window.__kiteSent={url:KITE_BASKET_URL,api_key:key,data:body};   // inspect in the console
   const sells=rows.filter(r=>r.side==='SELL').length;
   say(`Opened Kite with ${rows.length} order(s) as ${mkt?'MARKET':'LIMIT'} · CNC, tagged
        “${tag}”${sells?`, including ${sells} SELL`:''}. Review each one — prices came from the sheet
@@ -995,6 +1112,46 @@ function parseHoldings(rows){
 }
 let REBAL=null;                      // rebalance orders, with a side
 let HELD=null;                       // last parsed holdings, so the cash box can re-run
+// ---- how many copies of this sheet does a position represent? ----
+// The sheet's share vector is a lattice point: m copies of it reproduce the sheet's weights EXACTLY
+// for any integer m, because scaling every count by m scales value by m and leaves every ratio
+// alone. So when a holding is a clean multiple, snapping to it is exact (~0.00pp) where value-based
+// sizing lands wherever the rounding falls (1.06pp on the real basket). That is the only reason to
+// measure m — it is NEVER a factor applied to a value-based target, which already carries it.
+function multiplier(held,shares){
+  const k=Object.keys(shares||{}).filter(s=>shares[s]>0&&(held[s]||0)>0);
+  if(k.length<2) return null;
+  const r=k.map(s=>held[s]/shares[s]).sort((a,b)=>a-b);
+  const med=r[(r.length-1)>>1];
+  if(!(med>0)) return null;
+  const spread=(r[r.length-1]-r[0])/med;          // 0 => every stock agrees exactly
+  // Clamped at 1: "the nearest whole number of copies" is meaningless below one, and a bare
+  // Math.round on a fractional holding yields 0 — which as a target means sell everything. Held
+  // here as an arithmetic invariant rather than trusting every caller to check `clean` first.
+  const near=Math.max(1,Math.round(med));
+  return {med,spread,near,n:k.length,of:Object.keys(shares).length,
+          // "clean" means snapping is both exact AND close to what you already hold
+          clean:near>=1 && Math.abs(med-near)/near<=0.02 && spread<=0.05};
+}
+// What multiplier was a forwarded rebalance email computed at?
+// We cannot baseline against "the rebalance this sheet would need", because the sheet already sits
+// at its own weights — those deltas are ~0 and the ratio explodes. What IS reliable: a sell can
+// never exceed the position it came from, so max(sell/held) is a hard LOWER bound on the sender's
+// multiplier. And if two or more sold stocks agree on one ratio, that agreement is itself the
+// multiplier — which reads BOTH directions, where the oversell check only catches senders larger
+// than you. An orders-only email cannot always reveal this; the sheet always can.
+function emailMultiplier(sells,prior){
+  const r=sells.filter(x=>(prior[x.sym]||0)>0).map(x=>x.q/prior[x.sym]);
+  if(!r.length) return null;
+  const bound=Math.max(...r);
+  let agree=null;
+  if(r.length>=2){
+    const s=[...r].sort((a,b)=>a-b), med=s[(s.length-1)>>1];
+    const close=r.filter(x=>Math.abs(x-med)/med<=0.05);
+    if(close.length>=2 && Math.abs(med-1)>0.1) agree={m:med,n:close.length,of:r.length};
+  }
+  return {bound,agree};
+}
 function rebalance(held){
   if(held) HELD=held; else held=HELD;
   if(!held) return;
@@ -1036,11 +1193,17 @@ function rebalance(held){
   const step=Math.min(100,Math.max(1,parseFloat(($('rstep')&&$('rstep').value)||'100')||100));
   if(value<=0){ $('rebal').innerHTML=`<div class="warn">None of this basket's ${syms.length}
     stocks appear in that file — nothing to rebalance. Use step 4 to buy in.</div>`; return; }
+  // Snap-to-multiple. Only offered when the holding really is a clean multiple, and only applied
+  // to stocks still IN the basket — an exited stock must go to zero, never to m × its old count.
+  const MU=multiplier(held,SHEET.shares);
+  const snap=!!(MU&&MU.clean&&$('rsnap')&&$('rsnap').checked&&!add&&step===100);
   let buy=0,sell=0;
   const rows=syms.sort((a,b)=>(w[b]||0)-(w[a]||0)).map(s=>{
     const q=held[s]||0, tw=w[s]||0, px=p[s];
     if(!(px>0)) return {s,now:NaN,tgt:tw,d:-q,px:0,unknown:true};   // exited, price unknown
-    const now=q*px/value*100, tq=Math.round(value*(tw/100)/px);
+    const now=q*px/value*100;
+    const tq=snap&&(s in w)&&SHEET.shares[s]>0 ? MU.near*SHEET.shares[s]
+                                               : Math.round(value*(tw/100)/px);
     // full move, then scaled. Exits are never partial: leaving 3 shares of a dropped stock
     // behind is worse than selling it, so tw===0 always goes to zero.
     const full=tq-q, d=tw===0?full:Math.round(full*step/100);
@@ -1068,6 +1231,25 @@ function rebalance(held){
     <p class="rosub">No amount to type: a rebalance is sized by the value you already hold
       (${syms.length-missing.length}/${syms.length} of this basket's stocks found in your file),
       so the orders below are the difference between that and the targets.</p>
+    ${MU?`<div class="sendbox" style="margin:12px 0 4px">
+      <b>You hold ${MU.med.toFixed(2)}× this sheet.</b> ${MU.n} of ${MU.of} stocks agree
+      ${MU.spread<=0.005?'exactly':`to within ${(MU.spread*100).toFixed(1)}%`}.
+      ${!MU.clean
+        ? `<div class="dn">Not a clean multiple, so there is no exact copy to snap to — your
+             position has drifted from any whole number of copies. Targets come from its value.</div>`
+        : (add||step<100)
+        ? `<div class="dn">Snapping to exactly ${MU.near}× is available, but not while you are
+             ${add?'adding or withdrawing cash':'moving only part of the way'} — that changes the
+             capital, so a whole copy of the sheet is no longer what you would end up with.</div>`
+        : `<label style="display:block;margin-top:8px;font-size:12.5px;color:var(--tx)">
+             <input type="checkbox" id="rsnap" ${snap?'checked':''} onchange="rebalance()">
+             Snap to exactly ${MU.near}× the sheet
+             <div class="dn" style="margin-top:3px">Targets become ${MU.near} × the sheet's own
+               share counts, which is the exact answer when you hold whole copies. Sizing from value
+               instead goes through weights stored to two decimals, and that rounding can miss by a
+               share — producing a one-share order on a position that should not move. Usually the
+               two agree; this only repairs the cases where they do not.</div></label>`}
+      </div>`:''}
     <div class="row" style="margin:12px 0 4px">
       <label for="radd" style="font-size:12px;color:var(--tx2)">Also adding or taking out cash?</label>
       <input type="number" id="radd" aria-label="Cash to add, or negative to withdraw"
@@ -1100,6 +1282,7 @@ function rebalance(held){
     ${REBAL.length?`<div class="row" style="margin-top:13px">
       ${localStorage.getItem('ft_kite_api_key')
         ? '<button class="pri" onclick="placeInKite(true)">Place rebalance in Kite →</button>'
+          + '<a href="#" class="dn" style="margin:0 0 0 4px" onclick="showPayload(true);return false">show what gets sent</a>'
         : '<a href="onboarding.html" target="_blank" rel="noopener" class="setup">Set up one-click ordering — free, key stays on your device</a>'}
       <button onclick="copyOrders(true)">Copy as text</button>
       <button onclick="copyCSV(true)">Copy as CSV</button>
@@ -1648,14 +1831,30 @@ function fromEmail(){
       const turnover=[...r.buys,...r.sells].reduce((a,x)=>a+x.q*x.px,0);
       const oversold=r.sells.filter(x=>x.q>(prior[x.sym]||0))
         .map(x=>`${x.sym} (sell ${x.q}, you hold ${prior[x.sym]||0})`);
+      const em=emailMultiplier(r.sells,prior);
       if(oversold.length){
         $('mout').innerHTML=`<div class="warn err"><b>This email was not computed for this basket.</b><br><br>
-          It asks to sell more than the sheet holds: ${oversold.join('; ')}.<br><br>
+          It asks to sell more than the sheet holds: ${oversold.join('; ')}.
+          ${em&&em.bound>1?`That makes it a rebalance of a position at least
+            <b>${em.bound.toFixed(2)}× yours</b> — a sell can never exceed the position it came
+            from, so the largest of those ratios is a hard floor on the sender's size.`:''}<br><br>
           A rebalance email only fits the exact position it was worked out from. If someone
           forwarded you theirs, ask them for their updated <b>sheet</b> instead — that carries
           weights, which fit any amount of money.</div>`;
         say(''); return;
       }
+      // The oversell check above only catches senders LARGER than you. A sender at a FRACTION of
+      // your size oversells nothing, so nothing fires — the deltas are simply too small and the
+      // result silently lands short of the new targets. Two or more sold stocks agreeing on one
+      // ratio is the signal that reads both directions.
+      if(em&&em.agree) notes.push(`<b>This email looks computed for a position about
+        ${em.agree.m.toFixed(2)}× yours.</b> ${em.agree.n} of ${em.agree.of} sold stocks sell the
+        same fraction of what the sheet holds, which is what a different position size looks like
+        rather than a coincidence. ${em.agree.m<1
+          ? 'Because it is <i>smaller</i> than yours, nothing oversells and the orders look valid — '
+            +'they would just leave you short of the new targets.'
+          : 'Applying it as-is would overshoot.'}
+        Ask the sender for their updated <b>sheet</b>, which carries weights and fits any size.`);
       // If real holdings have been dropped in, they beat the sheet's remembered counts:
       // they can say whether this rebalance has ALREADY been executed in the account.
       if(HELD){

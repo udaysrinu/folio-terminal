@@ -179,10 +179,31 @@ against a small one — it goes through zero, and a position vanishes.</p>
 <p>Exchanges won't sell you 0.4 of a share, so every basket is an approximation. The size of the
 approximation is set by the priciest stock relative to your capital, and it is why a basket has a
 floor at all:</p>
-<pre>minimum = max over stocks of ( price / target weight )</pre>
+<pre>scale   = max over stocks of ( price / target weight )
+minimum = round up ( sum over stocks of ( price × round down ( scale × weight / price ) ) )</pre>
 <p>Below that, the priciest stock can't afford a single share. Most tools quietly drop it and
 hand you a more concentrated portfolio than you asked for. This one refuses, and says which stock
 set the floor.</p>
+<p>The two lines matter. We shipped only the first one at the start, and it was wrong — it
+overstated this basket's floor by <span class="mono">₹12,714</span> and refused amounts that buy a
+perfectly complete basket. <span class="mono">scale</span> is the point where the binding stock
+reaches exactly one share, but every <em>other</em> stock rounds <em>down</em> from its fractional
+target at that point, so the cash you actually need is strictly less. The gap grows with the number
+of holdings and the spread of their weights.</p>
+<p>The corrected version reproduces a minimum investment amount smallcase publishes for one of its
+own baskets — <span class="mono">₹385</span>, from a true cost of
+<span class="mono">₹384.7156</span> — to the rupee. That is how we know it's right rather than
+merely plausible, and it's the regression test in <span class="mono">selfTest()</span>.</p>
+<p>The last step rounds <em>up</em>, and that direction is not arbitrary: a minimum that rounded
+down would be short of its own basket. Publish <span class="mono">₹384</span> for a basket that
+costs <span class="mono">₹384.72</span> and someone who invests exactly the stated minimum cannot
+buy it — the same defect as overstating, just a rupee wide instead of ₹12,714. So the inner step
+rounds down (you cannot buy part of a share) and the outer step rounds up (you must cover the
+whole bill).</p>
+<p style="font-size:13.5px;color:var(--tx2)">Honest caveat: smallcase documents the
+<em>definition</em> of its minimum but
+publishes no formula and no rounding rule. Rounding up is the only self-consistent reading, not a
+confirmed fact.</p>
 <h3>How coarse is a basket, exactly?</h3>
 <p>One share is the smallest move you can make, so the priciest stock's share of the total is the
 resolution of the whole basket:</p>

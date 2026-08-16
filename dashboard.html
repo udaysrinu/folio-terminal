@@ -139,7 +139,9 @@ td.sym{font-family:'IBM Plex Mono';font-weight:600;font-size:12px} td.r{text-ali
 .iq{font-family:var(--ui),'IBM Plex Sans',system-ui,sans-serif;font-style:italic;font-size:14px;line-height:1.45;margin-top:16px;padding-left:12px;border-left:3px solid var(--gold);color:var(--tx)}
 @media(max-width:900px){.kpis{grid-template-columns:repeat(2,1fr)}.cols2,.cols-d,.info-card{grid-template-columns:1fr}.hr{grid-template-columns:100px 1fr 84px;gap:9px}.hr-q,.hr-day{display:none}.il{border-right:none;border-bottom:1px solid var(--hair)}}
 /* upload dropzone */
-.drop{border:1.5px dashed var(--hair2);border-radius:var(--radius-md);padding:26px 22px;text-align:center;background:linear-gradient(160deg,var(--panel),var(--bg2));cursor:pointer;transition:border-color .18s,background .18s}
+/* a <label> so clicking opens the picker natively — display:block because labels are inline */
+.drop{display:block;border:1.5px dashed var(--hair2);border-radius:var(--radius-md);padding:26px 22px;text-align:center;background:linear-gradient(160deg,var(--panel),var(--bg2));cursor:pointer;transition:border-color .18s,background .18s}
+.drop:focus-within{outline:2px solid var(--em);outline-offset:2px}
 .drop:hover,.drop.over{border-color:var(--em);background:rgba(21,90,120,.06)}
 .drop .di{font-family:'IBM Plex Mono';font-size:12.5px;color:var(--tx2)}.drop .di b{color:var(--em);font-weight:600}
 .drop .dh{font-family:var(--display),'Barlow Semi Condensed',sans-serif;font-weight:600;font-size:19px;margin-bottom:5px}
@@ -282,6 +284,10 @@ function M(v){v=+v;const s=v<0?'−':'';v=Math.abs(v);
   return s+'₹'+v.toFixed(0);}
 function Mfull(v){v=+v;return (v<0?'−₹':'₹')+Math.abs(v).toLocaleString('en-IN',{maximumFractionDigits:0})}
 const cls=v=>v>=0?'pos':'neg', ec=v=>v>=0?'e':'o', sign=v=>v>=0?'+':'−';
+// A ratio with no denominator is not zero and not NaN — it is unknown. Print an em dash rather than
+// "−NaN% on cost" or "Infinity : 1", both of which rendered as if they were measurements.
+const pctOf=(a,b)=>b?sign(a/b*100)+Math.abs(a/b*100).toFixed(1)+'%':'—',
+      xOf=(a,b)=>b?Math.abs(a/b).toFixed(0)+' : 1':'—';
 let DATA=null, fState={q:'',grp:'all',sort:'pnl',dir:-1};
 
 function curveSVG(c,w=540,h=200,pad=30){if(c.length<2)c=c.concat(c);const ys=c.map(p=>p.cum).concat([0]),ymin=Math.min(...ys),ymax=Math.max(...ys),yr=(ymax-ymin)||1,n=c.length;const X=i=>pad+(w-2*pad)*i/(n-1),Y=v=>h-pad-(h-2*pad)*(v-ymin)/yr,z=Y(0);const line=c.map((p,i)=>`${X(i).toFixed(1)},${Y(p.cum).toFixed(1)}`).join(' ');const area=`${X(0).toFixed(1)},${z.toFixed(1)} ${line} ${X(n-1).toFixed(1)},${z.toFixed(1)}`;const dots=c.map((p,i)=>`<circle cx="${X(i).toFixed(1)}" cy="${Y(p.cum).toFixed(1)}" r="3.5" fill="${p.cum>=0?'#0B5B3A':'#A52A22'}" stroke="#FCFCF8" stroke-width="2"/>`).join('');const vl=c.map((p,i)=>`<text x="${X(i).toFixed(1)}" y="${(Y(p.cum)-11).toFixed(1)}" text-anchor="middle" class="vl">${M(p.cum)}</text>`).join('');const xl=c.map((p,i)=>`<text x="${X(i).toFixed(1)}" y="${h-7}" text-anchor="middle" class="axl">${p.d.slice(5)}</text>`).join('');return `<svg viewBox="0 0 ${w} ${h}" class="chart"><defs><linearGradient id="eg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0B5B3A" stop-opacity=".22"/><stop offset="1" stop-color="#0B5B3A" stop-opacity="0"/></linearGradient></defs><line x1="${pad}" y1="${z.toFixed(1)}" x2="${w-pad}" y2="${z.toFixed(1)}" stroke="#A6AFA2" stroke-dasharray="2 3"/><polygon points="${area}" fill="url(#eg)"/><polyline points="${line}" fill="none" stroke="#0B5B3A" stroke-width="2.5" stroke-linejoin="round"/>${dots}${vl}${xl}</svg>`}
@@ -320,6 +326,11 @@ function concBar(grp){const tot=grp.reduce((s,g)=>s+g.val,0)||1;const ink={'Defe
 let allocMode='val';  // val | inv | pnl
 const GINK={'Defence':['#c2410c','#ea580c','#9a3412','#d4550a','#b03d0a','#7c2d12'],'Cash':['#64748b','#4b5563'],'Adani':['#7d5a4f','#966d5f','#65483f','#a87d6d','#523930','#b58f7d'],'Infra':['#6b5f3a','#877a4d','#574d2e','#9c8d5c','#4a4227','#b0a06a'],'Hedge':['#856011','#8a6314','#c28f22'],'Other':['#6d4aa8','#5a3d8c','#8159c2']};
 function allocBar(H){
+  // Refuse an empty book rather than let the `||1` divide-by-zero sentinel below reach the screen:
+  // it printed a portfolio total of "₹1", which reads as a real (tiny) number rather than as
+  // no-data. Guarding here also fixes the tile widths, which divide by the same sentinel.
+  if(!H||!H.length) return '<div class="note" style="padding:18px;text-align:center">'
+    +'No holdings loaded — nothing to allocate.</div>';
   // metric per holding
   const metric=h=>allocMode==='val'?h.q*h.ltp:allocMode==='inv'?h.q*h.avg:Math.abs(h.pnl);
   let list=H.map(h=>({...h,m:metric(h)})).filter(h=>h.m>0).sort((a,b)=>b.m-a.m);
@@ -366,9 +377,28 @@ function controls(){const grps=['all','Defence','Infra','Hedge','Adani','Cash'];
    <span class="fsep"></span><span class="dim mono" style="font-size:10px">SORT</span>
    ${[['pnl','P&L'],['day','Today'],['val','Value'],['sym','A–Z']].map(s=>`<button class="fbtn ${fState.sort===s[0]?'on':''}" onclick="setF('sort','${s[0]}')">${s[1]}${fState.sort===s[0]?(fState.dir<0?' ↓':' ↑'):''}</button>`).join('')}</div>`}
 function setF(k,v){if(k==='sort'&&fState.sort===v){fState.dir*=-1}else if(k==='sort'){fState.sort=v;fState.dir=v==='sym'?1:-1}else{fState[k]=v}renderLive()}
-function renderLive(){const d=DATA,hw=d.holdings.filter(h=>h.pnl>=0).length;
+function renderLive(){const d=DATA;
+  // "0 / 0 of 0 open" is what this used to show after a tradebook upload, which reads as a broken
+  // page rather than a missing input. Say which file is missing and why the one supplied cannot
+  // substitute for it.
+  if(!d.holdings||!d.holdings.length){
+    document.getElementById('live').innerHTML=`<div class="panel fade">
+      <b>No holdings loaded — this tab needs a different file.</b>
+      <p style="margin:9px 0 0;font-size:13.5px;color:var(--tx2)">A tradebook records what you
+      <i>did</i>; this tab shows what you <i>hold</i>. Those are not the same file, and the second
+      cannot be rebuilt from the first.${d.windowed?` Your tradebook also begins mid-history — some
+      sells in it have no matching buy — so anything bought before it starts leaves no trace to
+      reconstruct.`:''}${d.openSyms?` (FIFO does leave ${d.openSyms} symbol${d.openSyms===1?'':'s'}
+      with unmatched buys, but that is a floor on your position, not your position — measured
+      against a real account it recovered 3 of 38.)`:''}</p>
+      <p style="margin:9px 0 0;font-size:13.5px;color:var(--tx2)">Drop a <b>holdings JSON</b> —
+      the shape in <span class="mono">samples/sample_holdings.json</span> — and this tab fills in.
+      Every other tab is unaffected: realised P&amp;L comes from the tradebook you already loaded.</p>
+      </div>`;
+    return; }
+  const hw=d.holdings.filter(h=>h.pnl>=0).length;
   document.getElementById('live').innerHTML=`<div class="kpis fade">
-    <div class="kpi ${d.unreal>=0?'g':'r'}"><div class="k">Open P&L</div><div class="v ${cls(d.unreal)}">${M(d.unreal)}</div><div class="s">${sign(d.unreal/d.invested*100)}${Math.abs(d.unreal/d.invested*100).toFixed(1)}% on cost</div></div>
+    <div class="kpi ${d.unreal>=0?'g':'r'}"><div class="k">Open P&L</div><div class="v ${cls(d.unreal)}">${M(d.unreal)}</div><div class="s">${pctOf(d.unreal,d.invested)} on cost</div></div>
     <div class="kpi b"><div class="k">Invested</div><div class="v">${M(d.invested)}</div><div class="s">cost basis</div></div>
     <div class="kpi b"><div class="k">Market Value</div><div class="v">${M(d.mkt)}</div><div class="s">at last price</div></div>
     <div class="kpi y"><div class="k">Win / Loss</div><div class="v">${hw}<span style="color:var(--tx3)"> / </span>${d.holdings.length-hw}</div><div class="s">of ${d.holdings.length} open</div></div></div>
@@ -377,7 +407,12 @@ function renderLive(){const d=DATA,hw=d.holdings.filter(h=>h.pnl>=0).length;
 function leagueRows(L){const mx=Math.max(...L.map(x=>Math.abs(x.v)))||1;return L.map(x=>{const pos=x.v>=0,pct=Math.abs(x.v)/mx*50;return `<div class="hr" tabindex="0"><div class="hr-s">${x.s}</div><div class="hr-q">${x.n}× trades</div><div class="hr-track"><div class="hr-bar ${ec(x.v)}" style="width:${pct.toFixed(1)}%;${pos?'left:50%':'right:50%'}"></div></div><div class="hr-day"></div><div class="hr-v ${cls(x.v)}">${M(x.v)}</div></div>`}).join('')}
 function rtRows(R){return R.map(t=>`<tr><td class="sym">${t.sym}</td><td class="dt">${t.entry.slice(5)}<span class="arr">→</span>${t.exit.slice(5)}</td><td class="r">${t.qty}</td><td class="r">${t.buy_px.toFixed(1)}</td><td class="r">${t.sell_px.toFixed(1)}</td><td class="r ${cls(t.pnl)}">${sign(t.ret)}${Math.abs(t.ret).toFixed(1)}%</td><td class="r b ${cls(t.pnl)}">${M(t.pnl)}</td><td class="r dim">${t.hold}d</td></tr>`).join('')}
 const I={tr:'<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path d="M3 17l6-6 4 4 8-8" stroke-linecap="round"/><path d="M21 7v6h-6" stroke-linecap="round"/></svg>',bar:'<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><rect x="3" y="10" width="4" height="10"/><rect x="10" y="4" width="4" height="16"/><rect x="17" y="13" width="4" height="7"/></svg>',list:'<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h12" stroke-linecap="round"/></svg>',pie:'<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v9l6 4"/></svg>',tbl:'<svg fill="none" stroke="currentColor" stroke-width="1.7" viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="1"/><path d="M8 8h8M8 12h8M8 16h5" stroke-linecap="round"/></svg>',warn:'<svg fill="none" stroke="#856011" stroke-width="1.7" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01M10.3 3.9l-8 14A2 2 0 004 21h16a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" stroke-linecap="round"/></svg>'}
-function render(d){DATA=d;document.getElementById('upd').textContent=d.updated;const bw=d.roundtrips[d.roundtrips.length-1],bl=d.roundtrips[0];
+function render(d){DATA=d;document.getElementById('upd').textContent=d.updated;
+  // A holdings-only load has NO round-trips, so best/worst trade are undefined. That used to be
+  // unreachable because every upload was a tradebook; now it is a normal state, and reading .sym off
+  // undefined threw before any tab rendered — one missing file blanked the entire page.
+  const rts=d.roundtrips||[], hasRT=rts.length>0, NOTRADE={sym:'—',pnl:0,ret:0,hold:0};
+  const bw=rts[rts.length-1]||NOTRADE, bl=rts[0]||NOTRADE;
   // attention rail
   document.getElementById('rail').innerHTML=d.attention.length?d.attention.map(a=>`<div class="chip ${a.sev}"><span class="cd"></span><b>${a.s}</b> ${a.msg}</div>`).join(''):'';
   // OVERVIEW
@@ -398,7 +433,7 @@ function render(d){DATA=d;document.getElementById('upd').textContent=d.updated;c
     <div class="kpi g"><div class="k">Cumulative Realised</div><div class="v ${cls(d.cum_realized)}">${M(d.cum_realized)}</div><div class="s">all booked profit/loss</div></div>
     <div class="kpi b"><div class="k">In-Window</div><div class="v ${cls(d.inwindow)}">${M(d.inwindow)}</div><div class="s">${d.nrt} round-trips · Apr–Jun</div></div>
     <div class="kpi y"><div class="k">Profit Factor</div><div class="v">${d.pf}</div><div class="s">${d.wr}% strike · ${d.nwin}W/${d.nloss}L</div></div>
-    <div class="kpi g"><div class="k">Reward : Risk</div><div class="v">${Math.abs(d.avg_w/d.avg_l).toFixed(0)} : 1</div><div class="s">${M(d.avg_w)} / ${M(d.avg_l)}</div></div></div>
+    <div class="kpi g"><div class="k">Reward : Risk</div><div class="v">${xOf(d.avg_w,d.avg_l)}</div><div class="s">${M(d.avg_w)} / ${M(d.avg_l)}</div></div></div>
    <h2 style="margin-top:18px">${I.tbl}How P&L Nets Out · in-window round-trips</h2>
    <div class="pnlbd">
      <div class="cell"><div class="lbl">Gross Profit</div><div class="num pos">${M(d.gross_win)}</div><div class="sub">${d.nwin} winning trades</div></div>
@@ -410,12 +445,18 @@ function render(d){DATA=d;document.getElementById('upd').textContent=d.updated;c
    <div class="note" style="margin-top:10px"><b>P&L is the NET figure</b> — gross profit minus gross loss. In-window: ${M(d.gross_win)} of wins (${d.nwin} trades) minus ${M(Math.abs(d.gross_loss))} of losses (${d.nloss} trades) = <b class="${cls(d.inwindow)}">${M(d.inwindow)} net</b>. On top sits <b>pre-April booked ${M(d.pre_april)}</b> (positions bought before this window, so excluded from the in-window math) → <b>cumulative ${M(d.cum_realized)}</b>.</div>
    <h2 style="margin-top:18px">${I.bar}In-Window Net by Counter</h2>${leagueRows(d.rtsym)}
    <h2>${I.tbl}Round-Trip Ledger · ${d.nrt} closed</h2><div class="scroll"><table id="lt"><thead><tr><th>Counter</th><th>Held</th><th class="r">Qty</th><th class="r">Buy</th><th class="r">Sell</th><th class="r">Return</th><th class="r">P&L</th><th class="r">Days</th></tr></thead><tbody>${rtRows(d.roundtrips)}</tbody></table></div>
-   <div class="big"><div class="bigc"><div class="t"><svg width="13" height="13" fill="none" stroke="#0B5B3A" stroke-width="2.2" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7" stroke-linecap="round"/></svg>Finest Trade</div><div class="n pos">${bw.sym} · ${M(bw.pnl)}</div><div class="d">${sign(bw.ret)}${Math.abs(bw.ret).toFixed(1)}% in ${bw.hold}d</div></div>
-   <div class="bigc"><div class="t"><svg width="13" height="13" fill="none" stroke="#A52A22" stroke-width="2.2" viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7" stroke-linecap="round"/></svg>Heaviest Trade</div><div class="n neg">${bl.sym} · ${M(bl.pnl)}</div><div class="d">${bl.ret.toFixed(1)}% in ${bl.hold}d</div></div></div>`;
+   ${hasRT?`<div class="big"><div class="bigc"><div class="t"><svg width="13" height="13" fill="none" stroke="#0B5B3A" stroke-width="2.2" viewBox="0 0 24 24"><path d="M12 19V5M5 12l7-7 7 7" stroke-linecap="round"/></svg>Finest Trade</div><div class="n pos">${bw.sym} · ${M(bw.pnl)}</div><div class="d">${sign(bw.ret)}${Math.abs(bw.ret).toFixed(1)}% in ${bw.hold}d</div></div>
+   <div class="bigc"><div class="t"><svg width="13" height="13" fill="none" stroke="#A52A22" stroke-width="2.2" viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7" stroke-linecap="round"/></svg>Heaviest Trade</div><div class="n neg">${bl.sym} · ${M(bl.pnl)}</div><div class="d">${bl.ret.toFixed(1)}% in ${bl.hold}d</div></div></div>`
+   :`<div class="note">No closed round-trips in this data. Realised P&amp;L needs a <b>tradebook</b> —
+      drop one above and this tab fills in.</div>`}`;
   const lt=document.getElementById('lt');if(lt)lt.querySelectorAll('th').forEach((i,ix)=>i.onclick=()=>{const tb=lt.querySelector('tbody'),rows=[...tb.rows],num=ix>=2,asc=i.dataset.a!=='1';i.dataset.a=asc?'1':'0';rows.sort((a,b)=>{let x=a.cells[ix].innerText.replace(/[₹,%dkLCr→ ]/g,'').replace('−','-'),y=b.cells[ix].innerText.replace(/[₹,%dkLCr→ ]/g,'').replace('−','-');if(num)return asc?(+x||0)-(+y||0):(+y||0)-(+x||0);return asc?x.localeCompare(y):y.localeCompare(x)});rows.forEach(r=>tb.appendChild(r))});
-  // STORY
+  // STORY — the whole piece is an argument about round-trips, so with none there is nothing to say.
   const wo=d.inwindow-bw.pnl;
-  document.getElementById('story').innerHTML=`<div class="info-card fade"><div class="il"><div class="ik"><span>The Ledger · DEMO</span><span>Apr–Jun 2026</span></div><div class="ih">The Asymmetry<em>Paradox</em></div><p class="ilede">A trader wins barely <b>one in eight</b> in-window — yet finishes <b>net positive</b>. The edge isn't accuracy. It's <b>winning big when right, losing small when wrong</b>.</p><div class="ibn"><div class="f pos">${M(d.cum_realized)}</div><div class="c">cumulative realised</div></div></div><div class="ir"><div class="irk">Anatomy of an Edge (in-window)</div><div class="ist"><div class="l">Strike Rate<small>trades won</small></div><div class="v">${d.wr}%</div></div><div class="ist"><div class="l">Average Winner<small>when right</small></div><div class="v pos">${M(d.avg_w)}</div></div><div class="ist"><div class="l">Average Loser<small>when wrong</small></div><div class="v neg">${M(d.avg_l)}</div></div><div class="ist"><div class="l">Reward : Risk</div><div class="v">${Math.abs(d.avg_w/d.avg_l).toFixed(0)}:1</div></div><div class="iq">“Remove the single best trade of ${M(bw.pnl)}, and the in-window book bleeds to ${M(wo)}. The edge is asymmetry — not being right.”</div></div></div>`;
+  document.getElementById('story').innerHTML=!hasRT
+   ?`<div class="panel fade"><b>Nothing to narrate yet.</b><p style="margin:9px 0 0;font-size:13.5px;
+      color:var(--tx2)">This page is an argument about closed trades — strike rate, average winner
+      against average loser. Drop a <b>tradebook</b> above and it writes itself.</p></div>`
+   :`<div class="info-card fade"><div class="il"><div class="ik"><span>The Ledger · DEMO</span><span>Apr–Jun 2026</span></div><div class="ih">The Asymmetry<em>Paradox</em></div><p class="ilede">A trader wins barely <b>one in eight</b> in-window — yet finishes <b>net positive</b>. The edge isn't accuracy. It's <b>winning big when right, losing small when wrong</b>.</p><div class="ibn"><div class="f pos">${M(d.cum_realized)}</div><div class="c">cumulative realised</div></div></div><div class="ir"><div class="irk">Anatomy of an Edge (in-window)</div><div class="ist"><div class="l">Strike Rate<small>trades won</small></div><div class="v">${d.wr}%</div></div><div class="ist"><div class="l">Average Winner<small>when right</small></div><div class="v pos">${M(d.avg_w)}</div></div><div class="ist"><div class="l">Average Loser<small>when wrong</small></div><div class="v neg">${M(d.avg_l)}</div></div><div class="ist"><div class="l">Reward : Risk</div><div class="v">${xOf(d.avg_w,d.avg_l)}</div></div><div class="iq">“Remove the single best trade of ${M(bw.pnl)}, and the in-window book bleeds to ${M(wo)}. The edge is asymmetry — not being right.”</div></div></div>`;
 }
 // ════════════════════════════════════════════════════════════════════════
 //  IN-BROWSER TRADEBOOK PIPELINE  (ports build_dashboard.py to JavaScript)
@@ -437,14 +478,19 @@ const COL={symbol:['symbol','tradingsymbol','instrument','scrip','stock'],
   type:['trade type','transaction type','type','buy/sell','side'],
   qty:['quantity','qty'], price:['price','trade price','avg price','average price'],
   time:['order execution time','trade date','time','date']};
-function findCol(headers,key){const low=headers.map(h=>h==null?'':(''+h).trim().toLowerCase());
-  for(const a of COL[key])if(low.includes(a))return low.indexOf(a);return null;}
+// Zerodha's real export uses trade_type / trade_date with underscores; the alias lists were written
+// with spaces. COL.date happened to list both spellings, COL.type did not — so a genuine tradebook
+// failed the type lookup and got misclassified as a holdings snapshot, including this repo's OWN
+// samples/sample_tradebook.csv. Normalise separators once here instead of doubling every alias.
+const normCol=h=>(h==null?'':(''+h)).trim().toLowerCase().replace(/[_\-.]+/g,' ').replace(/\s+/g,' ');
+function findCol(headers,key){const low=headers.map(normCol);
+  for(const a of COL[key]){const i=low.indexOf(normCol(a));if(i>=0)return i;}return null;}
 
 // Parse a sheet (array-of-arrays) into normalized trade rows.
 function parseRows(rows){
   let hi=null;
-  for(let i=0;i<Math.min(40,rows.length);i++){const low=(rows[i]||[]).map(c=>c==null?'':(''+c).trim().toLowerCase());
-    if(COL.symbol.some(a=>low.includes(a))&&COL.qty.some(a=>low.includes(a))){hi=i;break;}}
+  for(let i=0;i<Math.min(40,rows.length);i++){const low=(rows[i]||[]).map(normCol);
+    if(COL.symbol.some(a=>low.includes(normCol(a)))&&COL.qty.some(a=>low.includes(normCol(a)))){hi=i;break;}}
   if(hi===null)throw new Error('No header row with Symbol + Quantity columns found.');
   const headers=rows[hi], ci={}; for(const k in COL)ci[k]=findCol(headers,k);
   if(ci.symbol==null||ci.qty==null||ci.type==null||ci.price==null){
@@ -452,10 +498,12 @@ function parseRows(rows){
     // a snapshot of what you own rather than a record of what you did. Say that, rather than
     // listing headers at someone who brought the wrong file.
     if(ci.symbol!=null && ci.qty!=null && ci.type==null) throw new Error(
-      'This looks like a HOLDINGS file \u2014 a snapshot of what you own now. This page needs a '+
-      'TRADEBOOK: one row per trade, with a buy/sell column and a date, which is what realised '+
-      'P&L is computed from. Get it from Zerodha Console \u2192 Reports \u2192 Tradebook. '+
-      '(Holdings are what the Basket Workbench wants, not this page.) Header seen: '+headers.join(', '));
+      'This looks like a HOLDINGS spreadsheet \u2014 a snapshot of what you own now. Realised P&L '+
+      'needs a TRADEBOOK: one row per trade, with a buy/sell column and a date. Get it from '+
+      'Zerodha Console \u2192 Reports \u2192 Tradebook.\n\n'+
+      'For the Live Holdings tab, drop a holdings JSON instead (same shape as '+
+      'samples/sample_holdings.json). A holdings SPREADSHEET is not read yet \u2014 column names '+
+      'differ per broker, so it is not guessed at.\nHeader seen: '+headers.join(', '));
     throw new Error('Missing required columns. A tradebook needs symbol, quantity, price and a '+
       'buy/sell type. Header seen: '+headers.join(', '));
   }
@@ -468,12 +516,32 @@ function parseRows(rows){
     let date=ci.date!=null?(''+row[ci.date]).trim():''; date=date?date.slice(0,10):'';
     const time=ci.time!=null?(''+row[ci.time]).trim():date;
     trades.push({sym:(''+row[ci.symbol]).trim(),date,type:tt,qty,price,time});}
-  return trades;
+  return {kind:'trades',rows:trades};
+}
+// A dropped .json is one of two things, told apart by shape rather than by filename:
+// an array of holdings rows, or a whole prebuilt live.json. Both are useful; neither is a tradebook.
+function parseJSON(txt){
+  let j; try{ j=JSON.parse(txt); }catch(e){ throw new Error('Not valid JSON: '+e.message); }
+  if(Array.isArray(j)){
+    const ok=j.filter(h=>h&&h.s&&h.q>0);
+    if(!ok.length) throw new Error('This JSON array has no holdings rows. Each needs at least '+
+      '"s" (symbol) and "q" (quantity), like samples/sample_holdings.json.');
+    // Fill what a minimal file may omit, so a hand-written holdings file works.
+    return {kind:'holdings',rows:ok.map(h=>{
+      const avg=+h.avg||0, ltp=(h.ltp==null?avg:+h.ltp)||0;
+      return {s:h.s,q:+h.q,avg,ltp,pnl:h.pnl==null?Math.round((ltp-avg)*+h.q):+h.pnl,
+              grp:h.grp||grpOf(h.s),day:+h.day||0,sl:h.sl==null?null:+h.sl,dpnl:+h.dpnl||0};})};
+  }
+  if(j&&Array.isArray(j.holdings)) return {kind:'live',data:j};
+  throw new Error('JSON must be an array of holdings rows, or a live.json object with a '+
+    '"holdings" array.');
 }
 // SheetJS for xlsx; native split for csv.
 function readFile(file){return new Promise((res,rej)=>{const fr=new FileReader(),ext=file.name.toLowerCase();
   fr.onerror=()=>rej(new Error('Could not read file'));
-  if(ext.endsWith('.csv')){fr.onload=e=>{const txt=e.target.result;
+  if(ext.endsWith('.json')){fr.onload=e=>{try{res(parseJSON(e.target.result));}catch(err){rej(err);}};
+    fr.readAsText(file);}
+  else if(ext.endsWith('.csv')){fr.onload=e=>{const txt=e.target.result;
     const rows=txt.split(/\r?\n/).map(l=>{const out=[];let cur='',q=false;
       for(let i=0;i<l.length;i++){const c=l[i];
         if(c==='"'){if(q&&l[i+1]==='"'){cur+='"';i++}else q=!q}
@@ -506,7 +574,7 @@ function fifoJS(trades){
 
 // Build the full live.json-shaped object from trades (+ optional holdings & pre base).
 function buildData(trades,holdings,pre,stamp){
-  const {roundtrips:rt}=fifoJS(trades);
+  const {roundtrips:rt,openLots,preSold}=fifoJS(trades);
   const wins=rt.filter(t=>t.pnl>0),losses=rt.filter(t=>t.pnl<0);
   const gw=wins.reduce((s,t)=>s+t.pnl,0),gl=Math.abs(losses.reduce((s,t)=>s+t.pnl,0));
   const inwindow=rt.reduce((s,t)=>s+t.pnl,0); pre=+pre||0;
@@ -533,7 +601,24 @@ function buildData(trades,holdings,pre,stamp){
     rtsym:Object.keys(rtsym).map(k=>({s:k,v:Math.round(rtsym[k]),n:rtcnt[k]})).sort((a,b)=>a.v-b.v),
     monthly:Object.keys(monthly).map(k=>({m:k,v:Math.round(monthly[k])})).sort((a,b)=>a.m<b.m?-1:1),
     curve:eq,cumcurve,_trades:trades};
-  if(holdings&&holdings.length){const H=holdings;
+  // A tradebook contains every buy and every sell, so whatever FIFO could NOT match is by definition
+  // still open — quantity and average cost exactly, with no extra information required. fifoJS has
+  // always returned openLots; buildData just threw them away, so a tradebook upload with no
+  // live.json present left holdings:[] and the Live Holdings tab read "0/0 of 0 open".
+  // What a tradebook cannot know is today's price. These rows are therefore valued AT COST and say
+  // so: setting ltp=avg silently would report a real portfolio as exactly break-even, which is a
+  // wrong answer dressed as an answer rather than a missing one.
+  // MEASURED, not assumed: reconstructing holdings from openLots recovered only 3 of 38 real
+  // positions on the actual tradebook (131 rows = a window, not full history). Anything bought
+  // before the window has no buy row to match, and if it was never sold it leaves no trace at all.
+  // So a tradebook can only ever LOWER-BOUND the position, and 12 wrong quantities presented as a
+  // portfolio is worse than an empty tab. openLots is kept for the honest empty state below.
+  let H=(holdings&&holdings.length)?holdings:null;
+  out.openSyms=Object.keys(openLots||{}).filter(s=>openLots[s].reduce((a,l)=>a+l[0],0)>0).length;
+  // A sell with no matching buy proves the tradebook starts mid-history. It is a sufficient signal,
+  // never a complete one: a pre-window buy that was never sold is invisible here by construction.
+  out.windowed=Object.keys(preSold||{}).length>0||(+pre||0)!==0;
+  if(H&&H.length){
     const unreal=H.reduce((s,h)=>s+h.pnl,0),invested=H.reduce((s,h)=>s+h.q*h.avg,0),mkt=H.reduce((s,h)=>s+h.q*h.ltp,0);
     const grp={}; H.forEach(h=>{grp[h.grp]=grp[h.grp]||[0,0];grp[h.grp][0]+=h.pnl;grp[h.grp][1]+=h.q*h.ltp;});
     const att=[]; H.forEach(h=>{if(h.sl){const d=(h.ltp-h.sl)/h.ltp*100;
@@ -578,6 +663,21 @@ function counterfactual(data){
 function renderNeverSold(data){
   const cf=counterfactual(data),el=document.getElementById('neversold');
   if(!cf){el.innerHTML='<div class="note" style="padding:40px;text-align:center">Upload a tradebook to reconstruct the never-sold portfolio.</div>';return;}
+  // ABSTAIN when nothing can be priced. Prices come from the holdings you loaded (plus CURPRICE for
+  // exited names), so with no holdings every phantom symbol is dropped and phantomVal is 0. The
+  // page then compared 0 against banked realised and stated a confident verdict whose SIGN was just
+  // the sign of cum_realized — "your discipline beat diamond hands by ₹1.13L" where ₹1.13L was the
+  // banked total relabelled as alpha, or the exact opposite claim on a different file. A fabricated
+  // conclusion over an empty table is the worst failure this page can have, so it says nothing.
+  if(!cf.rows.length){
+    el.innerHTML=`<div class="panel fade"><b>No current price for anything in this tradebook.</b>
+      <p style="margin:9px 0 0;font-size:13.5px;color:var(--tx2)">Valuing shares you never sold needs
+      today's price, and prices here come from the holdings you loaded — none of the
+      ${cf.missing.length} counter${cf.missing.length===1?'':'s'} bought in this tradebook
+      ${cf.missing.length?`(<span class="mono">${cf.missing.slice(0,12).join(', ')}${cf.missing.length>12?', …':''}</span>) `:''}is
+      among them. Drop a <b>holdings JSON</b> and this tab computes. It will not guess: with no
+      prices the comparison would just restate your banked P&amp;L with the sign flipped.</p></div>`;
+    return; }
   const gapPos=cf.gap>=0, mx=Math.max(...cf.rows.map(r=>Math.abs(r.pnl)),1);
   // comparison bar: actual-now vs phantom-value
   const tot=Math.max(cf.actualNow,cf.phantomVal)||1;
@@ -605,20 +705,30 @@ function renderNeverSold(data){
 }
 
 // ─── UPLOAD UI ───
-let dataSource='live.json';
+let dataSource='live.json', liveOk=false;
 function renderUpbar(){const el=document.getElementById('upbar');if(!el)return;
-  el.innerHTML=`<div class="drop" id="drop">
-    <div class="dh">Drop your tradebook to refresh</div>
-    <div class="di">Drag an <b>XLSX</b> or <b>CSV</b> here, or <b>click to browse</b></div>
-    <div class="di" style="margin-top:6px">A <b>tradebook</b> is one row per trade \u2014 symbol,
-    buy/sell, quantity, price, date. Get it from <b>Console \u2192 Reports \u2192 Tradebook</b>.
-    <b>Not</b> a holdings file: holdings say what you own now, which cannot produce realised P&amp;L.</div>
+  // A <label> wrapping the input, NOT a div calling fin.click(). The native label activation is
+  // immune to the ways a programmatic .click() gets swallowed — a chooser already pending, or an
+  // automation layer intercepting filechooser events — both of which look exactly like "the dialog
+  // does not open" while every handler is correctly attached.
+  el.innerHTML=`<label class="drop" id="drop">
+    <div class="dh">Drop a tradebook, a holdings file, or both</div>
+    <div class="di">Drag an <b>XLSX</b>, <b>CSV</b> or <b>JSON</b> here, or <b>click to browse</b></div>
+    <div class="di" style="margin-top:6px">They answer different questions, so neither replaces the
+    other \u2014 drop both and each tab fills from the right one.<br>
+    <b>Tradebook</b> (XLSX/CSV) \u2014 one row per trade: symbol, buy/sell, quantity, price, date.
+    From <b>Console \u2192 Reports \u2192 Tradebook</b>. Drives realised P&amp;L.<br>
+    <b>Holdings</b> (JSON, shape of <span class="mono">samples/sample_holdings.json</span>) \u2014 what
+    you own now. Drives <b>Live Holdings</b>, which a tradebook cannot reconstruct once it starts
+    mid-history.</div>
     <div class="dn2">Parsed entirely in your browser — FIFO-matched live, no upload, no server round-trip.
-      Source: <span class="srcbadge ${dataSource==='live.json'?'live':'file'}">${dataSource==='live.json'?'● live.json':'▲ '+dataSource}</span></div>
-    <input type="file" id="fin" aria-label="Upload tradebook file" accept=".xlsx,.xls,.csv" class="sr"></div>`;
+      Source: <span class="srcbadge ${dataSource!=='live.json'?'file':liveOk?'live':'file'}">${
+        dataSource!=='live.json'?'▲ '+dataSource:liveOk?'● live.json':'○ no data loaded'}</span></div>
+    <input type="file" id="fin" aria-label="Upload a tradebook (XLSX or CSV) or a holdings file (JSON)"
+      accept=".xlsx,.xls,.csv,.json,application/json" class="sr"></label>`;
   const drop=document.getElementById('drop'),fin=document.getElementById('fin');
-  drop.onclick=e=>{ if(e.target!==fin) fin.click(); };
-fin.onclick=e=>e.stopPropagation();
+  // No click handler at all: the input is nested inside the label, so the browser opens the picker
+  // itself. Adding fin.click() on top would open it twice in some browsers.
   drop.ondragover=e=>{e.preventDefault();drop.classList.add('over')};
   drop.ondragleave=()=>drop.classList.remove('over');
   drop.ondrop=e=>{e.preventDefault();drop.classList.remove('over');if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0])};
@@ -626,19 +736,42 @@ fin.onclick=e=>e.stopPropagation();
 }
 function handleFile(file){
   document.getElementById('upd').textContent='parsing '+file.name+'…';
-  readFile(file).then(trades=>{
-    if(!trades.length)throw new Error('No trades parsed from file.');
-    // reuse current live holdings (+ pre base) so the upload keeps the full picture
-    const H=(DATA&&DATA.holdings)?DATA.holdings:[], pre=(DATA&&DATA.pre_april)||0;
-    const d=buildData(trades,H,pre,'uploaded · '+file.name+' · '+new Date().toLocaleString('en-IN'));
+  readFile(file).then(r=>{
+    const stamp='uploaded · '+file.name+' · '+new Date().toLocaleString('en-IN');
+    const pre=(DATA&&DATA.pre_april)||0;
+    let d;
+    if(r.kind==='live'){ d=r.data; d.updated=stamp; if(d._trades===undefined)d._trades=[]; }
+    else if(r.kind==='holdings'){
+      // Holdings alone are enough for this tab. Keep any trades already loaded so dropping a second
+      // file adds to the picture instead of discarding the realised side.
+      d=buildData((DATA&&DATA._trades)||[],r.rows,pre,stamp);
+    }else{
+      if(!r.rows.length)throw new Error('No trades parsed from file.');
+      // reuse current live holdings (+ pre base) so the upload keeps the full picture
+      d=buildData(r.rows,(DATA&&DATA.holdings)||[],pre,stamp);
+    }
     dataSource=file.name; renderUpbar(); render(d); renderNeverSold(d);
   }).catch(err=>{document.getElementById('upd').textContent='✗ '+err.message;
     alert('Could not process file:\n'+err.message);});
 }
 
 function load(){fetch('live.json?t='+Date.now()).then(r=>r.json()).then(d=>{
-    if(dataSource==='live.json'){if(d._trades===undefined)d._trades=d._trades||[];render(d);renderNeverSold(d);renderUpbar();}
-  }).catch(()=>{document.getElementById('upd').textContent='live.json not found — serve via localhost';renderUpbar();})}
+    if(dataSource==='live.json'){if(d._trades===undefined)d._trades=d._trades||[];liveOk=true;render(d);renderNeverSold(d);renderUpbar();}
+  }).catch(()=>{
+    // Not a serving problem: live.json is a private portfolio file and is deliberately not in the
+    // repo, so a 404 is the NORMAL first load for everyone. Two consequences the old catch missed:
+    // (1) it ran every 30s and overwrote the "uploaded · yourfile.csv" stamp with a failure
+    //     message, so a successful upload appeared to have failed half a minute later. The success
+    //     branch already guarded on dataSource; the catch never did.
+    // (2) it called only renderUpbar(), so the five view containers were never written and every
+    //     tab sat blank. Each tab already contains its own "which file do I need" empty state —
+    //     they were simply unreachable. Rendering the empty dataset once makes them reachable.
+    if(dataSource!=='live.json') return;
+    liveOk=false;
+    if(!DATA){ const e=buildData([],[],0,'no live.json — drop a tradebook or holdings file below');
+      render(e); renderNeverSold(e); }
+    document.getElementById('upd').textContent='no live.json — drop a tradebook or holdings file below';
+    renderUpbar();})}
 document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('on'));document.querySelectorAll('.view').forEach(x=>x.classList.remove('on'));t.classList.add('on');document.getElementById(t.dataset.v).classList.add('on')});
 load();setInterval(load,30000);
 </script></body></html>
