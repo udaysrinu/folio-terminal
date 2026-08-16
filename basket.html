@@ -596,11 +596,12 @@ function load(obj){
   say('');
   // the routing question only means something once a sheet exists
   $('route').className='';
-  // A sheet that arrives already carrying share counts came from someone's real position, and a
-  // basket we have seen before is one you are following — both hint you already own it. Hint,
-  // not decide: the choice stays yours and either path is one click away.
+  // Default to buying. A sheet carrying share counts is NOT evidence the recipient owns
+  // anything — every sheet built from an order email carries the publisher's reference counts
+  // by design, so keying off that sent first-time buyers into the rebalance path and hid the
+  // amount box. The only real signal is having seen this basket here before.
   const known=(()=>{ try{ return !!follows()[slug(obj&&obj.label)]; }catch(e){ return false; } })();
-  if(!PATH) route((obj&&obj.shares)||known ? 'own' : 'new');
+  if(!PATH) route(known ? 'own' : 'new');
   const w=SHEET.weights,p=SHEET.prices,n=Object.keys(w).length;
   const tot=Object.values(w).reduce((a,b)=>a+b,0), mu=minUnit(w,p);
   const top=Object.keys(w).sort((a,b)=>w[b]-w[a]);
@@ -1498,14 +1499,16 @@ function readFile(f){
   fr.readAsText(f);
 }
 const d=$('drop');
-d.onclick=()=>$('fin').click();
+d.onclick=e=>{ if(e.target!==$('fin')) $('fin').click(); };
+$('fin').onclick=e=>e.stopPropagation();   // else this bubbles to #drop and loops
 d.ondragover=e=>{e.preventDefault();d.classList.add('over')};
 d.ondragleave=()=>d.classList.remove('over');
 d.ondrop=e=>{e.preventDefault();d.classList.remove('over');if(e.dataTransfer.files[0])readFile(e.dataTransfer.files[0])};
 $('fin').onchange=e=>{if(e.target.files[0])readFile(e.target.files[0])};
 $('amt').addEventListener('keydown',e=>{if(e.key==='Enter')calc()});
 const hd=$('hdrop');
-hd.onclick=()=>$('hfin').click();
+hd.onclick=e=>{ if(e.target!==$('hfin')) $('hfin').click(); };
+$('hfin').onclick=e=>e.stopPropagation();
 hd.ondragover=e=>{e.preventDefault();hd.classList.add('over')};
 hd.ondragleave=()=>hd.classList.remove('over');
 hd.ondrop=e=>{e.preventDefault();hd.classList.remove('over');
@@ -1530,7 +1533,8 @@ document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{
   // keep the accessible state in step with the visual state
   document.querySelectorAll('.tab').forEach(x=>x.setAttribute('aria-selected',x.classList.contains('on')));});
 const idr=$('idrop');
-idr.onclick=()=>$('ifin').click();
+idr.onclick=e=>{ if(e.target!==$('ifin')) $('ifin').click(); };
+$('ifin').onclick=e=>e.stopPropagation();
 idr.ondragover=e=>{e.preventDefault();idr.classList.add('over')};
 idr.ondragleave=()=>idr.classList.remove('over');
 idr.ondrop=e=>{e.preventDefault();idr.classList.remove('over');
