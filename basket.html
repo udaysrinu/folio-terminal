@@ -370,13 +370,24 @@ Headers optional. It reads the symbol, the quantity, and a price if present."></
 <div class="view" id="tNew">
   <h2>Easiest · paste your order-confirmation email</h2>
   <div class="panel">
-    <textarea id="mail" aria-label="Paste the basket order email" style="min-height:140px" placeholder="Open the order email from your basket provider, select all, and paste it here.
+    <textarea id="mail" aria-label="Paste the basket order email" style="min-height:150px" placeholder="Open the order email from your basket provider, select all, and paste it here.
 
-It looks for rows like:
-   ZENTEC      12 of 12   BUY    1,826.40
-   DYNAMATECH   3 of 3    BUY   10,587.67
+Select the WHOLE email — the Order Type line is what tells me whether this is a fresh
+basket or a set of changes:
 
-Everything else in the email is ignored. Unfilled rows (0 of N) are dropped."></textarea>
+   Order Type   Buy Value    Sell Value
+   Rebalance    ₹38,085.95   ₹35,914.55
+
+   Stock        Qty        Type   Avg. Price
+   ZENTEC       12 of 12   BUY      1,826.40
+   POWERGRID    25 of 25   SELL       316.85
+
+Invest = the whole basket. Rebalance = only the changes, so load the earlier basket on
+the other tab first. If you only paste the orders table I can still tell, because an
+Invest never sells.
+
+A row that did not fill (0 of N) is kept — it is still part of the basket — and you will
+be asked for its price. Everything else in the email is ignored."></textarea>
     <div class="row" style="margin-top:12px">
       <input id="mlabel" aria-label="Basket name, optional" placeholder="Basket name (optional — taken from the email if blank)" style="flex:1;min-width:200px">
       <button class="pri" onclick="fromEmail()">Read the email</button>
@@ -635,16 +646,18 @@ function calc(){
           ${M(floor)} invested before one share of it fits.</div></div>`;
     $('unitnote').innerHTML=''; window.__rows=[]; return; }
   say('');
-  const {rows,cost,min}=size(SHEET,amt), mx=Math.max(...rows.map(r=>r.w));
+  const {rows,cost}=size(SHEET,amt);   // min unused: the floor check above already returned.
+                                       // mx dropped with the weight bars the ledger replaced.
   let worst=0, worstSym='—';
   rows.filter(r=>!r.skip).forEach(r=>{const d=Math.abs(r.val/cost*100-r.w);
     if(d>worst){worst=d;worstSym=r.s;}});
   const skipped=rows.filter(r=>r.skip);
   $('orders').className='enter';
   const nLive=rows.filter(r=>!r.skip).length, over=cost>amt, resid=Math.abs(amt-cost);
+  // No "below the minimum" warning here: min === the floor checked above, which already
+  // returned. Reaching this line means the amount clears the floor, and the old warning
+  // also claimed stocks get skipped, which contradicts the blocking behaviour.
   $('orders').innerHTML=`<h2>Step 4 · Place these orders</h2>
-   ${amt<min?`<div class="warn"><b>Below the ${M(min)} minimum.</b> ${skipped.length} stock(s) can't
-     afford even one share and are skipped — the basket's shape changes. Consider ${M(min)} or more.</div>`:''}
    <div class="rolabel">This basket, sized to you</div>
    <div class="readout">${M(amt)}<span class="arw">→</span>${nLive} stock${nLive===1?'':'s'}<span
      class="arw">→</span><span class="dep">${M(cost)} deployed</span><span class="arw">→</span><span
