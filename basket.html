@@ -424,8 +424,9 @@ Invest = the whole basket. Rebalance = only the changes, so load the earlier bas
 the other tab first. If you only paste the orders table I can still tell, because an
 Invest never sells.
 
-A row that did not fill (0 of N) is kept — it is still part of the basket — and you will
-be asked for its price. Everything else in the email is ignored."></textarea>
+A row that did not fill (0 of N) has no price in the email, so it is left out and the
+sheet says so. Paste the follow-up Repair order email with this one to include it.
+Everything else in the email is ignored."></textarea>
     <div class="row" style="margin-top:12px">
       <input id="mlabel" aria-label="Basket name, optional" placeholder="Basket name (optional — taken from the email if blank)" style="flex:1;min-width:200px">
       <button class="pri" onclick="fromEmail()">Read the email</button>
@@ -1260,32 +1261,10 @@ function sheetFrom(shares,prices,label){
     weights:Object.fromEntries(Object.keys(shares).map(k=>[k,+(shares[k]*prices[k]/inv*100).toFixed(2)])),
     prices:{...prices}, shares:{...shares}};   // shares let a later rebalance be applied
 }
-let PENDING=null;
-function finishEmail(drop){
-  if(!PENDING){ say('Nothing pending.','warn err'); return; }
-  const {shares,prices,label,need}=PENDING;
-  if(drop){
-    need.forEach(k=>delete shares[k]);
-    showBuilt(sheetFrom(shares,prices,label),'mout',
-      `${Object.keys(shares).length} stocks — ${need.join(', ')} left out`);
-    $('mout').innerHTML+=`<div class="warn">Left out <b>${need.join(', ')}</b>. This sheet is a
-      ${Object.keys(shares).length}-stock basket, not the manager's full list — say so if you share it.</div>`;
-    PENDING=null; return;
-  }
-  try{
-    const {prices:add}=parseLines($('npx').value);
-    const still=need.filter(k=>!(add[k]>0));
-    if(still.length) throw new Error('still no price for '+still.join(', '));
-    need.forEach(k=>{ prices[k]=add[k]; });
-    showBuilt(sheetFrom(shares,prices,label),'mout',
-      `${Object.keys(shares).length} stocks — complete, including ${need.join(', ')}`);
-    PENDING=null; say('');
-  }catch(e){ say('Could not read that price — '+e.message,'warn err'); }
-}
 function fromEmail(){
   // Clear last run's output and state FIRST. If this parse throws or returns early, the old
   // panel must not survive: its buttons stay live and act on the previous email's data.
-  $('mout').innerHTML=''; PENDING=null;
+  $('mout').innerHTML='';
   try{
     const r=parseEmail($('mail').value);
     // Keep the loaded basket's name when this email is an update to it: a rebalance continues
@@ -1374,22 +1353,16 @@ function fromEmail(){
       need.forEach(k=>{ shares[k]=r.pending[k]; });          // keep them — the basket includes them
       if(need.length){
         // weights depend on every holding's value, so collect the missing price(s) first
-        PENDING={shares,prices,label,need};
-        $('mout').innerHTML=`<div class="warn"><b>${need.join(', ')} did not fill in that order
-            (shown as "0 of N"), so the email has no price for ${need.length>1?'them':'it'}.</b><br><br>
-            ${need.length>1?'They are':'It is'} still part of the basket — ${need.map(k=>k+' ×'+r.pending[k]).join(', ')} —
-            and every weight depends on ${need.length>1?'their':'its'} value, so I need the price before
-            building. Use the fill price from the follow-up “Repair order” email, or today's price.</div>
-          <div class="panel" style="margin-top:12px">
-            <textarea id="npx" style="min-height:74px">${need.map(k=>k+', ').join('\n')}</textarea>
-            <div class="row" style="margin-top:11px">
-              <button class="pri" onclick="finishEmail()">Add price and build</button>
-              <button onclick="finishEmail(true)">Leave ${need.length>1?'them':'it'} out</button>
-            </div>
-            <div class="note">You can also paste the invest email and the repair email together —
-              the fill from the repair order will be picked up automatically.</div>
-          </div>`;
-        setTimeout(()=>fit($('npx')),0); say(''); return;
+        // No price for an unfilled row, and no price feed to look one up. Rather than stopping
+        // with a form to fill in, build from the rows that DID fill and say loudly what is
+        // missing — a dead end is worse than an honest partial sheet.
+        need.forEach(k=>{ delete shares[k]; });
+        notes.push(`<b>${need.join(', ')} is not in this sheet.</b> It shows as
+          “0 of ${need.map(k=>r.pending[k]).join('/')}” in the email — the order did not fill, so the
+          email carries no price for it, and a weight cannot be worked out without one.<br><br>
+          This is a <b>${Object.keys(shares).length}-stock</b> sheet, not the manager's full list —
+          say so if you share it. To include it, paste the follow-up <b>“Repair order”</b> email
+          together with this one and its fill price will be picked up automatically.`);
       }
       const inv=Object.keys(shares).reduce((a,k)=>a+shares[k]*prices[k],0);
       showBuilt(sheetFrom(shares,prices,label),'mout',
