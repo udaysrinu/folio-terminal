@@ -421,17 +421,17 @@ function render(d){DATA=d;document.getElementById('upd').textContent=d.updated;
     <div class="kpi g"><div class="k">Cumulative Realised</div><div class="v ${cls(d.cum_realized)}">${M(d.cum_realized)}</div><div class="s"><b>${M(d.inwindow)}</b> in-window + <b>${M(d.pre_april)}</b> pre-Apr</div></div>
     <div class="kpi ${d.unreal>=0?'g':'r'}"><div class="k">Unrealised</div><div class="v ${cls(d.unreal)}">${M(d.unreal)}</div><div class="s">open · <span class="${cls(d.day_total)}">${d.day_total>=0?'+':''}${M(d.day_total)} today</span></div></div>
     <div class="kpi b"><div class="k">Live Exposure</div><div class="v">${M(d.mkt)}</div><div class="s">${d.holdings.length} positions · inv ${M(d.invested)}</div></div></div>
-   <h2 style="margin-top:22px">${I.tr}Cumulative Realised P&L · running booked total</h2><div class="panel"><div id="cumwrap">${cumChart(d.cumcurve)}</div><div class="note">Each step is a realised event; running total climbs from the pre-window base of ${M(d.pre_april)}. Green dot = net-positive day, red = net-negative. </div></div>
+   <h2 style="margin-top:22px">${I.tr}Cumulative Realised P&L · running booked total</h2><div class="panel"><div id="cumwrap">${cumChart(d.cumcurve)}</div><div class="note">Each step is a realised event; running total ${d.pre_april?`runs from the pre-window base of ${M(d.pre_april)}`:'starts at zero — no pre-window base supplied'}. Green dot = net-positive day, red = net-negative. </div></div>
    <h2 style="margin-top:22px">${I.pie}Allocation · one tile per holding (sized by value)</h2><div class="panel" id="allocwrap">${allocBar(d.holdings)}</div>
-   <h2 style="margin-top:22px">${I.bar}Concentration · by Basket</h2><div class="panel">${concBar(d.groups)}<div class="note">Length encodes exposure share. Adani dominance is the concentration risk to watch.</div></div>
+   <h2 style="margin-top:22px">${I.bar}Concentration · by Basket</h2><div class="panel">${concBar(d.groups)}<div class="note">Length encodes exposure share.${d.groups.length?` Largest block: <b>${d.groups[0].g}</b> at ${(d.groups[0].val/(d.mkt||1)*100).toFixed(0)}% of exposure.`:''}</div></div>
    <div class="cols2" style="margin-top:18px"><div class="panel"><h2>${I.tr}Realised Equity Curve</h2>${curveSVG(d.curve)}</div><div class="panel"><h2>${I.bar}Realised by Month</h2>${monthSVG(d.monthly)}</div></div>
    <div class="cols-d" style="margin-top:8px"><div><h2>${I.list}Open Positions · by Basket</h2>${groupedHoldings(d.holdings)}</div><div><h2>${I.pie}Mix</h2><div class="panel">${donutSVG(d.groups,d.mkt)}</div></div></div>
-   <div class="verdict"><div class="q">“Cumulative realised ${M(d.cum_realized)} — but live, the open Adani book carries ${M(d.unreal)}. With ${(d.groups.find(g=>g.g==='Adani')?.val/d.mkt*100||0).toFixed(0)}% of exposure in one group, recovery hinges on the clean-chit thesis.”</div><div class="a">— Reading of the Folio · ${d.updated}</div></div>`;
+   ${(d.nrt||d.holdings.length)?`<div class="verdict"><div class="q">“Cumulative realised ${M(d.cum_realized)}${d.holdings.length&&d.groups.length?` — the open book carries ${M(d.unreal)} unrealised, with ${(d.groups[0].val/(d.mkt||1)*100).toFixed(0)}% of exposure in ${d.groups[0].g} (${M(d.groups[0].pnl)} there).`:'.'}”</div><div class="a">— Reading of the Folio · ${d.updated}</div></div>`:''}`;
   renderLive(); bindAllocTips();
   // REALISED
   document.getElementById('realized').innerHTML=`<div class="kpis fade">
     <div class="kpi g"><div class="k">Cumulative Realised</div><div class="v ${cls(d.cum_realized)}">${M(d.cum_realized)}</div><div class="s">all booked profit/loss</div></div>
-    <div class="kpi b"><div class="k">In-Window</div><div class="v ${cls(d.inwindow)}">${M(d.inwindow)}</div><div class="s">${d.nrt} round-trips · Apr–Jun</div></div>
+    <div class="kpi b"><div class="k">In-Window</div><div class="v ${cls(d.inwindow)}">${M(d.inwindow)}</div><div class="s">${d.nrt} round-trips${d.monthly.length?' · '+d.monthly[0].m+(d.monthly.length>1?'→'+d.monthly[d.monthly.length-1].m:''):''}</div></div>
     <div class="kpi y"><div class="k">Profit Factor</div><div class="v">${d.pf}</div><div class="s">${d.wr}% strike · ${d.nwin}W/${d.nloss}L</div></div>
     <div class="kpi g"><div class="k">Reward : Risk</div><div class="v">${xOf(d.avg_w,d.avg_l)}</div><div class="s">${M(d.avg_w)} / ${M(d.avg_l)}</div></div></div>
    <h2 style="margin-top:18px">${I.tbl}How P&L Nets Out · in-window round-trips</h2>
@@ -452,11 +452,13 @@ function render(d){DATA=d;document.getElementById('upd').textContent=d.updated;
   const lt=document.getElementById('lt');if(lt)lt.querySelectorAll('th').forEach((i,ix)=>i.onclick=()=>{const tb=lt.querySelector('tbody'),rows=[...tb.rows],num=ix>=2,asc=i.dataset.a!=='1';i.dataset.a=asc?'1':'0';rows.sort((a,b)=>{let x=a.cells[ix].innerText.replace(/[₹,%dkLCr→ ]/g,'').replace('−','-'),y=b.cells[ix].innerText.replace(/[₹,%dkLCr→ ]/g,'').replace('−','-');if(num)return asc?(+x||0)-(+y||0):(+y||0)-(+x||0);return asc?x.localeCompare(y):y.localeCompare(x)});rows.forEach(r=>tb.appendChild(r))});
   // STORY — the whole piece is an argument about round-trips, so with none there is nothing to say.
   const wo=d.inwindow-bw.pnl;
+  // The window label was hard-coded "Apr–Jun 2026"; derive it from the months actually present.
+  const win=d.monthly.length?d.monthly[0].m+(d.monthly.length>1?' – '+d.monthly[d.monthly.length-1].m:''):'in-window';
   document.getElementById('story').innerHTML=!hasRT
    ?`<div class="panel fade"><b>Nothing to narrate yet.</b><p style="margin:9px 0 0;font-size:13.5px;
       color:var(--tx2)">This page is an argument about closed trades — strike rate, average winner
       against average loser. Drop a <b>tradebook</b> above and it writes itself.</p></div>`
-   :`<div class="info-card fade"><div class="il"><div class="ik"><span>The Ledger · DEMO</span><span>Apr–Jun 2026</span></div><div class="ih">The Asymmetry<em>Paradox</em></div><p class="ilede">A trader wins barely <b>one in eight</b> in-window — yet finishes <b>net positive</b>. The edge isn't accuracy. It's <b>winning big when right, losing small when wrong</b>.</p><div class="ibn"><div class="f pos">${M(d.cum_realized)}</div><div class="c">cumulative realised</div></div></div><div class="ir"><div class="irk">Anatomy of an Edge (in-window)</div><div class="ist"><div class="l">Strike Rate<small>trades won</small></div><div class="v">${d.wr}%</div></div><div class="ist"><div class="l">Average Winner<small>when right</small></div><div class="v pos">${M(d.avg_w)}</div></div><div class="ist"><div class="l">Average Loser<small>when wrong</small></div><div class="v neg">${M(d.avg_l)}</div></div><div class="ist"><div class="l">Reward : Risk</div><div class="v">${xOf(d.avg_w,d.avg_l)}</div></div><div class="iq">“Remove the single best trade of ${M(bw.pnl)}, and the in-window book bleeds to ${M(wo)}. The edge is asymmetry — not being right.”</div></div></div>`;
+   :`<div class="info-card fade"><div class="il"><div class="ik"><span>The Ledger</span><span>${win}</span></div><div class="ih">The Asymmetry<em>Paradox</em></div><p class="ilede">This book wins <b>${d.wr}%</b> of its round-trips${d.wr?` — about one in ${Math.round(100/d.wr)}`:''} — and finishes <b>${d.inwindow>=0?'net positive':'net negative'}</b> in-window. ${Math.abs(d.avg_w)>Math.abs(d.avg_l)?`The winners run larger than the losers: <b>asymmetry, not accuracy</b>.`:`The winners run <b>smaller</b> than the losers — here accuracy is doing the work, not asymmetry.`}</p><div class="ibn"><div class="f ${cls(d.cum_realized)}">${M(d.cum_realized)}</div><div class="c">cumulative realised</div></div></div><div class="ir"><div class="irk">Anatomy of an Edge (in-window)</div><div class="ist"><div class="l">Strike Rate<small>trades won</small></div><div class="v">${d.wr}%</div></div><div class="ist"><div class="l">Average Winner<small>when right</small></div><div class="v pos">${M(d.avg_w)}</div></div><div class="ist"><div class="l">Average Loser<small>when wrong</small></div><div class="v neg">${M(d.avg_l)}</div></div><div class="ist"><div class="l">Reward : Risk</div><div class="v">${xOf(d.avg_w,d.avg_l)}</div></div><div class="iq">“Remove the single best trade of ${M(bw.pnl)}, and the in-window book ${wo<0?'bleeds to':'settles at'} ${M(wo)}. The edge is asymmetry — not being right.”</div></div></div>`;
 }
 // ════════════════════════════════════════════════════════════════════════
 //  IN-BROWSER TRADEBOOK PIPELINE  (ports build_dashboard.py to JavaScript)
@@ -636,8 +638,8 @@ function buildData(trades,holdings,pre,stamp){
 
 // ─── COUNTERFACTUAL: "What if I never sold?" (diamond hands, current prices) ───
 // Replay the tradebook ignoring every SELL → only buys accumulate. Value the
-// resulting phantom holdings at TODAY's price. The gap vs. what you actually
-// hold + already banked is the literal cost of every exit you made.
+// resulting phantom holdings at TODAY's price, and compare that to the path actually taken over
+// THE SAME counters IN THE SAME UNIT. The difference is the literal cost of every exit.
 function counterfactual(data){
   const trades=data._trades||[]; if(!trades.length)return null;
   // price lookup: live holdings first (most current), then the sold-stock map.
@@ -654,10 +656,28 @@ function counterfactual(data){
     rows.push({s,q:ph.q,avg,ltp:px,val,cost:ph.cost,pnl:val-ph.cost,grp:grpOf(s)});
     pv+=val; pcost+=ph.cost;}
   rows.sort((a,b)=>b.val-a.val);
-  // actual today = live market value + cumulative realised already banked
-  const actualMkt=data.mkt||0, banked=data.cum_realized||0, actualNow=actualMkt+banked;
+  // Both sides must be the SAME BOOK in the SAME UNIT. The old actual side was
+  // data.mkt + data.cum_realized — a gross market value plus a net P&L — so the cost basis returned
+  // on every exit simply vanished, and it spanned all 38 holdings against only the in-window buys.
+  // On the real portfolio that understated the actual path by ₹28.83L. Instead: net P&L both sides,
+  // over these trades only, on the symbols we can actually price.
+  //   phantom P&L = mark every share ever bought to today's price
+  //   actual  P&L = FIFO realised on the lots sold + mark-to-market on the lots still open
+  // The difference is then exactly Σ (price today − price you sold at) × qty across the exits,
+  // which is what this function always claimed to compute.
+  const priced={}; rows.forEach(r=>priced[r.s]=1);
+  const fifo=fifoJS(trades); let actualPnl=0;
+  rows.forEach(r=>{ actualPnl+=(fifo.realized[r.s]||0)
+    +(fifo.openLots[r.s]||[]).reduce((a,l)=>a+(r.ltp-l[1])*l[0],0); });
+  const gap=(pv-pcost)-actualPnl;
+  // The only non-obvious arithmetic here, so it carries its own check: the gap must equal the sum
+  // over exits of what those shares gained since you sold them. Fires the moment the two sides stop
+  // describing the same book.
+  console.assert(Math.abs(gap-fifo.roundtrips.filter(t=>priced[t.sym])
+    .reduce((a,t)=>a+(priceOf[t.sym]-t.sell_px)*t.qty,0))<1,
+    'never-sold gap no longer equals the exits it claims to price');
   return {rows,missing,phantomVal:pv,phantomCost:pcost,phantomPnl:pv-pcost,
-    actualMkt,banked,actualNow,gap:pv-actualNow};
+    actualPnl,gap,covered:rows.length,total:rows.length+missing.length};
 }
 
 function renderNeverSold(data){
@@ -678,34 +698,40 @@ function renderNeverSold(data){
       among them. Drop a <b>holdings JSON</b> and this tab computes. It will not guess: with no
       prices the comparison would just restate your banked P&amp;L with the sign flipped.</p></div>`;
     return; }
-  const gapPos=cf.gap>=0, mx=Math.max(...cf.rows.map(r=>Math.abs(r.pnl)),1);
-  // comparison bar: actual-now vs phantom-value
-  const tot=Math.max(cf.actualNow,cf.phantomVal)||1;
+  const gapPos=cf.gap>=0;
+  // Bar compares the two P&Ls on a shared scale, using magnitudes so a negative side still draws.
+  const tot=Math.max(Math.abs(cf.phantomPnl),Math.abs(cf.actualPnl))||1;
   el.innerHTML=`<div class="cf-hero fade">
-    <div class="cf-card actual"><div class="k">Portfolio Today (actual)</div><div class="v">${M(cf.actualNow)}</div>
-      <div class="s">live holdings ${M(cf.actualMkt)} + banked ${M(cf.banked)}</div></div>
-    <div class="cf-card phantom"><div class="k">If You Never Sold</div><div class="v" style="color:var(--gold)">${M(cf.phantomVal)}</div>
-      <div class="s">every share ever bought, held to today @ current price</div></div>
+    <div class="cf-card phantom"><div class="k">If You Never Sold</div><div class="v" style="color:var(--gold)">${M(cf.phantomPnl)}</div>
+      <div class="s">${M(cf.phantomCost)} of buys, worth ${M(cf.phantomVal)} today</div></div>
+    <div class="cf-card actual"><div class="k">What You Actually Made</div><div class="v ${cls(cf.actualPnl)}">${M(cf.actualPnl)}</div>
+      <div class="s">same ${cf.covered} counter${cf.covered===1?'':'s'}: realised exits + lots still open</div></div>
     <div class="cf-card gap ${gapPos?'':'neg'}"><div class="k">${gapPos?'Selling Cost You':'Selling Saved You'}</div>
       <div class="v ${gapPos?'neg':'pos'}">${M(Math.abs(cf.gap))}</div>
-      <div class="s">${gapPos?'diamond hands would be ahead':'your exits beat holding'} by this much</div></div>
+      <div class="s">${gapPos?'diamond hands would be ahead':'your exits beat holding'} on these ${cf.covered}</div></div>
   </div>
-  <h2 style="margin-top:24px">${I.bar}Actual vs. Diamond Hands</h2>
+  <h2 style="margin-top:24px">${I.bar}What the Exits Cost</h2>
   <div class="panel">
-    <div class="cf-bar"><div class="cf-seg" style="width:${(cf.actualNow/tot*100).toFixed(1)}%;background:var(--em)">Actual ${M(cf.actualNow)}</div></div>
-    <div class="cf-bar" style="margin-top:8px"><div class="cf-seg" style="width:${(cf.phantomVal/tot*100).toFixed(1)}%;background:var(--gold)">Never sold ${M(cf.phantomVal)}</div></div>
-    <div class="note">Phantom book invested ${M(cf.phantomCost)} across every buy ever placed; at today's prices that's ${M(cf.phantomVal)} (<span class="${cls(cf.phantomPnl)}">${M(cf.phantomPnl)}</span> unrealised). Your actual path — selling, getting stopped out, rebuying — sits at ${M(cf.actualNow)}.</div>
-    ${cf.missing.length?`<div class="cf-missing">⚠ No current price for: <b>${cf.missing.join(', ')}</b> — excluded from the phantom valuation. (Illiquid/delisted or unresolved ticker.)</div>`:''}
+    <div class="cf-bar"><div class="cf-seg" style="width:${(Math.abs(cf.phantomPnl)/tot*100).toFixed(1)}%;background:var(--gold)">Never sold ${M(cf.phantomPnl)}</div></div>
+    <div class="cf-bar" style="margin-top:8px"><div class="cf-seg" style="width:${(Math.abs(cf.actualPnl)/tot*100).toFixed(1)}%;background:var(--em)">Actual ${M(cf.actualPnl)}</div></div>
+    <div class="note">Both figures are net P&L on the <b>same ${cf.covered} counter${cf.covered===1?'':'s'}</b>,
+      from the buys in this tradebook only, at the same prices — so the difference is exactly
+      Σ (price today − price you sold at) × quantity across your exits. It is <b>not</b> a portfolio
+      total, and it excludes anything bought before this tradebook begins.</div>
+    ${cf.missing.length?`<div class="cf-missing">⚠ ${cf.covered} of ${cf.total} counters compared. No current price for: <b>${cf.missing.join(', ')}</b> — fully exited, so no live holding supplies a price. Excluded from <b>both</b> sides. (Illiquid/delisted, or fill CURPRICE.)</div>`:''}
   </div>
-  <h2 style="margin-top:22px">${I.list}Phantom Holdings · every buy, never sold</h2>
+  <h2 style="margin-top:22px">${I.list}Phantom Holdings · every buy in this tradebook, never sold</h2>
   <div class="scroll"><table><thead><tr><th>Counter</th><th>Basket</th><th class="r">Qty</th><th class="r">Avg Buy</th><th class="r">Price Now</th><th class="r">Value</th><th class="r">Unreal P&L</th></tr></thead><tbody>
     ${cf.rows.map(r=>`<tr><td class="sym">${r.s}</td><td class="dt">${r.grp}</td><td class="r">${r.q}</td><td class="r">${r.avg.toFixed(1)}</td><td class="r">${r.ltp.toFixed(1)}</td><td class="r b">${M(r.val)}</td><td class="r b ${cls(r.pnl)}">${M(r.pnl)}</td></tr>`).join('')}
   </tbody></table></div>
-  <div class="verdict"><div class="q">"Holding everything to today would be worth ${M(cf.phantomVal)} — ${gapPos?`${M(Math.abs(cf.gap))} more than the ${M(cf.actualNow)} you actually have. The stop-losses and exits cost you, in hindsight.`:`but you actually hold ${M(cf.actualNow)}. Your discipline — cutting losers, banking winners — beat diamond hands by ${M(Math.abs(cf.gap))}.`}"</div><div class="a">— Point-in-time counterfactual · today's prices</div></div>`;
+  <div class="verdict"><div class="q">“Never selling these ${cf.covered} would have returned ${M(cf.phantomPnl)}; the path you took returned ${M(cf.actualPnl)} — ${gapPos?`the exits cost ${M(Math.abs(cf.gap))} in hindsight.`:`the exits saved ${M(Math.abs(cf.gap))}.`}”</div><div class="a">— Point-in-time counterfactual · today's prices · ${cf.covered} of ${cf.total} counters</div></div>`;
 }
 
 // ─── UPLOAD UI ───
-let dataSource='live.json', liveOk=false;
+// `uploaded` is a flag, NOT dataSource!=='live.json'. Deriving it from the filename collides the
+// moment someone drops a file actually called live.json — which is the likeliest name for the file
+// this page documents — and the 30s poll then overwrites their upload stamp with a failure message.
+let dataSource='live.json', liveOk=false, uploaded=false;
 function renderUpbar(){const el=document.getElementById('upbar');if(!el)return;
   // A <label> wrapping the input, NOT a div calling fin.click(). The native label activation is
   // immune to the ways a programmatic .click() gets swallowed — a chooser already pending, or an
@@ -722,8 +748,8 @@ function renderUpbar(){const el=document.getElementById('upbar');if(!el)return;
     you own now. Drives <b>Live Holdings</b>, which a tradebook cannot reconstruct once it starts
     mid-history.</div>
     <div class="dn2">Parsed entirely in your browser — FIFO-matched live, no upload, no server round-trip.
-      Source: <span class="srcbadge ${dataSource!=='live.json'?'file':liveOk?'live':'file'}">${
-        dataSource!=='live.json'?'▲ '+dataSource:liveOk?'● live.json':'○ no data loaded'}</span></div>
+      Source: <span class="srcbadge ${uploaded?'file':liveOk?'live':'file'}">${
+        uploaded?'▲ '+dataSource:liveOk?'● live.json':'○ no data loaded'}</span></div>
     <input type="file" id="fin" aria-label="Upload a tradebook (XLSX or CSV) or a holdings file (JSON)"
       accept=".xlsx,.xls,.csv,.json,application/json" class="sr"></label>`;
   const drop=document.getElementById('drop'),fin=document.getElementById('fin');
@@ -750,13 +776,14 @@ function handleFile(file){
       // reuse current live holdings (+ pre base) so the upload keeps the full picture
       d=buildData(r.rows,(DATA&&DATA.holdings)||[],pre,stamp);
     }
-    dataSource=file.name; renderUpbar(); render(d); renderNeverSold(d);
+    dataSource=file.name; uploaded=true; renderUpbar(); render(d); renderNeverSold(d);
   }).catch(err=>{document.getElementById('upd').textContent='✗ '+err.message;
     alert('Could not process file:\n'+err.message);});
 }
 
 function load(){fetch('live.json?t='+Date.now()).then(r=>r.json()).then(d=>{
-    if(dataSource==='live.json'){if(d._trades===undefined)d._trades=d._trades||[];liveOk=true;render(d);renderNeverSold(d);renderUpbar();}
+    if(uploaded)return;
+    if(d._trades===undefined)d._trades=d._trades||[];liveOk=true;render(d);renderNeverSold(d);renderUpbar();
   }).catch(()=>{
     // Not a serving problem: live.json is a private portfolio file and is deliberately not in the
     // repo, so a 404 is the NORMAL first load for everyone. Two consequences the old catch missed:
@@ -766,7 +793,7 @@ function load(){fetch('live.json?t='+Date.now()).then(r=>r.json()).then(d=>{
     // (2) it called only renderUpbar(), so the five view containers were never written and every
     //     tab sat blank. Each tab already contains its own "which file do I need" empty state —
     //     they were simply unreachable. Rendering the empty dataset once makes them reachable.
-    if(dataSource!=='live.json') return;
+    if(uploaded) return;
     liveOk=false;
     if(!DATA){ const e=buildData([],[],0,'no live.json — drop a tradebook or holdings file below');
       render(e); renderNeverSold(e); }
