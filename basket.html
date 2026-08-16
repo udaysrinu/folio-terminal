@@ -424,11 +424,14 @@ Invest = the whole basket. Rebalance = only the changes, so load the earlier bas
 the other tab first. If you only paste the orders table I can still tell, because an
 Invest never sells.
 
-A row that did not fill (0 of N) has no price in the email, so it is left out and the
-sheet says so. Paste the follow-up Repair order email with this one to include it.
-Everything else in the email is ignored."></textarea>
+Rows read as: 12 of 12 filled at that price. A row showing 0 of N never filled. A row
+that filled at a price of 0 is inconsistent — the sheet says so and tells you where to
+get the real price. Everything else in the email is ignored."></textarea>
     <div class="row" style="margin-top:12px">
-      <input id="mlabel" aria-label="Basket name, optional" placeholder="Basket name (optional — taken from the email if blank)" style="flex:1;min-width:200px">
+      <input id="mlabel" aria-label="Basket name, required" required
+        placeholder="Basket name — e.g. Railways &amp; Defence" style="flex:1;min-width:190px">
+      <input id="mtheme" aria-label="Theme, optional — used as the name if you leave the name blank"
+        placeholder="Theme — e.g. Defence" style="width:170px">
       <button class="pri" onclick="fromEmail()">Read the email</button>
     </div>
     <div class="note">Fully offline — the text never leaves this page. This is the easiest route:
@@ -1217,13 +1220,20 @@ function importFollows(file){
 // rows look like:  SYMBOL <ws> "n of m" <ws> BUY|SELL <ws> price
 const MAILROW=/([A-Z][A-Z0-9&.\-]{1,19})\s+(\d+)\s+of\s+(\d+)\s+(BUY|SELL)\s+([\d,]+(?:\.\d+)?)/g;
 function parseEmail(txt){
-  const buys=[], sells=[], pending={};      // pending = intended but unfilled, price unknown
+  const buys=[], sells=[], pending={}, priceless={};
+  // pending  = 0 of N, nothing filled
+  // priceless = N of N filled, but the email shows no price for it
   let m; MAILROW.lastIndex=0;
   while((m=MAILROW.exec(txt))!==null){
     const [,sym,got,want,side,pxs]=m;
     const q=+got, intended=+want, px=parseFloat(pxs.replace(/,/g,''));
     if(q>0&&px>0){ (side==='SELL'?sells:buys).push({sym,q,px}); delete pending[sym]; continue; }
-    // 0 of N: the manager intended N shares — keep it, we only lack a price
+    // Two different things look alike here and must not be conflated:
+    //   "0 of 21"  -> nothing filled. No shares, no price.
+    //   "21 of 21 ... 0" -> it DID fill; only the price is missing from the email.
+    // Calling the second one "did not fill" is simply false, and dropping it discards a
+    // position the user actually holds.
+    if(q>0&&!(px>0)&&side!=='SELL'){ priceless[sym]=q; delete pending[sym]; continue; }
     if(intended>0&&side!=='SELL') pending[sym]=intended;
   }
   if(!buys.length&&!sells.length){
@@ -1235,6 +1245,10 @@ function parseEmail(txt){
       +'(the one with a "List Of Orders" table)');
   }
   const name=(txt.match(/order for ([^\r\n]{2,60})/i)||[])[1];
+  // The email states its own Buy Value. That lets us check whether a priceless row was
+  // actually paid for, instead of guessing.
+  const bv=(txt.match(/Buy\s*Value[\s\S]{0,60}?([\d,]+\.?\d*)/i)||[])[1];
+  const buyValue=bv?parseFloat(bv.replace(/,/g,'')):0;
 
   // "Rebalance"/"Repair" adjust an existing basket; "Invest" establishes one.
   // Three signals, cheapest and most reliable last, so nothing extra has to be pasted:
@@ -1253,7 +1267,7 @@ function parseEmail(txt){
   else if(/^(exit|withdraw)$/i.test(declared||'')) kind='exit';
   else if(sells.length) kind='rebalance';        // sells present but nothing declared it
   else kind='invest';
-  return {buys,sells,pending,kind,name:name&&name.trim(),declared};
+  return {buys,sells,pending,priceless,buyValue,kind,name:name&&name.trim(),declared};
 }
 function sheetFrom(shares,prices,label){
   const inv=Object.keys(shares).reduce((a,k)=>a+shares[k]*prices[k],0);
@@ -1270,8 +1284,18 @@ function fromEmail(){
     // Keep the loaded basket's name when this email is an update to it: a rebalance continues
     // a basket's history, and renaming it would fork the follow list into two half-histories.
     const isUpd=r.kind!=='invest' && SHEET && SHEET.shares;
-    const label=$('mlabel').value.trim()
-      || (isUpd?SHEET.label:null) || r.name || 'From order email';
+    const theme=($('mtheme')&&$('mtheme').value.trim())||'';
+    // Either field identifies the basket: a name if you have one, otherwise the theme.
+    const label=$('mlabel').value.trim() || (isUpd?SHEET.label:null) || r.name || theme || '';
+    if(!label){
+      $('mout').innerHTML=`<div class="warn err"><b>Name this basket first.</b><br><br>
+        The email does not say which basket it is, and the name is not cosmetic: it becomes the
+        <b>tag on every order</b> handed to Kite, which is how you tell this basket's orders apart
+        from another's in the order book.<br><br>
+        Fill in <b>either</b> box above — <b>Basket name</b>, or just the <b>Theme</b> if that is
+        all you have. Keep it short: Kite only keeps the first 8 characters.</div>`;
+      $('mlabel').focus(); say(''); return;
+    }
     const notes=[];
 
     // Route on KIND, not on the presence of sells: a rebalance that only adds weight has
@@ -1349,6 +1373,41 @@ function fromEmail(){
     } else {
       const shares={}, prices={};
       r.buys.forEach(x=>{ shares[x.sym]=(shares[x.sym]||0)+x.q; prices[x.sym]=x.px; });
+
+      // Rows that filled but show no price. The quantity is known and real, so the position
+      // exists — only its cost is missing. Recover it honestly or say exactly why we cannot.
+      const pl=Object.keys(r.priceless||{});
+      pl.forEach(sym=>{
+        const q=r.priceless[sym];
+        // (a) the holdings file, if one has been dropped, is a real observed price
+        if(HELDPX&&HELDPX[sym]>0){
+          shares[sym]=q; prices[sym]=HELDPX[sym];
+          notes.push(`<b>${sym}</b> filled ${q} of ${q} with no price in the email; used
+            ${M(HELDPX[sym])} from the holdings file you dropped in.`);
+          return;
+        }
+        // (b) the email states its own Buy Value — if the priced rows do not account for it,
+        //     the gap belongs to this row and divides exactly into its quantity
+        const priced=r.buys.reduce((a,x)=>a+x.q*x.px,0);
+        const gap=(r.buyValue||0)-priced;
+        const derived=gap/q;
+        if(r.buyValue>0 && pl.length===1 && gap>r.buyValue*0.005 && derived>=1){
+          shares[sym]=q; prices[sym]=+derived.toFixed(2);
+          notes.push(`<b>${sym}</b> filled ${q} of ${q} with no price shown. Recovered it from the
+            email's own Buy Value: ${M(r.buyValue)} total − ${M(priced)} for the priced rows
+            = ${M(gap)}, over ${q} shares = <b>${M(derived)}</b> each.`);
+          return;
+        }
+        // (c) cannot be recovered — say precisely why, using the email's own arithmetic
+        notes.push(`<b>${sym} is not in this sheet, and the email is inconsistent about it.</b>
+          It shows <b>${q} of ${q} filled</b> — so it did fill — but with a price of 0.
+          ${r.buyValue>0?`And the email's own Buy Value of ${M(r.buyValue)} is already accounted
+            for by the other ${r.buys.length} rows (${M(priced)}), leaving only ${M(gap)}, which
+            cannot be the cost of ${q} shares.`:''}
+          You do hold ${q} shares, so this sheet is short one stock. To fix it: drop your holdings
+          file into the rebalance path, which carries a real price, or paste the follow-up
+          <b>Repair order</b> email alongside this one.`);
+      });
       const need=Object.keys(r.pending);
       need.forEach(k=>{ shares[k]=r.pending[k]; });          // keep them — the basket includes them
       if(need.length){
@@ -1365,7 +1424,9 @@ function fromEmail(){
           together with this one and its fill price will be picked up automatically.`);
       }
       const inv=Object.keys(shares).reduce((a,k)=>a+shares[k]*prices[k],0);
-      showBuilt(sheetFrom(shares,prices,label),'mout',
+      const built=sheetFrom(shares,prices,label);
+      if(theme) built.theme=theme;
+      showBuilt(built,'mout',
         `weights from ${r.buys.length} filled orders (₹${Math.round(inv).toLocaleString('en-IN')})`);
       if(r.sells.length) notes.push(`Ignored ${r.sells.length} SELL row(s) — this email reads as an
         initial purchase, so only the buys were used.`);
