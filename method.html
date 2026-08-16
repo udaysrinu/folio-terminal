@@ -216,6 +216,24 @@ So the rule is counter-intuitive but firm: <b>whoever holds the most should be t
 the sheet.</b> The workbench states a sheet's resolution when it builds one, and says plainly when
 it is too coarse to pass on.</p>
 
+<h3>Is there a fractional multiplier?</h3>
+<p>Not on the capital, because that would only restate the cash box. "Rebalance at 0.5×" means
+"withdraw half my value", and rupees are the better unit: you know you have ₹50,000 to add, not
+that you want 1.15× of your portfolio. It is also ambiguous — half of your current value, or half
+of the target?</p>
+<p>There <i>is</i> a useful fraction, and it scales the <b>orders</b> rather than the capital:</p>
+<pre>order = round( (target_qty − held) × k )        k = 1.00, 0.75, 0.50, 0.25</pre>
+<p>Moving part of the way cuts turnover and defers realising gains, at the cost of staying
+deliberately off target. One exception is hard-coded: a stock the basket has <b>dropped</b> is
+always sold in full regardless of <span class="mono">k</span>. Part-exiting leaves a stub in your
+account forever, which is worse than either finishing or not starting.</p>
+
+<h3>Unsettled shares count as held</h3>
+<p>Buy today and the broker reports <span class="mono">quantity: 0, t1_quantity: 9</span> until
+settlement. Read only the quantity column and a just-executed rebalance looks like it never
+happened, so the next run tells you to buy the whole position <b>again</b>. Both holdings parsers
+add T1 to the settled quantity.</p>
+
 <h2><span class="n">06</span>State, not events</h2>
 <p>A rebalance email is an <i>event</i> — "I bought these, I sold those." A sheet is <i>state</i> —
 "the basket is now this." Events only make sense against the exact state they were computed

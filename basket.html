@@ -775,9 +775,13 @@ function copyCSV(reb){
 // ---- holdings upload -> rebalance (same model as basket.py rebalance) ----
 const num=v=>parseFloat(String(v??'').replace(/[^0-9.\-]/g,''));
 const norm=c=>String(c??'').trim().toLowerCase().replace(/\./g,'').replace(/\s+/g,' ');
-let HELDPX={};        // prices seen alongside uploaded/pasted holdings
+let HELDPX={}, T1SEEN=0;        // prices seen alongside uploaded/pasted holdings
 const SYMC=['symbol','tradingsymbol','instrument','scrip','stock','name'];
 const QTYC=['quantity','qty','quantity available','net quantity','holdings qty','free qty'];
+// Shares bought in the last session sit in T1 until settlement: Kite reports them as
+// quantity:0 + t1_quantity:9. Counting only 'quantity' makes a just-executed rebalance look
+// unexecuted, and the app would tell you to buy the whole position a second time.
+const T1C=['t1 quantity','t1_quantity','t1 qty','t1','quantity t1','unsettled quantity'];
 function parseHoldings(rows){
   let hi=-1,si=-1,qi=-1;
   for(let i=0;i<Math.min(40,rows.length);i++){
@@ -786,12 +790,17 @@ function parseHoldings(rows){
     if(a>-1&&b>-1){hi=i;si=a;qi=b;break;}
   }
   if(hi<0) throw new Error('no header row with a symbol and a quantity column');
-  let pi2=-1; { const low=(rows[hi]||[]).map(norm);
-    for(const want of PXC){ const j=low.indexOf(want); if(j>-1){pi2=j;break;} } }
-  const out={}; HELDPX={};
+  let pi2=-1, t1=-1; { const low=(rows[hi]||[]).map(norm);
+    for(const want of PXC){ const j=low.indexOf(want); if(j>-1){pi2=j;break;} }
+    for(const want of T1C){ const j=low.indexOf(want); if(j>-1){t1=j;break;} } }
+  const out={}; HELDPX={}; T1SEEN=0;
   for(let r=hi+1;r<rows.length;r++){
     const sym=String(rows[r]?.[si]??'').trim().toUpperCase();
-    const q=num(rows[r]?.[qi]);
+    // add unsettled T1 shares: freshly bought stock reports quantity 0 until settlement,
+    // and treating that as "not held" would re-buy the whole position
+    const t1q=t1>-1?num(rows[r]?.[t1]):0;
+    const q=num(rows[r]?.[qi])+(t1q>0?t1q:0);
+    if(t1q>0) T1SEEN+=t1q;
     if(!sym||!(q>0)) continue;
     out[sym]=(out[sym]||0)+q;
     if(pi2>-1){ const p=num(rows[r]?.[pi2]); if(p>0) HELDPX[sym]=p; }
@@ -814,15 +823,21 @@ function rebalance(held){
   // The only real choice is whether you are also adding or taking out cash.
   const add=parseFloat(($('radd')&&$('radd').value)||'0')||0;
   const value=heldValue+add;
+  // A fraction on the CAPITAL would just restate the cash box. A fraction on the ORDERS is a
+  // different knob: move part of the way to target, to cut turnover or defer a taxable gain.
+  const step=Math.min(100,Math.max(1,parseFloat(($('rstep')&&$('rstep').value)||'100')||100));
   if(value<=0){ $('rebal').innerHTML=`<div class="warn">None of this basket's ${syms.length}
     stocks appear in that file — nothing to rebalance. Use step 4 to buy in.</div>`; return; }
   let buy=0,sell=0;
   const rows=syms.sort((a,b)=>(w[b]||0)-(w[a]||0)).map(s=>{
     const q=held[s]||0, tw=w[s]||0, px=p[s];
     if(!(px>0)) return {s,now:NaN,tgt:tw,d:-q,px:0,unknown:true};   // exited, price unknown
-    const now=q*px/value*100, tq=Math.round(value*(tw/100)/px), d=tq-q;
+    const now=q*px/value*100, tq=Math.round(value*(tw/100)/px);
+    // full move, then scaled. Exits are never partial: leaving 3 shares of a dropped stock
+    // behind is worse than selling it, so tw===0 always goes to zero.
+    const full=tq-q, d=tw===0?full:Math.round(full*step/100);
     if(d>0)buy+=d*px; else if(d<0)sell+=-d*px;
-    return {s,now,tgt:tw,tq,d,px,exited:tw===0};
+    return {s,now,tgt:tw,tq,d,full,px,exited:tw===0};
   });
   // The invest path blocks below the basket's floor. The same floor applies here, but the
   // capital is given rather than chosen — so instead of blocking, name the stocks whose
@@ -837,7 +852,11 @@ function rebalance(held){
     <div class="readout" style="font-size:clamp(17px,2vw,25px)">${M(heldValue)}<span
       class="arw">→</span>${add?`${add>0?'+':'−'}${M(Math.abs(add))}<span class="arw">→</span>`:''}<span
       class="dep">${M(value)} at target</span><span class="arw">→</span><span
-      class="lo">${REBAL.length} order${REBAL.length===1?'':'s'}</span></div>
+      class="lo">${REBAL.length} order${REBAL.length===1?'':'s'}</span>${step<100
+      ?`<span class="arw">→</span><span class="lo">${step}% of the way</span>`:''}</div>
+    ${step<100?`<div class="warn" style="margin-bottom:4px"><b>Partial move.</b> These orders take you
+      ${step}% of the distance to the new targets, so you will stay deliberately off target. Stocks the
+      basket dropped are still sold in full — part-exiting leaves a stub behind.</div>`:''}
     <p class="rosub">No amount to type: a rebalance is sized by the value you already hold
       (${syms.length-missing.length}/${syms.length} of this basket's stocks found in your file),
       so the orders below are the difference between that and the targets.</p>
@@ -846,6 +865,17 @@ function rebalance(held){
       <input type="number" id="radd" aria-label="Cash to add, or negative to withdraw"
         value="${add||''}" placeholder="0" step="1000" style="width:150px;font-size:14px"
         onchange="rebalance()"><span class="note" style="margin:0">negative to withdraw</span>
+    </div>
+    <div class="row" style="margin:0 0 6px">
+      <label for="rstep" style="font-size:12px;color:var(--tx2)">How far to move toward target?</label>
+      <select id="rstep" aria-label="Fraction of the way to move toward the target weights"
+        onchange="rebalance()" style="width:150px">
+        <option value="100"${step===100?' selected':''}>All the way (100%)</option>
+        <option value="75"${step===75?' selected':''}>Three quarters (75%)</option>
+        <option value="50"${step===50?' selected':''}>Halfway (50%)</option>
+        <option value="25"${step===25?' selected':''}>A quarter (25%)</option>
+      </select>
+      <span class="note" style="margin:0">smaller = less turnover, less realised gain</span>
     </div>
     <table><thead><tr><th>Stock</th><th class="r">Now</th><th class="r">Target</th>
       <th class="r">Drift</th><th class="r">Action</th></tr></thead><tbody>
@@ -1189,10 +1219,13 @@ function sheetFromHoldings(rows){
     if(a>-1&&b>-1&&c2>-1){hi=i;si=a;qi=b;pi=c2;break;}
   }
   if(hi<0) throw new Error('need a symbol, a quantity and a price column');
+  let t1=-1; { const low=(rows[hi]||[]).map(norm);
+    for(const want of T1C){ const j=low.indexOf(want); if(j>-1){t1=j;break;} } }
   const val={},px={};
   for(let r=hi+1;r<rows.length;r++){
     const sym=String(rows[r]?.[si]??'').trim().toUpperCase();
-    const q=num(rows[r]?.[qi]), p=num(rows[r]?.[pi]);
+    const t1q=t1>-1?num(rows[r]?.[t1]):0;                 // unsettled shares count as held
+    const q=num(rows[r]?.[qi])+(t1q>0?t1q:0), p=num(rows[r]?.[pi]);
     if(!sym||!(q>0)||!(p>0)) continue;
     val[sym]=(val[sym]||0)+q*p; px[sym]=p;
   }
