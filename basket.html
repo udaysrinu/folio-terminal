@@ -84,7 +84,10 @@ border-radius:var(--radius);padding:11px 14px;font-size:12.5px;margin-top:12px}
   stroke-linecap:round;stroke-linejoin:round}
 .rt b{display:block;font-size:15.5px;color:var(--tx);margin:9px 0 4px}
 .rt span{display:block;color:var(--tx2);line-height:1.5}
-.rt.on{border-color:var(--em);box-shadow:0 0 0 3px rgba(21,90,120,.12)}
+.rt.on{border-color:var(--em);box-shadow:0 0 0 3px rgba(21,90,120,.12);background:var(--panel)}
+.rt.on b::after{content:' ✓';color:var(--em)}
+.rt:not(.on){opacity:.72}
+.rt:not(.on):hover{opacity:1}
 .tabs{display:flex;gap:7px;margin:20px 0 4px}
 .tab{display:inline-flex;align-items:center;gap:7px;font-size:12px;letter-spacing:.06em;text-transform:uppercase;padding:9px 18px;cursor:pointer;
 background:var(--panel);border:1px solid var(--hair);color:var(--tx2);border-radius:var(--radius)}
@@ -329,6 +332,8 @@ It looks like this:
        and has no amount to choose. Both start from the same sheet, loaded once above. -->
   <div id="route" class="hide">
     <h2>Step 3 · Do you already hold any of this basket?</h2>
+    <p class="note" style="font-style:normal;margin:0 0 10px">This decides what comes next:
+      an <b>amount to invest</b>, or a place to <b>drop your holdings</b>. Switch any time.</p>
     <div class="routes">
       <button class="rt" id="rtNew" onclick="route('new')">
         <svg viewBox="0 0 24 24"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 20h16"/></svg>
@@ -344,6 +349,9 @@ It looks like this:
 
   <div id="pathNew" class="hide">
   <h2>Step 4 · How much do you want to invest?</h2>
+  <p class="note" style="font-style:normal;margin:0 0 8px">Looking for the holdings upload?
+    That lives on the other path —
+    <a href="#" onclick="route('own');return false"><b>switch to rebalance →</b></a></p>
   <div class="panel">
     <div class="row">
       <input type="number" id="amt" aria-label="Amount to invest in rupees" placeholder="200000" step="1000">
@@ -999,12 +1007,26 @@ function pasteHoldings(){
   try{ rebalance(holdingsFromText($('hpaste').value)); say(''); }
   catch(e){ say('Could not read those holdings — '+e.message,'warn err'); }
 }
+
+// Split one CSV line, respecting double quotes. Needed because a Kite export writes
+// large numbers as "1,554.93" — splitting naively on commas shifts every later column.
+function splitCSV(line){
+  const out=[]; let cur='', q=false;
+  for(let i=0;i<line.length;i++){
+    const c=line[i];
+    if(c==='"'){ if(q&&line[i+1]==='"'){cur+='"';i++;} else q=!q; continue; }
+    if(c===','&&!q){ out.push(cur); cur=''; continue; }
+    cur+=c;
+  }
+  out.push(cur);
+  return out.map(v=>v.trim());
+}
 function readHoldings(f){
   const fr=new FileReader(), csv=f.name.toLowerCase().endsWith('.csv');
   fr.onerror=()=>say('Could not read that file.','warn err');
   fr.onload=e=>{ try{
       const rows=csv
-        ? e.target.result.split(/\r?\n/).map(l=>l.split(','))
+        ? e.target.result.split(/\r?\n/).map(splitCSV)
         : XLSX.utils.sheet_to_json(
             (w=>w.Sheets[w.SheetNames[0]])(XLSX.read(new Uint8Array(e.target.result),{type:'array'})),
             {header:1,raw:true,defval:null});
@@ -1472,7 +1494,7 @@ function readImport(f){
   fr.onerror=()=>say('Could not read that file.','warn err');
   fr.onload=e=>{ try{
       const rows=csv
-        ? e.target.result.split(/\r?\n/).map(l=>l.split(','))
+        ? e.target.result.split(/\r?\n/).map(splitCSV)
         : XLSX.utils.sheet_to_json(
             (w=>w.Sheets[w.SheetNames[0]])(XLSX.read(new Uint8Array(e.target.result),{type:'array'})),
             {header:1,raw:true,defval:null});

@@ -447,8 +447,18 @@ function parseRows(rows){
     if(COL.symbol.some(a=>low.includes(a))&&COL.qty.some(a=>low.includes(a))){hi=i;break;}}
   if(hi===null)throw new Error('No header row with Symbol + Quantity columns found.');
   const headers=rows[hi], ci={}; for(const k in COL)ci[k]=findCol(headers,k);
-  if(ci.symbol==null||ci.qty==null||ci.type==null||ci.price==null)
-    throw new Error('Missing required columns. Header seen: '+headers.join(', '));
+  if(ci.symbol==null||ci.qty==null||ci.type==null||ci.price==null){
+    // A holdings export has symbol + quantity but no buy/sell type and no date, because it is
+    // a snapshot of what you own rather than a record of what you did. Say that, rather than
+    // listing headers at someone who brought the wrong file.
+    if(ci.symbol!=null && ci.qty!=null && ci.type==null) throw new Error(
+      'This looks like a HOLDINGS file \u2014 a snapshot of what you own now. This page needs a '+
+      'TRADEBOOK: one row per trade, with a buy/sell column and a date, which is what realised '+
+      'P&L is computed from. Get it from Zerodha Console \u2192 Reports \u2192 Tradebook. '+
+      '(Holdings are what the Basket Workbench wants, not this page.) Header seen: '+headers.join(', '));
+    throw new Error('Missing required columns. A tradebook needs symbol, quantity, price and a '+
+      'buy/sell type. Header seen: '+headers.join(', '));
+  }
   const trades=[];
   for(let r=hi+1;r<rows.length;r++){const row=rows[r];
     if(!row||row[ci.symbol]==null||row[ci.symbol]==='')continue;
@@ -600,11 +610,15 @@ function renderUpbar(){const el=document.getElementById('upbar');if(!el)return;
   el.innerHTML=`<div class="drop" id="drop">
     <div class="dh">Drop your tradebook to refresh</div>
     <div class="di">Drag an <b>XLSX</b> or <b>CSV</b> here, or <b>click to browse</b></div>
+    <div class="di" style="margin-top:6px">A <b>tradebook</b> is one row per trade \u2014 symbol,
+    buy/sell, quantity, price, date. Get it from <b>Console \u2192 Reports \u2192 Tradebook</b>.
+    <b>Not</b> a holdings file: holdings say what you own now, which cannot produce realised P&amp;L.</div>
     <div class="dn2">Parsed entirely in your browser — FIFO-matched live, no upload, no server round-trip.
       Source: <span class="srcbadge ${dataSource==='live.json'?'live':'file'}">${dataSource==='live.json'?'● live.json':'▲ '+dataSource}</span></div>
     <input type="file" id="fin" aria-label="Upload tradebook file" accept=".xlsx,.xls,.csv" class="sr"></div>`;
   const drop=document.getElementById('drop'),fin=document.getElementById('fin');
-  drop.onclick=()=>fin.click();
+  drop.onclick=e=>{ if(e.target!==fin) fin.click(); };
+fin.onclick=e=>e.stopPropagation();
   drop.ondragover=e=>{e.preventDefault();drop.classList.add('over')};
   drop.ondragleave=()=>drop.classList.remove('over');
   drop.ondrop=e=>{e.preventDefault();drop.classList.remove('over');if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0])};
