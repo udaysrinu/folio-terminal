@@ -7,8 +7,10 @@
 // attached. Nothing here is authenticated — that is the whole point. Compare the alternative, a Kite
 // proxy, which would need an access_token that can PLACE AND CANCEL ORDERS.
 //
-// Deploy: import this repo into Vercel. The static pages keep being served by GitHub Pages; this adds
-// only /api/price. No environment variables, no secrets, nothing to rotate.
+// Deploy: import this repo into Vercel. Vercel serves the static pages AND this function from one
+// origin, which means the page's price call is same-origin and the CORS dance below is only needed
+// for other hosts (a local dev server, or a GitHub Pages mirror). No env vars, no secrets, nothing
+// to rotate.
 //
 //   GET /api/price?symbols=GRSE,JWL,DYNAMATECH
 //   -> {"prices":{"GRSE":2600.1,"JWL":251.85},"missing":["DYNAMATECH"],"asof":"2026-08-17T…"}
@@ -18,8 +20,11 @@ const TIMEOUT_MS  = 8000;
 
 // Only these origins may read the response. A wildcard would work — there are no credentials to
 // protect — but naming origins stops other sites casually using this endpoint as free infrastructure.
+// Same-origin requests send no Origin header and need nothing here. These cover the other hosts the
+// page might be served from. A wildcard would be safe — there are no credentials to protect — but
+// naming origins stops other sites using this as free infrastructure.
 const ALLOWED = [
-  'https://udaysrinu.github.io',
+  'https://sharecase.vercel.app',
   'http://localhost:8899',
   'http://localhost:3000',
 ];
@@ -35,7 +40,7 @@ async function yahooPrice(sym) {
     const r = await fetch(url, {
       signal: ctl.signal,
       // Yahoo 401s requests with no User-Agent
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; folio-terminal/1.0)' },
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; sharecase/1.0)' },
     });
     if (!r.ok) return null;
     const j = await r.json();

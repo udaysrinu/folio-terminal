@@ -298,7 +298,7 @@ tbody tr:last-child{border-bottom:none}
 }
 </style></head><body>
 <div class="ftbar"><nav class="ftnav" aria-label="Main">
-<a href="index.html" class="brand">Folio Terminal</a>
+<a href="index.html" class="brand">sharecase</a>
 <a href="basket.html" data-p="basket.html"><svg viewBox="0 0 24 24"><path d="M3 7h18l-1.6 11.2A2 2 0 0 1 17.4 20H6.6a2 2 0 0 1-2-1.8L3 7Z"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/></svg>Baskets</a>
 <a href="dashboard.html" data-p="dashboard.html"><svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>Dashboard</a>
 <a href="onboarding.html" data-p="onboarding.html"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg>One-click setup</a>
@@ -1691,7 +1691,9 @@ function importFollows(file){
 //
 // Still never automatic: you press the button, you are told which symbols go out and where, and a
 // failure leaves the sheet's own prices untouched.
-const PX_PROXY_DEFAULT='';           // set to your deployment, e.g. https://your-app.vercel.app/api/price
+// Relative, because Vercel serves the pages and the function from one origin — so this needs no
+// configuration and no absolute URL. Only a mirror served elsewhere would need to override it.
+const PX_PROXY_DEFAULT='/api/price';
 const PXPROXY='ft_px_proxy';         // per-browser override, so a fork can point somewhere else
 const proxyUrl=()=>(localStorage.getItem(PXPROXY)||PX_PROXY_DEFAULT||'').replace(/\/+$/,'');
 

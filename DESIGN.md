@@ -1,4 +1,4 @@
-# Folio Terminal — Mineral Paper, Blue Signal (Direction B)
+# sharecase — Mineral Paper, Blue Signal (Direction B)
 
 Portfolio analytics and shareable stock baskets for Indian equity investors.
 The feeling is a **printed brokerage statement**, not a trading terminal: warm paper,

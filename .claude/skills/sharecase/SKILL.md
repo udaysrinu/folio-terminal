@@ -1,9 +1,9 @@
 ---
-name: folio-terminal
+name: sharecase
 description: Use when analysing a Zerodha Kite portfolio, building the folio dashboard from a tradebook, recovering which holdings belong to which smallcase/basket via order tags, or sharing/sizing a weighted stock basket. Triggers on "build my dashboard", "analyse my portfolio", "which smallcase is this stock from", "share this basket", "size this basket to my capital", "export my holdings", "realised P&L", "tradebook".
 ---
 
-# Folio Terminal
+# sharecase
 
 Local Kite portfolio analytics + portable basket sheets. Full detail in `README.md` — read it before a first run. This file is the operating order.
 

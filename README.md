@@ -1,15 +1,15 @@
-# Folio Terminal
+# sharecase
 
 **Someone shares a stock basket. You get your own buy list.**
 
 A basket is a list of stocks and *target percentages* — not share counts. Type what you want to
-invest and Folio Terminal turns those percentages into exact whole-share orders at **your**
+invest and sharecase turns those percentages into exact whole-share orders at **your**
 capital, not theirs.
 
 Five standalone HTML files. No build step, no server, no account, no telemetry. Nothing you drop
 in ever leaves the tab.
 
-**[Open it →](https://udaysrinu.github.io/folio-terminal/)**  ·  MIT  ·  Not investment advice
+**[Open it →](https://udaysrinu.github.io/sharecase/)**  ·  MIT  ·  Not investment advice
 
 ![The basket workbench: a monospace readout showing ₹4,00,000 becoming ₹3,98,055 deployed with ₹1,945 left, above a ledger of four stocks with target weight, shares, cost, actual weight and signed drift](docs/img/workbench.png)
 
@@ -17,7 +17,7 @@ in ever leaves the tab.
 
 ## Try it in 30 seconds, nothing to install
 
-1. Open **[the workbench](https://udaysrinu.github.io/folio-terminal/basket.html)**
+1. Open **[the workbench](https://udaysrinu.github.io/sharecase/basket.html)**
 2. Click **“Try it with sample data”** — loads a fake 4-stock basket
 3. Type an amount, press **Calculate orders**
 
@@ -57,7 +57,7 @@ prices and confirm there. Nothing is placed by this page.
 This is the part that works differently, and the difference is the point.
 
 **Investing is a choice: you pick the amount.** A rebalance is not — the capital is already
-determined by what you hold. So there is no multiplier to pick. Folio Terminal reads your
+determined by what you hold. So there is no multiplier to pick. sharecase reads your
 holdings, values them at current prices, applies the *new* target weights to **that** value, and
 the orders are simply the difference:
 
@@ -111,7 +111,7 @@ arithmetic worked out on real numbers.
 
 ![The Method page: why a basket travels as percentages and never as an order list](docs/img/method.png)
 
-**[Read the method →](https://udaysrinu.github.io/folio-terminal/method.html)**
+**[Read the method →](https://udaysrinu.github.io/sharecase/method.html)**
 
 The short version, since it's the question everyone asks:
 
@@ -173,7 +173,7 @@ Two things to know:
 
 ### Reads your tradebook
 
-Drop a Zerodha Console tradebook on the **[dashboard](https://udaysrinu.github.io/folio-terminal/dashboard.html)**
+Drop a Zerodha Console tradebook on the **[dashboard](https://udaysrinu.github.io/sharecase/dashboard.html)**
 for FIFO-matched realised P&L, an equity curve, per-basket concentration, and a
 "what if I never sold" counterfactual. Parsed in the browser; the Python path below is optional.
 
@@ -185,14 +185,14 @@ There's a plain-English page for exactly that — no finance jargon, about two m
 
 ![The guide page: what to do with a shared basket, four numbered steps, and answers to common questions](docs/img/guide.png)
 
-**[Read the guide →](https://udaysrinu.github.io/folio-terminal/friends.html)**
+**[Read the guide →](https://udaysrinu.github.io/sharecase/friends.html)**
 
 ---
 
 ## Invest vs Rebalance — why it matters
 
 An **Invest** email lists a whole basket. A **Rebalance** email lists only the *changes*, so
-reading it as a basket would give you a fragment. Folio Terminal tells them apart on three
+reading it as a basket would give you a fragment. sharecase tells them apart on three
 signals, so you never have to paste anything extra:
 
 | Signal | Example |
