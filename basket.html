@@ -1717,7 +1717,15 @@ const pxSay=h=>{ const el=$('pxout'); if(el) el.innerHTML=h; };
 async function fetchViaProxy(syms){
   const r=await fetch(proxyUrl()+'?symbols='+encodeURIComponent(syms.join(',')));
   let j; try{ j=await r.json(); }
-  catch(e){ throw new Error('the price endpoint did not return JSON (HTTP '+r.status+')'); }
+  catch(e){
+    // The likeliest cause by far: the page is being served by a plain static server, so /api/price
+    // does not exist and a 404 HTML page came back instead of JSON. Say that, rather than reporting
+    // a parse failure at someone who has done nothing wrong.
+    if(r.status===404) throw new Error('no price service at '+proxyUrl()
+      +' — if you are running this locally, use `npx vercel dev` instead of a plain static server, '
+      +'or just skip prices and use the ones in the sheet.');
+    throw new Error('the price endpoint did not return JSON (HTTP '+r.status+')');
+  }
   if(!r.ok) throw new Error(j&&j.error?j.error:('the price endpoint returned HTTP '+r.status));
   const got={};
   for(const k in (j.prices||{})){ const px=parseFloat(j.prices[k]); if(px>0) got[k.toUpperCase()]=px; }

@@ -9,7 +9,7 @@ capital, not theirs.
 Five standalone HTML files. No build step, no server, no account, no telemetry. Nothing you drop
 in ever leaves the tab.
 
-**[Open it →](https://udaysrinu.github.io/sharecase/)**  ·  MIT  ·  Not investment advice
+**[Open it →](https://sharecase.vercel.app/)**  ·  MIT  ·  Not investment advice
 
 ![The basket workbench: a monospace readout showing ₹4,00,000 becoming ₹3,98,055 deployed with ₹1,945 left, above a ledger of four stocks with target weight, shares, cost, actual weight and signed drift](docs/img/workbench.png)
 
@@ -17,11 +17,68 @@ in ever leaves the tab.
 
 ## Try it in 30 seconds, nothing to install
 
-1. Open **[the workbench](https://udaysrinu.github.io/sharecase/basket.html)**
+1. Open **[the workbench](https://sharecase.vercel.app/basket.html)**
 2. Click **“Try it with sample data”** — loads a fake 4-stock basket
 3. Type an amount, press **Calculate orders**
 
 That's the whole loop. Everything below is detail.
+
+---
+
+## Run it on your own machine
+
+The pages are plain HTML with no build step, so there is nothing to compile and no
+`node_modules`. The only moving part is one serverless function, `api/price.js`, which fetches
+market prices.
+
+```bash
+git clone https://github.com/udaysrinu/sharecase.git
+cd sharecase
+```
+
+**Option A — everything works, including live prices.** This runs the pages *and* the price
+function, exactly as they run in production:
+
+```bash
+npx vercel dev
+```
+
+Then open <http://localhost:3000/basket.html>. First run asks you to log in to Vercel and link a
+project; after that it is one command.
+
+**Option B — no install at all.** Any static file server works, because nothing else needs a
+server:
+
+```bash
+python3 -m http.server 8899
+```
+
+Then open <http://localhost:8899/basket.html>. Everything works except **Refresh prices from the
+market** — `/api/price` does not exist here, and the button says so rather than failing silently.
+Sheets carry their own prices, so sizing, rebalancing and the Kite handoff are all fine without it.
+
+Why prices need a server at all: browsers refuse to read a response from another origin unless that
+origin allows it, and Yahoo does not. A serverless function is not a browser, so it can read Yahoo
+and pass the answer on. Nothing in it is authenticated — no key, no token, nothing to leak.
+
+---
+
+## Deploy your own copy
+
+```bash
+npx vercel        # from the repo root; accept the defaults
+```
+
+Or from the dashboard, which needs no CLI: **vercel.com → Add New → Project → import the repo →
+Deploy**. `api/` is detected automatically. There are no environment variables and no secrets to
+set.
+
+You get `https://<your-project>.vercel.app`, serving both the pages and `/api/price`. Because they
+share an origin, the app calls the relative path `/api/price` and there is nothing to configure
+after deploying.
+
+If you serve the pages from somewhere else and the function from Vercel, add that origin to
+`ALLOWED` in `api/price.js` — otherwise the browser will refuse the response.
 
 ---
 
@@ -111,7 +168,7 @@ arithmetic worked out on real numbers.
 
 ![The Method page: why a basket travels as percentages and never as an order list](docs/img/method.png)
 
-**[Read the method →](https://udaysrinu.github.io/sharecase/method.html)**
+**[Read the method →](https://sharecase.vercel.app/method.html)**
 
 The short version, since it's the question everyone asks:
 
@@ -173,7 +230,7 @@ Two things to know:
 
 ### Reads your tradebook
 
-Drop a Zerodha Console tradebook on the **[dashboard](https://udaysrinu.github.io/sharecase/dashboard.html)**
+Drop a Zerodha Console tradebook on the **[dashboard](https://sharecase.vercel.app/dashboard.html)**
 for FIFO-matched realised P&L, an equity curve, per-basket concentration, and a
 "what if I never sold" counterfactual. Parsed in the browser; the Python path below is optional.
 
@@ -185,7 +242,7 @@ There's a plain-English page for exactly that — no finance jargon, about two m
 
 ![The guide page: what to do with a shared basket, four numbered steps, and answers to common questions](docs/img/guide.png)
 
-**[Read the guide →](https://udaysrinu.github.io/sharecase/friends.html)**
+**[Read the guide →](https://sharecase.vercel.app/friends.html)**
 
 ---
 
