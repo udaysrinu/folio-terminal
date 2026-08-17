@@ -23,11 +23,16 @@ const TIMEOUT_MS  = 8000;
 // Same-origin requests send no Origin header and need nothing here. These cover the other hosts the
 // page might be served from. A wildcard would be safe — there are no credentials to protect — but
 // naming origins stops other sites using this as free infrastructure.
+// Vercel serves the pages and this function from the same origin, so the page's own call sends no
+// Origin header and needs nothing from this list. It exists only for a page served from ELSEWHERE:
+// a local static server, or a mirror. VERCEL_URL is injected by Vercel itself — it is not a variable
+// anyone configures — so a renamed project keeps working without editing this file.
 const ALLOWED = [
-  'https://sharecase.vercel.app',
+  process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
+  process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : null,
   'http://localhost:8899',
   'http://localhost:3000',
-];
+].filter(Boolean);
 
 async function yahooPrice(sym) {
   // v8 chart, not v7 quote: v7 batch now demands a crumb/cookie, v8 needs nothing. One symbol per
