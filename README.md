@@ -235,7 +235,7 @@ nothing shared between users:
 | Key | For | Where you get it | Free? |
 |---|---|---|---|
 | Kite `api_key` | pre-filling orders in Kite | developers.kite.trade — **Publisher** app recommended, Personal also works | yes |
-| Twelve Data key | current market prices | twelvedata.com, Basic plan | yes — 8 credits/min, 800/day |
+| *(none)* | current market prices | nothing to get — the app's own `/api/price` | yes |
 
 Neither is required. Without the Kite key you copy orders by hand; without the price key the app
 uses the prices carried in the sheet.
@@ -246,12 +246,11 @@ wrong numbers, so real drift is larger than the app reports. Fetching current pr
 sizing honest — and the workbench then searches for the amount that drives drift closest to zero
 while still giving every stock at least one share.
 
-**How the free tier really works.** Twelve Data charges **one credit per symbol**, not per request.
-Batching a comma-separated list saves HTTP round-trips, not credits. Basic allows **8 credits per
-minute** and **800 per day**, so a 15-stock basket costs 15 credits and cannot complete inside one
-minute however it is batched. The app therefore fetches in chunks of 8, waits out the window with a
-visible countdown, and **caches prices for 15 minutes** so pressing the button again costs nothing.
-800/day works out to roughly 50 full refreshes of a 15-stock basket.
+**Live prices need no key.** `api/price.js` is a Vercel function that reads Yahoo server-side and
+re-serves it with a CORS header — Yahoo refuses browsers, but a function is not a browser. Deploy
+this repo to Vercel, set `PX_PROXY_DEFAULT` in `basket.html` to the resulting `/api/price` URL, and
+the Refresh button works for everyone with nothing to sign up for. Nothing in it is authenticated,
+so there is no secret to leak and it cannot place an order.
 
 ## Privacy
 

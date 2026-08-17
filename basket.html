@@ -355,8 +355,8 @@ It looks like this:
   <div id="needpx"></div>
   <div class="row" style="margin:2px 0 4px">
     <button onclick="refreshPrices()">Refresh prices from the market</button>
-    <span class="note" style="margin:0">optional · one request to Twelve Data · sheet prices are
-      used if you skip it</span>
+    <span class="note" style="margin:0">optional · no key needed · the sheet’s own prices are used
+      if you skip it</span>
   </div>
   <div id="pxout"></div>
 
@@ -1062,8 +1062,6 @@ function editKey(){
   const t=v.trim();
   if(!t){ dropKey(); return; }
   if(!/^[A-Za-z0-9_-]{6,40}$/.test(t)){ say('That does not look like an api_key.','warn err'); return; }
-  if(t===localStorage.getItem('ft_td_api_key')){ say('That is your Twelve Data <b>price</b> key. Kite rejects '
-    +'it with “Invalid api_key” — the Kite key comes from developers.kite.trade.','warn err'); return; }
   localStorage.setItem(KKEY,t); say('Key updated.','ok'); calc();
 }
 function dropKey(){
@@ -1660,26 +1658,19 @@ function importFollows(file){
 }
 
 
-// ==================== LIVE PRICES (optional, opt-in) ====================
-// The only free quote API a browser can actually reach for NSE. Yahoo, Stooq, NSE's own
-// endpoint and BSE all refuse cross-origin reads, so they are impossible from a page with
-// no server. Twelve Data sends CORS headers, allows 800 requests/day free, and takes a
-// comma-separated symbol list, so one basket costs one request.
+// ==================== LIVE PRICES ====================
+// One button, no key, no signup, no per-symbol accounting. It calls this project's own /api/price
+// (a Vercel function in api/price.js), which reads Yahoo server-side and re-serves it with a CORS
+// header. Yahoo is unreachable from a browser and Kite is too; a server-side function is neither,
+// so it can read them. Nothing here is authenticated and nothing can place an order.
 //
-// This is the ONE place the app talks to a third party. It is never automatic: you press a
-// button, and you are told exactly which symbols are about to be sent and to whom. If it
-// fails, the sheet's own prices stay untouched.
-const PXKEY='ft_td_api_key';
-const tdKey=()=>localStorage.getItem(PXKEY)||'';
+// Still never automatic: you press the button, you are told which symbols go out and where, and a
+// failure leaves the sheet's own prices untouched.
+const PX_PROXY_DEFAULT='';           // set to your deployment, e.g. https://your-app.vercel.app/api/price
+const PXPROXY='ft_px_proxy';         // per-browser override, so a fork can point somewhere else
+const proxyUrl=()=>(localStorage.getItem(PXPROXY)||PX_PROXY_DEFAULT||'').replace(/\/+$/,'');
 
-const PXCACHE='ft_px_cache';
-// Twelve Data charges ONE CREDIT PER SYMBOL, not per request. The free tier allows 8 credits
-// per minute and 800 per day, so a 15-stock basket costs 15 credits and cannot be fetched in
-// one minute however you batch it. Batching saves HTTP round-trips; it does not save credits.
-// So: fetch in chunks of 8, wait out the minute between chunks, and cache what comes back so
-// pressing the button twice costs nothing.
-const PX_PER_MIN=8, PX_TTL=15*60*1000;
-
+const PXCACHE='ft_px_cache', PX_TTL=15*60*1000;
 function pxCache(){ try{ return JSON.parse(localStorage.getItem(PXCACHE)||'{}'); }catch(e){ return {}; } }
 function pxCachePut(m){
   const c=pxCache(), now=Date.now();
@@ -1692,14 +1683,23 @@ function pxCacheGet(syms){
     if(e&&e.px>0&&now-e.at<PX_TTL) hit[s]=e.px; else miss.push(s); });
   return {hit,miss};
 }
-
 const pxSay=h=>{ const el=$('pxout'); if(el) el.innerHTML=h; };
 
-// Show every symbol from the start and fill them in as answers arrive, so the wait is legible
-// rather than a spinner: you can see which stocks are done, which are queued, and what changed.
-function pxProgress(all,got,state,note){
+// One request for the whole basket. Returns {got, missing} — `missing` are symbols the endpoint
+// could not price, which must keep the sheet's own price rather than silently becoming zero.
+async function fetchViaProxy(syms){
+  const r=await fetch(proxyUrl()+'?symbols='+encodeURIComponent(syms.join(',')));
+  let j; try{ j=await r.json(); }
+  catch(e){ throw new Error('the price endpoint did not return JSON (HTTP '+r.status+')'); }
+  if(!r.ok) throw new Error(j&&j.error?j.error:('the price endpoint returned HTTP '+r.status));
+  const got={};
+  for(const k in (j.prices||{})){ const px=parseFloat(j.prices[k]); if(px>0) got[k.toUpperCase()]=px; }
+  return {got, missing:j.missing||[]};
+}
+
+// Show every symbol and fill them in, so the wait is legible rather than a spinner.
+function pxProgress(all,got,note){
   const done=all.filter(x=>got[x]>0).length;
-  const pct=Math.round(done/all.length*100);
   const cells=all.map(x=>{
     if(got[x]>0){
       const old=(SHEET&&SHEET.prices&&SHEET.prices[x])||0;
@@ -1707,95 +1707,53 @@ function pxProgress(all,got,state,note){
       const arrow=!old?'':(got[x]>old?'\u2191':got[x]<old?'\u2193':'');
       return `<div><span>${x}</span><span class="${cls}">${arrow}${M(got[x])}</span></div>`;
     }
-    return `<div><span class="w">${x}</span><span class="w">${state[x]||'queued'}</span></div>`;
+    return `<div><span class="w">${x}</span><span class="w">…</span></div>`;
   }).join('');
   pxSay(`<div class="panel" style="padding:13px 16px">
-    <div class="rolabel">Fetching market prices — ${done} of ${all.length}</div>
-    <div class="pxbar"><i style="width:${pct}%"></i></div>
+    <div class="rolabel">Market prices — ${done} of ${all.length}</div>
+    <div class="pxbar"><i style="width:${Math.round(done/all.length*100)}%"></i></div>
     ${note?`<div class="note" style="font-style:normal;margin:2px 0 0">${note}</div>`:''}
     <div class="pxgrid">${cells}</div></div>`);
 }
 
-async function fetchChunk(syms,key){
-  const url='https://api.twelvedata.com/price?symbol='+encodeURIComponent(syms.join(','))
-    +'&exchange=NSE&apikey='+encodeURIComponent(key);
-  const j=await (await fetch(url)).json();
-  if(j&&j.code&&j.code!==200){
-    const e=new Error(j.message||('API returned '+j.code)); e.code=j.code; throw e;
-  }
-  const got={};
-  if(syms.length===1&&j&&j.price!=null){ got[syms[0]]=parseFloat(j.price); }
-  else for(const k in j){
-    const v=j[k];
-    const px=v&&v.price!=null?parseFloat(v.price):(typeof v==='string'?parseFloat(v):NaN);
-    if(px>0) got[k.toUpperCase()]=px;
-  }
-  return got;
-}
-
 async function refreshPrices(){
   if(!SHEET){ say('Load a basket first.','warn err'); return; }
-  const key=tdKey();
-  if(!key){
-    pxSay(`<div class="warn"><b>No price key set up.</b> Live prices need a free Twelve Data key —
-      about two minutes. <a href="onboarding.html#prices" target="_blank" rel="noopener"><b>Set it up →</b></a></div>`);
+  const base=proxyUrl();
+  if(!base){
+    pxSay(`<div class="warn"><b>Price lookup is not configured for this copy.</b>
+      Deploy <span class="mono">api/price.js</span> (see the README) and set its URL once — then this
+      button works for everyone, with no key to sign up for.</div>`);
     return;
   }
   const syms=Object.keys(SHEET.weights);
   const {hit,miss}=pxCacheGet(syms);
-  if(!miss.length){
-    applyPrices(hit,syms,'all from cache, no credits used');
+  if(!miss.length){ applyPrices(hit,syms,'still fresh from the last check'); return; }
+  if(!confirm(`Look up today's price for ${miss.length} stock${miss.length>1?'s':''}?\n\n`
+    +miss.join(', ')
+    +`\n\nThe request goes to this app's own price endpoint, which reads them from Yahoo Finance.`
+    +`\nIt sees the stock names only — no amounts, no holdings, no identity.`)) return;
+
+  const got={...hit};
+  pxProgress(syms,got,'Asking…');
+  let missing=[];
+  try{
+    const r=await fetchViaProxy(miss);
+    Object.assign(got,r.got); missing=r.missing;
+    pxCachePut(r.got);
+  }catch(e){
+    pxSay(`<div class="warn err"><b>Could not reach the price service.</b> ${e.message}<br><br>
+      Nothing changed — the sheet is still using its own prices.</div>`);
     return;
   }
-  const chunks=[]; for(let i=0;i<miss.length;i+=PX_PER_MIN) chunks.push(miss.slice(i,i+PX_PER_MIN));
-  const mins=chunks.length-1;
-  if(!confirm(`Fetch prices for ${miss.length} symbol${miss.length>1?'s':''} from api.twelvedata.com?\n\n`
-    +miss.join(', ')
-    +`\n\nThis provider charges ONE CREDIT PER SYMBOL and the free tier allows ${PX_PER_MIN} per minute,`
-    +` so this runs in ${chunks.length} batch${chunks.length>1?'es':''}`
-    +(mins?` and takes about ${mins} minute${mins>1?'s':''}.`:'.')
-    +`\n\nThey will see which stocks you looked up. No amounts, no holdings, no identity.`
-    +(Object.keys(hit).length?`\n\n${Object.keys(hit).length} price(s) are still fresh in cache and will not be refetched.`:''))){
-    return; }
-
-  const got={...hit}, state={};
-  miss.forEach(x=>state[x]='queued');
-  pxProgress(syms,got,state,`${chunks.length} batch${chunks.length>1?'es':''} to go — this provider
-    charges one credit per symbol and allows ${PX_PER_MIN} a minute.`);
-  for(let i=0;i<chunks.length;i++){
-    chunks[i].forEach(x=>state[x]='fetching…');
-    pxProgress(syms,got,state,`Batch ${i+1} of ${chunks.length}…`);
-    try{
-      Object.assign(got, await fetchChunk(chunks[i],key));
-      pxCachePut(got);
-      chunks[i].forEach(x=>{ if(!(got[x]>0)) state[x]='no listing'; });
-      pxProgress(syms,got,state,`Batch ${i+1} of ${chunks.length} done.`);
-    }catch(e){
-      const rate=/credits? for the current minute|rate limit/i.test(e.message||'');
-      if(rate&&i<chunks.length-1){ /* fall through to the wait below */ }
-      else if(rate){
-        applyPrices(got,syms,`stopped at the per-minute limit`);
-        pxSay($('pxout').innerHTML+`<div class="warn"><b>Hit the per-minute limit.</b>
-          ${e.message}<br><br>What arrived has been kept and cached. Press the button again in a
-          minute to finish the rest.</div>`);
-        return;
-      } else {
-        pxSay(`<div class="warn err"><b>Could not fetch prices.</b> ${e.message}<br><br>
-          Your sheet's prices are unchanged.${Object.keys(got).length>Object.keys(hit).length
-            ?' Prices that did arrive were cached.':''}</div>`);
-        return;
-      }
-    }
-    if(i<chunks.length-1){
-      for(let t=62;t>0;t--){
-        chunks.slice(i+1).flat().forEach(x=>{ if(!(got[x]>0)) state[x]=`in ${t}s`; });
-        pxProgress(syms,got,state,`Waiting <b>${t}s</b> for the ${PX_PER_MIN}-per-minute window to
-          reset — leave this tab open.`);
-        await new Promise(r=>setTimeout(r,1000));
-      }
-    }
+  const hits=Object.keys(got).filter(s=>got[s]>0);
+  if(!hits.length){
+    pxSay(`<div class="warn err"><b>No prices came back.</b> These may not be NSE symbols:
+      ${miss.join(', ')}. The sheet's own prices are unchanged.</div>`);
+    return;
   }
-  applyPrices(got,syms,`${chunks.length} batch${chunks.length>1?'es':''}`);
+  pxProgress(syms,got,'');
+  applyPrices(got,syms,missing.length?`${missing.join(', ')} had no price and kept the sheet's`
+                                     :'from today\u2019s market');
 }
 
 function applyPrices(got,syms,how){
