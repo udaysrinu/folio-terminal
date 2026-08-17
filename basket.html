@@ -791,7 +791,11 @@ function load(obj){
     : 'minimum ≈ '+M(mu)+(exact&&exact.amt!==mu?` · exact at <b>${M(exact.amt)}</b>`:'');
   $('quick').innerHTML = qp.length
     ? '<span class="mono" style="font-size:11px;color:var(--tx3)">QUICK PICK:</span>' +
-      qp.map(o=>`<button onclick="setAmt(${o.amt})" title="worst holding lands ${o.drift.toFixed(3)}pp from its target">${M(o.amt)}<span class="qpd">${o.drift<0.01?'exact':'±'+o.drift.toFixed(2)+'pp'}</span></button>`).join('')
+      qp.map(o=>{
+        const m=misfit(size(SHEET,o.amt).rows,size(SHEET,o.amt).cost);
+        const off=m?m.rs:0;
+        return `<button onclick="setAmt(${o.amt})" title="${m?`about ${M(off)} of ${M(size(SHEET,o.amt).cost)} would sit in the wrong stock; furthest off is ${m.worst}`:''}">${M(o.amt)}<span class="qpd">${o.drift<0.01?'spot on':M(off)+' off'}</span></button>`;
+      }).join('')
     : '';
   if(!$('amt').value) $('amt').value=Math.ceil(mu/1000)*1000;
   showUnits();
@@ -874,6 +878,23 @@ function quickPicks(floor){
   }
   return keep.slice(0,6);
 }
+// "1.06pp" is both opaque and alarmist: pp means percentage points, and this figure is the SINGLE
+// worst-placed stock, while the average holding is usually three times closer. Measured on the real
+// 15-stock basket at its floor: worst 1.06pp, average 0.34pp, and what a person actually wants to
+// know is that Rs3,465 of Rs1,37,465 is sitting in the wrong stock. So report the money.
+// misplaced = sum of the POSITIVE deviations = half the total absolute deviation = the fraction of
+// the basket that is in the wrong place. In rupees that needs no unit to be explained.
+function misfit(rows,cost){
+  if(!(cost>0)||!rows.length) return null;
+  let over=0, worst=null, worstDev=0, sum=0;
+  rows.forEach(r=>{
+    const dev=r.val/cost*100-r.w;
+    if(dev>0) over+=dev;
+    sum+=Math.abs(dev);
+    if(Math.abs(dev)>Math.abs(worstDev)){ worstDev=dev; worst=r.s; }
+  });
+  return {pct:over, rs:over/100*cost, worst, worstDev, avg:sum/rows.length};
+}
 function bestAmounts(amt){
   const floor=minUnit(SHEET.weights,SHEET.prices);
   const scan=(lo,hi,step)=>{
@@ -931,17 +952,19 @@ function showAdvice(){
       more concentrated basket. <button onclick="setAmt(${a.floor})">Use ${M(a.floor)}</button></div>`;
     return;
   }
-  const q=a.here<0.05?'≈0':'±'+a.here.toFixed(2);
+  const sz=size(SHEET,amt), mf=misfit(sz.rows,sz.cost);
   el.innerHTML=`<div class="${a.here<0.35?'ok':'warn'}" style="margin-top:10px">
-    <b>At ${M(amt)} the worst holding lands ${q}pp from its target.</b>
-    ${a.here<0.35?' That is about as close as whole shares allow.':''}
+    <b>At ${M(amt)}${mf&&mf.rs>=1?`, about ${M(mf.rs)} ends up in the wrong stock.`
+      :' every stock lands on its target.'}</b>
+    ${mf&&mf.rs>=1?` That is ${mf.pct.toFixed(1)}% of the basket — ${mf.worst} is furthest out.`:''}
+    ${a.here<0.35?' About as close as whole shares allow.':''}
     ${a.stuck?`<br><br>Nothing near this amount does better — this close to the floor of ${M(a.floor)}
       each stock holds only one or two shares, so the weights simply cannot be tracked finely.
-      ${a.best?`The next real improvement is ${M(a.best.amt)} at ${a.best.drift<0.05?'≈0':'±'+a.best.drift.toFixed(2)}pp,
-        which is ${Math.abs(a.best.away*100).toFixed(0)}% ${a.best.away>0?'more':'less'} than you typed.`:''}`:''}
+      ${a.best?`The next real improvement is ${M(a.best.amt)}, which is
+        ${Math.abs(a.best.away*100).toFixed(0)}% ${a.best.away>0?'more':'less'} than you typed.`:''}`:''}
     ${!a.stuck&&a.cand.length?`<div class="row" style="margin-top:9px">${a.cand.map(c=>
       `<button class="${c.drift<0.05?'pri':''}" onclick="setAmt(${c.amt})">${M(c.amt)} →
-        ${c.drift<0.05?'≈0':'±'+c.drift.toFixed(2)}pp</button>`).join('')}</div>`:''}
+        ${c.drift<0.05?'spot on':M((misfit(size(SHEET,c.amt).rows,size(SHEET,c.amt).cost)||{rs:0}).rs)+' off'}</button>`).join('')}</div>`:''}
   </div>`;
 }
 
@@ -983,8 +1006,10 @@ function calc(){
      class="arw">→</span><span class="dep">${M(cost)} deployed</span><span class="arw">→</span><span
      class="${over?'short':'lo'}">${M(resid)} ${over?'over' : 'left'}</span></div>
    <p class="rosub">${(cost/amt*100).toFixed(1)}% of your amount goes in. Whole shares only, so the
-     rounding leaves <b>${M(resid)}</b> ${over?'over-committed':'uninvested'} and pulls the worst
-     holding <b>${worst.toFixed(1)}%</b> off target (${worstSym}).</p>
+     rounding leaves <b>${M(resid)}</b> ${over?'over-committed':'uninvested'}${(()=>{
+       const mf=misfit(rows,cost);
+       return mf&&mf.rs>=1?` and puts about <b>${M(mf.rs)}</b> into the wrong stock — ${mf.worst} is
+         the furthest from its target`:', and every stock lands on its target';})()}.</p>
    <div class="ledger"><table>
     <thead><tr><th>Stock</th><th class="r">Target</th><th class="r">Price</th><th class="r">Shares</th>
       <th class="r">Cost</th><th class="r">Weight</th><th class="r">Drift</th></tr></thead>
@@ -1025,7 +1050,7 @@ function calc(){
         ${list.map(c=>`<div class="row" style="margin-top:7px">
           <button class="${c.drift<0.05?'pri':''}" onclick="setAmt(${c.amt})">Use ${M(c.amt)}</button>
           <span class="mono" style="font-size:12.5px">drift ${c.drift<0.005?'≈0'
-            :'±'+c.drift.toFixed(2)}pp<span style="color:var(--tx3)"> vs ±${o.here.toFixed(2)}pp now</span></span>
+            :M((misfit(size(SHEET,c.amt).rows,size(SHEET,c.amt).cost)||{rs:0}).rs)+' off'}<span style="color:var(--tx3)"> vs ${M((misfit(size(SHEET,amt).rows,size(SHEET,amt).cost)||{rs:0}).rs)} now</span></span>
           <span class="note" style="margin:0">${c.label}</span></div>`).join('')}
       </div>`;})()}
     <div class="row" style="margin-top:13px">
