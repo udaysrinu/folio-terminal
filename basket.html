@@ -619,25 +619,57 @@ const missingPx=(w,p)=>Object.keys(w).filter(s=>!(p[s]>0));
 // needed is strictly less. Using max(p/w) directly overstated this basket's floor by 9.2% and
 // wrongly blocked amounts that buy a complete basket. Verified against smallcase's own published
 // minInvestAmount values (385 and 579) — see selfTest().
-const minUnit=(w,p)=>{const k=priced(w,p); if(!k.length) return 0;
+// The scale where the priciest-per-weight stock reaches exactly one share, with every other stock
+// floored. This is smallcase's definition and it reproduces their published minInvestAmount (385,
+// 579) — but it is NOT what this app can promise, because it floors while size() rounds. Kept
+// separate so the two questions stay separate.
+const latticeScale=(w,p)=>{const k=priced(w,p); if(!k.length) return 0;
   const tot=k.reduce((a,s)=>a+w[s],0); if(!(tot>0)) return 0;
-  const f=s=>w[s]/tot;                                     // normalise: callers may pass raw weights
-  const scale=Math.max(...k.map(s=>p[s]/f(s)));            // binding stock hits exactly 1 share here
-  // ceil, not floor: a minimum that rounds DOWN is short of its own basket by construction.
-  // (smallcase's true cost 384.72 is published as 385, not 384.) The convention is not documented
-  // in any primary source — this is the only self-consistent inference, not a confirmed fact.
+  const f=s=>w[s]/tot;
+  const scale=Math.max(...k.map(s=>p[s]/f(s)));
   return Math.ceil(k.reduce((a,s)=>a+p[s]*Math.floor(scale*f(s)/p[s]),0));};
-// Run selfTest() in the console. Guards the two things that were actually wrong once:
-// the minimum overstating itself, and a "minimum" that cannot buy a whole basket.
+
+// THE MINIMUM THIS APP STATES. It must satisfy the only promise a minimum can usefully make:
+// fund exactly this much and the orders go through. That means it has to be judged by the allocator
+// that actually places them — size(), which ROUNDS — not by a closed form that floors.
+//
+// Measured on two real sheets, the closed form failed both ways: on a 25-stock sheet it said
+// Rs1,05,751 while size() spent Rs1,14,090 (Rs8,339 short, so Kite would reject for insufficient
+// funds), and on a 15-stock sheet it said Rs1,37,894 when a complete basket was fundable at
+// Rs1,24,505 (Rs13,389 too high, blocking valid amounts). A minimum you cannot fund is worse than
+// no minimum at all, so this searches rather than solves.
+const minUnit=(w,p)=>{
+  const k=priced(w,p); if(!k.length) return 0;
+  const tot=k.reduce((a,s)=>a+w[s],0); if(!(tot>0)) return 0;
+  const f=s=>w[s]/tot;
+  const fits=A=>{                       // exactly what size() will do, then both conditions
+    let cost=0;
+    for(const s of k){ const q=Math.round(A*f(s)/p[s]); if(q<1) return false; cost+=q*p[s]; }
+    return cost<=A;
+  };
+  const ceilTo=(v,st)=>Math.ceil(v/st)*st;
+  const anchor=latticeScale(w,p);
+  if(!(anchor>0)) return 0;
+  // Coarse sweep from half the anchor (the round-based floor can be well below it) to 2x, then
+  // refine down to the rupee so the answer is the true threshold and not a step artefact.
+  const step=Math.max(100,Math.round(anchor/2000/100)*100);
+  for(let A=ceilTo(anchor*0.45,step); A<=anchor*2; A+=step){
+    if(!fits(A)) continue;
+    let lo=A-step+1;                    // known-bad side
+    while(lo<A){ const mid=Math.floor((lo+A)/2); if(fits(mid)) A=mid; else lo=mid+1; }
+    return A;
+  }
+  return anchor;                        // nothing fits in range: fall back rather than return 0
+};
 function selfTest(){
   const eq=(got,want,what)=>{ if(got!==want) throw new Error(`${what}: got ${got}, want ${want}`); };
   // THE discriminating case: smallcase's Equity & Gold, published minInvestAmount 385.
   // Prices derived from three independently published fields (weight, fractional shares,
   // lastCloseIndex 292.6426) — never from fill prices, which are post-trade and include slippage,
   // so a floor computed from them is circular. True cost 384.7156: only ceil reaches 385.
-  eq(minUnit({A:70,B:30},{A:282.2892,B:20.4853}),385,'Equity & Gold = 385');
+  eq(latticeScale({A:70,B:30},{A:282.2892,B:20.4853}),385,'Equity & Gold = 385');
   // raw (un-normalised) weights must give the same answer as normalised ones
-  eq(minUnit({A:35,B:15},{A:282.2892,B:20.4853}),385,'half-scale weights normalise');
+  eq(latticeScale({A:35,B:15},{A:282.2892,B:20.4853}),385,'half-scale weights normalise');
   // Second sample (ICICINIFTY+JUNIORBEES, published 579) can't pin the rounding rule — the two
   // available price snapshots straddle the integer. Assert only what is snapshot-independent:
   // the allocation is one share of each.
@@ -647,9 +679,16 @@ function selfTest(){
   const w={A:7.03,B:5.97,C:11.01,D:75.99},p={A:10587.67,B:1687.05,C:155.60,D:410.02};
   const m=minUnit(w,p);
   size({weights:w,prices:p},m).rows.forEach(r=>{ if(r.q<1) throw new Error(`min ${m} leaves ${r.s} at ${r.q} shares`); });
-  // and it must not overstate: max(p/w) is the notional scale, never the cash required
-  const notional=Math.max(...Object.keys(w).map(s=>p[s]/(w[s]/100)));
-  if(!(m<notional)) throw new Error(`min ${m} is not below the notional scale ${notional}`);
+  // THE promise a minimum must keep: fund exactly this and the orders fit. Both halves, because the
+  // old closed form broke each of them on a different real sheet — Rs8,339 short on one, Rs13,389
+  // too high on another.
+  const z=size({weights:w,prices:p},m);
+  z.rows.forEach(r=>{ if(r.q<1) throw new Error(`min ${m} leaves ${r.s} at ${r.q} shares`); });
+  if(z.cost>m) throw new Error(`min ${m} cannot be funded: sizing spends ${Math.round(z.cost)}`);
+  // and it must be the THRESHOLD: one rupee less must fail one of the two conditions
+  const below=size({weights:w,prices:p},m-1);
+  if(below.rows.every(r=>r.q>=1) && below.cost<=m-1)
+    throw new Error(`${m-1} also works, so ${m} is not the minimum`);
   // ---- multiplier ----
   const sh={A:3,B:7,C:12};
   eq(multiplier({A:9,B:21,C:36},sh).near,3,'exact 3x detected');

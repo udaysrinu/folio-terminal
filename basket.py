@@ -35,7 +35,11 @@ def load_sheet(path):
     return s
 
 def min_unit(w, p):
-    """Smallest basket size where every symbol affords >=1 whole share.
+    """smallcase-style minimum: the scale where the binding stock reaches one share, others floored.
+
+    NOTE this is NOT what basket.html now shows. The browser searches for the smallest amount its own
+    allocator can FUND (it rounds, this floors), which differs materially: Rs72,477 vs Rs1,05,751 on
+    a real 25-stock sheet. This stays because it reproduces smallcase's published minInvestAmount.
 
     max(price / weight) is NOT the answer — that is only the notional value at the scale where the
     priciest-per-weight stock reaches exactly one share. Every OTHER stock floors down from its
