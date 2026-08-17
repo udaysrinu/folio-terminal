@@ -35,8 +35,22 @@ def load_sheet(path):
     return s
 
 def min_unit(w, p):
-    """Smallest basket size where every symbol affords >=1 whole share."""
-    return math.ceil(max(p[s] / (w[s] / 100) for s in w))   # ceil: a suggested amount must clear its own floor
+    """Smallest basket size where every symbol affords >=1 whole share.
+
+    max(price / weight) is NOT the answer — that is only the notional value at the scale where the
+    priciest-per-weight stock reaches exactly one share. Every OTHER stock floors down from its
+    fractional target at that scale, so the cash actually required is strictly less. Using it
+    directly overstated a real 15-stock basket by Rs12,714 (9.2%) and refused amounts that buy a
+    complete basket. Reproduces smallcase's own published minInvestAmount of 385 (see self_test).
+
+    Outer op is ceil, not floor: a minimum that rounds DOWN is short of its own basket.
+    """
+    tot = sum(w.values())
+    if not tot:
+        return 0
+    f = {s: w[s] / tot for s in w}                      # normalise; callers may pass raw weights
+    scale = max(p[s] / f[s] for s in w)                 # binding stock hits exactly 1 share here
+    return math.ceil(sum(p[s] * math.floor(scale * f[s] / p[s]) for s in w))
 
 def size(sheet, amount):
     """→ ([(sym, qty, price, value, note)], total_cost, minimum_unit)"""
