@@ -664,6 +664,24 @@ function selfTest(){
    const book=Object.keys(sq).reduce((a,s)=>a+sq[s]*spx[s],0), val=8*book;
    eq(Math.round(val*(swt.A/100)/spx.A),687,'value-based sizing loses a share to weight rounding');
    eq(8*sq.A,688,'snapping to the multiple keeps it');}
+  // ---- NSE series suffixes ----
+  // Real failure: a friend's basket rejected MTARTECH because the sheet said MTARTECH while the
+  // position was MTARTECH-BE, a different instrument in the Trade-to-Trade series.
+  {const save=HELD;
+   HELD={'MTARTECH-BE':4,'GRSE':12,'APOLLO':39};
+   eq(nseSymbol('MTARTECH'),'MTARTECH-BE','bare symbol resolves to the held -BE variant');
+   eq(nseSymbol('GRSE'),'GRSE','a held exact symbol is never remapped');
+   eq(nseSymbol('NOTHELD'),'NOTHELD','an unheld symbol is left alone');
+   HELD={'FOO-BE':1,'FOO-BZ':1};
+   eq(nseSymbol('FOO'),'FOO','ambiguous variants must NOT be guessed between');
+   HELD={'MTARTECH':4,'MTARTECH-BE':4};
+   eq(nseSymbol('MTARTECH'),'MTARTECH','holding both series keeps the exact match');
+   HELD=null;
+   eq(nseSymbol('MTARTECH'),'MTARTECH','no holdings file means no remapping');
+   HELD=save;}
+  eq(t2t('MTARTECH-BE'),true,'-BE is trade-to-trade');
+  eq(t2t('INDIGRID-IV'),false,'-IV is a normal series, not T2T');
+  eq(t2t('GRSE'),false,'plain symbol is not T2T');
   // ---- forwarded rebalance email ----
   const prior={A:10,B:20};
   eq(emailMultiplier([{sym:'A',q:30}],prior).bound,3,'sell 30 of 10 held => bound 3');
@@ -1009,6 +1027,21 @@ function dropKey(){
 // request. Kite validates the api_key only AFTER you log in, so a wrong key surfaces as a raw
 // "Invalid api_key" on Kite's own page with no clue which value was sent. This is that clue.
 const KITE_BASKET_URL='https://kite.zerodha.com/connect/basket';
+// NSE lists some counters in a second series under a SUFFIXED tradingsymbol, and those are different
+// instruments: MTARTECH-BE (Trade-to-Trade) is not MTARTECH (EQ), so an order for the bare name is
+// rejected. A sheet carries whatever name its author typed; a holdings file carries the authoritative
+// one. So when the sheet's bare symbol is not held but exactly one suffixed variant is, order that.
+// Real case: a friend's basket failed on MTARTECH because the sheet said MTARTECH and the position
+// was MTARTECH-BE. Only remap when there is exactly one candidate — never guess between two.
+function nseSymbol(s){
+  if(!HELD||HELD[s]>0) return s;
+  const v=Object.keys(HELD).filter(k=>HELD[k]>0&&k!==s&&k.split('-')[0]===s);
+  return v.length===1?v[0]:s;
+}
+// -BE / -BZ are Trade-to-Trade: delivery only, and under NSE surveillance. Kite makes you accept a
+// per-scrip consent before it will place these, and a basket cannot carry that consent — so the
+// order silently does not go through. Naming them is the only thing this page can usefully do.
+const t2t=s=>/-(BE|BZ)$/.test(s);
 function kitePayload(reb){
   const key=localStorage.getItem(KKEY);
   const rows=reb?REBAL:lines();
@@ -1020,7 +1053,7 @@ function kitePayload(reb){
   const buf=1+(parseFloat($('obuf')&&$('obuf').value)||2)/100;   // headroom over the sheet price
   const orders=rows.map(r=>{
     const side=r.side||'BUY';
-    const o={variety:'regular',exchange:'NSE',tradingsymbol:r.s,transaction_type:side,
+    const o={variety:'regular',exchange:'NSE',tradingsymbol:nseSymbol(r.s),transaction_type:side,
              product:'CNC',quantity:r.q,readonly:false,tag};
     if(mkt){ o.order_type='MARKET'; }
     // a limit BUY needs headroom ABOVE the price; a limit SELL needs it BELOW, or it never fills
@@ -1057,9 +1090,20 @@ function placeInKite(reb){
   document.body.appendChild(f); f.submit(); f.remove();
   window.__kiteSent={url:KITE_BASKET_URL,api_key:key,data:body};   // inspect in the console
   const sells=rows.filter(r=>r.side==='SELL').length;
+  const remapped=rows.map(r=>[r.s,nseSymbol(r.s)]).filter(([a,b])=>a!==b);
+  const gated=orders.map(o=>o.tradingsymbol).filter(t2t);
   say(`Opened Kite with ${rows.length} order(s) as ${mkt?'MARKET':'LIMIT'} · CNC, tagged
        “${tag}”${sells?`, including ${sells} SELL`:''}. Review each one — prices came from the sheet
-       and may be stale — then confirm there. Nothing is placed until you confirm.`,'ok');
+       and may be stale — then confirm there. Nothing is placed until you confirm.
+       ${remapped.length?`<br><br><b>Renamed to match what you hold:</b>
+         ${remapped.map(([a,b])=>`${a} → <b>${b}</b>`).join(', ')}. NSE lists these in a second
+         series, and an order for the bare name is rejected outright.`:''}
+       ${gated.length?`<br><br><b>${gated.join(', ')} may not place from a basket.</b>
+         Trade-to-Trade scrips need a per-scrip consent that Kite asks for once, and a basket cannot
+         carry it. If they do not appear, place them individually from Kite's own order window.`:''}
+       ${mkt?`<br><br><b>Market orders can be rejected on thin counters.</b> Kite's market protection
+         refuses a MARKET order that would fill too far from the last price — which is most likely on
+         exactly the illiquid small-caps in a basket like this. LIMIT is the safer choice here.`:''}`,'ok');
 }
 function copyOrders(reb){
   const rows=reb?REBAL:lines();
