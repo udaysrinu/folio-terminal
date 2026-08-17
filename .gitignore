@@ -25,6 +25,9 @@ __pycache__/
 node_modules/
 .playwright-mcp/
 *.png
+# ...but the README's screenshots are documentation, not junk. The blanket *.png above silently
+# excluded them, so every image in the README rendered broken on GitHub.
+!docs/img/*.png
 
 # keep the agent skill
 !.claude/
