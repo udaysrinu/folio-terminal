@@ -2022,20 +2022,44 @@ function sheetFromHoldings(rows){
   if(hi<0) throw new Error('need a symbol, a quantity and a price column');
   let t1=-1; { const low=(rows[hi]||[]).map(norm);
     for(const want of T1C){ const j=low.indexOf(want); if(j>-1){t1=j;break;} } }
-  const val={},px={};
+  const val={},px={},qty={};
   for(let r=hi+1;r<rows.length;r++){
     const sym=String(rows[r]?.[si]??'').trim().toUpperCase();
     const t1q=t1>-1?num(rows[r]?.[t1]):0;                 // unsettled shares count as held
     const q=num(rows[r]?.[qi])+(t1q>0?t1q:0), p=num(rows[r]?.[pi]);
     if(!sym||!(q>0)||!(p>0)) continue;
-    val[sym]=(val[sym]||0)+q*p; px[sym]=p;
+    val[sym]=(val[sym]||0)+q*p; px[sym]=p; qty[sym]=(qty[sym]||0)+q;
   }
   const syms=Object.keys(val);
   if(!syms.length) throw new Error('no rows with a symbol, quantity and price');
   const tot=syms.reduce((a,s)=>a+val[s],0);
+  // `shares` was being computed and then thrown away — only q*p was kept. Without it a sheet is
+  // crippled in ways that are all silent: a rebalance email cannot be applied to it (that path
+  // requires SHEET.shares), EXITED cannot be told from UNRELATED so exits are never detected, the
+  // holdings multiplier and snap-to-multiple never offer, and the natural amount cannot be found.
+  // The quantities are right here in the file, so keep them.
   return {label:'From my holdings',asof:new Date().toISOString().slice(0,10),
     weights:Object.fromEntries(syms.map(s=>[s,+(val[s]/tot*100).toFixed(2)])),
-    prices:px};
+    prices:px, shares:qty};
+}
+// A holdings export is the WHOLE account — every basket, plus anything bought outside one. It cannot
+// say which rows belong to a given basket, so building from it produces a cumulative sheet. When a
+// sheet is already loaded, its own symbol list is the filter that makes the result mean "this basket,
+// as I actually hold it now" instead of "everything I own".
+function scopeToBasket(sheet,keep){
+  // Match on the BASE symbol, so a sheet asking for MTARTECH finds a held MTARTECH-BE. NSE series
+  // suffixes mean the sheet's name and the tradeable name legitimately differ (see nseSymbol), and
+  // an exact match silently dropped the position from the basket it plainly belongs to. The held
+  // name is the one kept, because that is the instrument that actually exists.
+  const want={}; Object.keys(keep).forEach(s=>{ want[s.split('-')[0]]=1; });
+  const syms=Object.keys(sheet.weights).filter(s=>want[s.split('-')[0]]);
+  if(!syms.length) return null;
+  const tot=syms.reduce((a,s)=>a+sheet.shares[s]*sheet.prices[s],0);
+  if(!(tot>0)) return null;
+  return {label:sheet.label,asof:sheet.asof,
+    weights:Object.fromEntries(syms.map(s=>[s,+(sheet.shares[s]*sheet.prices[s]/tot*100).toFixed(2)])),
+    prices:Object.fromEntries(syms.map(s=>[s,sheet.prices[s]])),
+    shares:Object.fromEntries(syms.map(s=>[s,sheet.shares[s]]))};
 }
 function readImport(f){
   const fr=new FileReader(), csv=f.name.toLowerCase().endsWith('.csv');
@@ -2046,7 +2070,25 @@ function readImport(f){
         : XLSX.utils.sheet_to_json(
             (w=>w.Sheets[w.SheetNames[0]])(XLSX.read(new Uint8Array(e.target.result),{type:'array'})),
             {header:1,raw:true,defval:null});
-      showBuilt(sheetFromHoldings(rows),'iout','weights from current value'); say('');
+      const full=sheetFromHoldings(rows);
+      const n=Object.keys(full.weights).length;
+      // If a basket is already loaded, default to ITS stocks — a whole-account export otherwise
+      // silently produces a cumulative sheet of every position you own.
+      const keep=(SHEET&&SHEET.weights)?SHEET.weights:null;
+      const scoped=keep?scopeToBasket(full,keep):null;
+      window.__fullHoldingsSheet=full;
+      showBuilt(scoped||full,'iout',
+        scoped ? `${Object.keys(scoped.weights).length} of ${n} holdings — just “${SHEET.label}”`
+               : `all ${n} holdings — weights from current value`);
+      say(scoped
+        ? `That file held <b>${n}</b> positions across your whole account. Kept the
+           <b>${Object.keys(scoped.weights).length}</b> that are in “${SHEET.label}” and left the rest
+           out — a holdings export cannot say which basket a row belongs to, so without this the sheet
+           would be every stock you own.
+           <button onclick="showBuilt(window.__fullHoldingsSheet,'iout','all ${n} holdings — weights from current value');say('')">Use all ${n} instead</button>`
+        : `Built from all <b>${n}</b> positions in that file. A holdings export is the whole account,
+           so if you meant one basket, load its sheet first and re-import — this will then keep only
+           that basket's stocks.`,'ok');
     }catch(err){ say('Could not build from that file — '+err.message,'warn err'); } };
   csv?fr.readAsText(f):fr.readAsArrayBuffer(f);
 }
