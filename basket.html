@@ -33,6 +33,11 @@ background:linear-gradient(160deg,var(--panel),var(--bg2));cursor:pointer;transi
 .drop:hover,.drop.over{border-color:var(--em);background:rgba(21,90,120,.06)}
 .drop b{color:var(--em)}
 .dn{font-size:11.5px;color:var(--tx3);margin-top:7px;font-style:italic}
+/* drift printed under each quick-pick amount, so a cheaper basket reads as a trade not a saving */
+#quick button{display:inline-flex;flex-direction:column;align-items:center;gap:1px;line-height:1.25}
+.qpd{font-family:var(--num),ui-monospace,monospace;font-size:9.5px;letter-spacing:.02em;
+  color:var(--tx3);font-weight:400}
+#quick button:hover .qpd{color:var(--em)}
 textarea{width:100%;min-height:150px;max-height:70vh;overflow:auto;resize:vertical;background:var(--panel2);border:1px solid var(--hair2);
 color:var(--tx);border-radius:var(--radius);padding:11px;font-family:var(--num),ui-monospace,monospace;font-size:12.5px;line-height:1.5}
 input[type=number]{background:var(--panel2);border:1px solid var(--hair2);color:var(--tx);
@@ -777,10 +782,16 @@ function load(obj){
   $('out').classList.remove('hide');
   remember();
   setTimeout(()=>{fit($('pxin'));},0);
-  $('minhint').textContent = need.length ? need.length+' price(s) missing' : 'minimum ≈ '+M(mu);
-  $('quick').innerHTML = mu>0
+  const qp=(mu>0&&!need.length)?quickPicks(mu):[];
+  // Name the cheapest EXACT amount next to the minimum. The minimum is only the cheapest that
+  // works — on a real sheet it saved 13% of the money and cost 100× the drift, so presenting it
+  // alone as the headline reads as a recommendation when it is a lower bound.
+  const exact=qp.find(o=>o.drift<0.01);
+  $('minhint').innerHTML = need.length ? need.length+' price(s) missing'
+    : 'minimum ≈ '+M(mu)+(exact&&exact.amt!==mu?` · exact at <b>${M(exact.amt)}</b>`:'');
+  $('quick').innerHTML = qp.length
     ? '<span class="mono" style="font-size:11px;color:var(--tx3)">QUICK PICK:</span>' +
-      [1,1.5,2,3,5,10].map(k=>`<button onclick="setAmt(${Math.ceil(mu*k)})">${M(mu*k)}</button>`).join('')
+      qp.map(o=>`<button onclick="setAmt(${o.amt})" title="worst holding lands ${o.drift.toFixed(3)}pp from its target">${M(o.amt)}<span class="qpd">${o.drift<0.01?'exact':'±'+o.drift.toFixed(2)+'pp'}</span></button>`).join('')
     : '';
   if(!$('amt').value) $('amt').value=Math.ceil(mu/1000)*1000;
   showUnits();
@@ -823,6 +834,46 @@ function driftAt(a){
 //
 // The old version scanned +/-6%, which is why it never found the 12.5% jump that took a real
 // basket from 0.751pp to 0.004pp.
+// The value a sheet's own share counts add up to. At that figure the integers reproduce themselves,
+// so drift is ~0 by construction. Null when the sheet carries no share counts.
+function naturalAmount(sheet){
+  if(!sheet||!sheet.shares) return null;
+  const v=Object.keys(sheet.shares).reduce((a,k)=>a+sheet.shares[k]*(sheet.prices[k]||0),0);
+  return v>0?Math.round(v):null;
+}
+// Quick picks were [1, 1.5, 2, 3, 5, 10] × the minimum. Measured on two real sheets that is close to
+// arbitrary: drift is a SAWTOOTH in the amount, so fixed multiples land wherever rounding falls
+// (0.11–1.78pp), and on a real 25-stock sheet the 1.5× button sat near a local PEAK while an amount
+// only 13% above the minimum drifted 100× less (0.005pp vs 0.562pp). Offer the valleys instead — the
+// best amount inside each budget band — and print each one's drift on the button, so choosing a
+// cheaper basket is visibly a trade rather than a free saving.
+function quickPicks(floor){
+  const step=Math.max(100,Math.round(floor/1200/100)*100);
+  const out=[];
+  for(const [lo,hi] of [[1.0,1.3],[1.3,1.8],[1.8,2.6],[2.6,4.0],[4.0,6.0]]){
+    let best=null;
+    for(let a=Math.ceil(floor*lo/step)*step; a<=floor*hi; a+=step){
+      const d=driftAt(a);
+      if(d===null) continue;
+      if(!best||d<best.drift-1e-9){ best={amt:a,drift:d}; if(d<0.01) break; }
+    }
+    if(best) out.push(best);
+  }
+  const nat=naturalAmount(SHEET);            // always offer the exact amount, even outside the bands
+  if(nat){ const d=driftAt(nat); if(d!==null) out.push({amt:nat,drift:d,nat:true}); }
+  out.sort((a,b)=>a.amt-b.amt);
+  // Collapse near-duplicates: ₹1,19,000 and ₹1,19,967 are the same decision to a human, and a band
+  // scan lands next to the natural amount often. Keep the better of the two, preferring the natural
+  // amount on a tie because that is the figure whoever shared the sheet actually holds.
+  const keep=[];
+  for(const o of out){
+    const last=keep[keep.length-1];
+    if(last && Math.abs(o.amt-last.amt)/last.amt<=0.02){
+      if(o.drift<last.drift-1e-9 || (Math.abs(o.drift-last.drift)<=1e-9 && o.nat)) keep[keep.length-1]=o;
+    } else keep.push(o);
+  }
+  return keep.slice(0,6);
+}
 function bestAmounts(amt){
   const floor=minUnit(SHEET.weights,SHEET.prices);
   const scan=(lo,hi,step)=>{
@@ -838,11 +889,8 @@ function bestAmounts(amt){
   // A sheet built from real share counts has an exact amount: the value it came from.
   // At that figure the integers reproduce themselves and drift is zero by construction.
   let natural=null;
-  if(SHEET.shares){
-    const v=Object.keys(SHEET.shares)
-      .reduce((a,k)=>a+SHEET.shares[k]*(SHEET.prices[k]||0),0);
-    if(v>0){ const d=driftAt(Math.round(v)); if(d!==null) natural={amt:Math.round(v),drift:d}; }
-  }
+  const nv=naturalAmount(SHEET);
+  if(nv){ const d=driftAt(nv); if(d!==null) natural={amt:nv,drift:d}; }
   return { here:driftAt(amt), floor, natural,
            tight:scan(amt*0.98, amt*1.02, 100),      // a nudge you would not notice
            wide :scan(amt*0.72, amt*1.40, 500) };    // if you can flex the amount
