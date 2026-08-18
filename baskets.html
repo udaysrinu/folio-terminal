@@ -1,0 +1,278 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Baskets — sharecase</title>
+<style>
+@font-face{font-family:'IBM Plex Sans';src:url(fonts/plex-sans-400.woff2)format('woff2');font-weight:400;font-display:swap}
+@font-face{font-family:'IBM Plex Sans';src:url(fonts/plex-sans-600.woff2)format('woff2');font-weight:600;font-display:swap}
+@font-face{font-family:'IBM Plex Mono';src:url(fonts/plex-mono-400.woff2)format('woff2');font-weight:400;font-display:swap}
+@font-face{font-family:'IBM Plex Mono';src:url(fonts/plex-mono-500.woff2)format('woff2');font-weight:500;font-display:swap}
+@font-face{font-family:'Barlow Semi Condensed';src:url(fonts/barlow-sc-600.woff2)format('woff2');font-weight:600;font-display:swap}
+:root{--bg:#E9EAE3;--bg2:#F3F4EE;--panel:#FCFCF8;--panel2:#F3F4EE;--hair:#BCC3B8;--hair2:#A6AFA2;
+--tx:#18211D;--tx2:#46534C;--tx3:#5C6A61;--em:#155A78;--gain:#0B5B3A;--ox:#A52A22;--gold:#7A4E00;
+--display:'Barlow Semi Condensed';--ui:'IBM Plex Sans';--num:'IBM Plex Mono';
+--radius:10px;--radius-sm:6px;--radius-md:12px;--radius-lg:16px;--radius-full:999px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--tx);font-family:var(--ui),system-ui,sans-serif;font-size:15px;
+line-height:1.5;padding:0 0 70px;background-image:linear-gradient(180deg,rgba(0,0,0,.05),transparent 240px)}
+.wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+.mono{font-family:var(--num),ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.pos{color:var(--gain)}.neg{color:var(--ox)}
+h1{font-family:var(--display),sans-serif;font-weight:600;font-size:29px;letter-spacing:-.02em}
+.sub{font-family:var(--num);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--tx2);margin-top:5px}
+h2{font-family:var(--num);font-size:11.5px;font-weight:600;letter-spacing:.13em;text-transform:uppercase;
+color:var(--tx2);display:flex;align-items:center;gap:10px;margin:30px 0 13px}
+h2::after{content:'';flex:1;height:1px;background:var(--hair)}
+.panel{background:var(--panel);border:1px solid var(--hair);border-radius:var(--radius-lg);padding:20px 23px;
+box-shadow:0 1px 2px rgba(0,0,0,.04),0 10px 26px -12px rgba(0,0,0,.10);margin-top:14px}
+button{font-size:12.5px;letter-spacing:.04em;padding:10px 17px;border-radius:var(--radius);
+border:1px solid var(--hair2);background:var(--panel2);color:var(--tx);cursor:pointer}
+button:hover{border-color:var(--em);color:var(--em)}
+button.pri{background:var(--em);border-color:var(--em);color:#fff;font-weight:700}
+.row{display:flex;gap:11px;align-items:center;flex-wrap:wrap}
+.note{font-size:12.5px;color:var(--tx2);font-style:italic;margin-top:9px}
+.warn{border:1px solid var(--gold);background:#F7EEDC;color:var(--gold);border-radius:var(--radius);
+padding:13px 16px;font-size:13px;margin-top:13px}
+.warn b{color:var(--gold)}
+/* the smallcase-style performance header */
+.perf{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0;
+border-bottom:1px solid var(--hair);padding-bottom:16px}
+.perf .c{padding-right:18px}
+.perf .k{font-family:var(--num);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--tx2)}
+.perf .v{font-family:var(--display),sans-serif;font-weight:600;font-size:26px;margin-top:5px;line-height:1.1}
+.perf .s{font-size:12px;color:var(--tx2);margin-top:3px}
+.perf2{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0;padding-top:15px}
+.perf2 .v{font-size:19px}
+.bhead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.bname{font-family:var(--display),sans-serif;font-weight:600;font-size:22px;letter-spacing:-.01em;
+color:var(--tx);background:transparent;border:none;border-bottom:1px dashed var(--hair2);
+padding:1px 2px;max-width:26em;width:auto;min-width:9em}
+.bname:hover{border-bottom-color:var(--em)}
+.bname:focus{outline:none;border-bottom:1px solid var(--em);background:var(--panel2)}
+.tag{font-family:var(--num);font-size:10px;letter-spacing:.08em;text-transform:uppercase;
+padding:3px 9px;border-radius:var(--radius-full);border:1px solid var(--em);color:var(--em)}
+.tag.none{border-color:var(--hair2);color:var(--tx3)}
+table{width:100%;border-collapse:collapse;margin-top:12px;font-size:13.5px}
+th{font-family:var(--num);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--tx3);
+font-weight:600;text-align:left;padding:0 10px 8px 0;border-bottom:1px solid var(--hair2)}
+th.r,td.r{text-align:right}
+td{padding:8px 10px 8px 0;border-bottom:1px solid var(--hair)}
+tr:last-child td{border-bottom:none}
+td.sym{font-family:var(--num);font-weight:500}
+.dual{background:#F7EEDC;color:var(--gold);font-family:var(--num);font-size:9px;padding:1px 5px;
+border-radius:var(--radius-xs,3px);margin-left:5px;letter-spacing:.05em}
+.wbar{height:5px;background:var(--panel2);border-radius:3px;overflow:hidden;margin-top:4px}
+.wbar i{display:block;height:100%;background:var(--em)}
+.ftbar{width:100%;border-bottom:1px solid var(--hair);background:var(--panel);margin-bottom:26px}
+.ftnav{max-width:1180px;margin:0 auto;display:flex;gap:2px;align-items:center;flex-wrap:nowrap;
+overflow-x:auto;padding:9px 20px}
+.ftnav a{font-size:12.5px;color:var(--tx2);text-decoration:none;padding:8px 13px;border-radius:var(--radius);
+white-space:nowrap;line-height:1}
+.ftnav a:hover{background:var(--panel2);color:var(--tx)}
+.ftnav a.on{background:var(--em);color:#fff;font-weight:600}
+.ftnav a.brand{font-family:var(--display),sans-serif;font-weight:600;font-size:13.5px;color:var(--tx);margin-right:8px;padding-left:0}
+:focus-visible{outline:2px solid var(--em);outline-offset:2px;border-radius:var(--radius)}
+.drop{display:block;border:1.5px dashed var(--hair2);border-radius:var(--radius-md);padding:24px 22px;
+text-align:center;background:linear-gradient(160deg,var(--panel),var(--bg2));cursor:pointer}
+.drop:hover{border-color:var(--em)}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.foot{font-size:11px;color:var(--tx3);text-align:center;margin-top:44px;line-height:1.8}
+</style></head><body>
+<div class="ftbar"><nav class="ftnav" aria-label="Main">
+<a href="index.html" class="brand">sharecase</a>
+<a href="basket.html">Baskets</a>
+<a href="dashboard.html">Dashboard</a>
+<a href="baskets.html" class="on">Tracker</a>
+<a href="method.html">Method</a></nav></div>
+
+<div class="wrap">
+<h1>Basket tracker</h1>
+<div class="sub">Per-basket performance, grouped by the tag its orders were placed under</div>
+
+<div class="panel">
+  <p style="font-size:14px">Drop any JSON that carries <b>order tags</b> — a Kite orders export, or a
+  saved batch map. Orders are grouped by their <b>tag</b>, which is the only basket marker Kite
+  records, and each group's name is yours to type. Prices come live; nothing is uploaded.</p>
+  <p class="note" style="font-style:normal">Kite sets a tag when an order is placed and never after,
+  and holdings carry no tag at all — so snapshot your orders on the day you place them, or the
+  grouping is gone.</p>
+  <label class="drop" id="drop" style="margin-top:14px">
+    <div style="font-family:var(--num);font-size:13px">Drop a <b>tagged orders</b> or <b>batch map</b> JSON</div>
+    <div class="note" style="font-style:normal">or click to browse · stays in this browser</div>
+    <input type="file" id="fin" accept=".json,application/json" class="sr">
+  </label>
+  <div id="msg"></div>
+</div>
+
+<div id="out"></div>
+
+<div class="foot">Prices from this app's own <span class="mono">/api/price</span>. Unrealised figures only —
+realised returns and XIRR need a tradebook; dividends are not exposed by Kite's holdings or orders API.
+<br>Not investment advice.</div>
+</div>
+
+<script>
+const $=id=>document.getElementById(id);
+const M=v=>'₹'+Math.round(v).toLocaleString('en-IN');
+const cls=v=>v>=0?'pos':'neg';
+const sgn=v=>v>=0?'+':'−';
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+const say=(h,c='warn')=>$('msg').innerHTML=h?`<div class="${c}">${h}</div>`:'';
+
+let GROUPS=null, PX={};
+
+// Names live here, keyed by tag, so they survive reloads and are the user's to choose. The tag is the
+// grouping key because that is the only thing Kite actually records against an order.
+const NAMEKEY='sc_basket_names';
+const names=()=>{ try{ return JSON.parse(localStorage.getItem(NAMEKEY)||'{}'); }catch(e){ return {}; } };
+function setName(tag,v){ const n=names(); if(v&&v.trim()) n[tag]=v.trim(); else delete n[tag];
+  try{ localStorage.setItem(NAMEKEY,JSON.stringify(n)); }catch(e){} }
+const nameFor=tag=>names()[tag] || (tag===UNTAGGED?'Untagged orders':tag);
+const UNTAGGED='__untagged__';
+
+// One request for every symbol across every basket. The endpoint reads Yahoo server-side, which a
+// browser cannot do at all — see method.html. No key, so there is nothing to set up.
+async function prices(syms){
+  const r=await fetch('/api/price?symbols='+encodeURIComponent(syms.join(',')));
+  let j; try{ j=await r.json(); }
+  catch(e){
+    // Almost always a plain static server: /api/price does not exist, so a 404 HTML page came back.
+    if(r.status===404) throw new Error('no price service here — run `npx vercel dev` rather than a '
+      +'static server, or read the cost-basis view below');
+    throw new Error('the price endpoint did not return JSON (HTTP '+r.status+')');
+  }
+  if(!r.ok) throw new Error(j&&j.error||('price endpoint returned HTTP '+r.status));
+  return j;
+}
+
+// Accepts whatever you have, and groups by TAG rather than by any file's own structure:
+//   1. an array of Kite orders            [{tradingsymbol, filled_quantity, average_price, tag, status}]
+//   2. an array of holdings-ish rows      [{s|tradingsymbol, q|quantity, avg|average_price, tag}]
+//   3. a batches map                      {batches:{KEY:{tag,label,holdings:{SYM:{q,avg}}}}}
+// Everything collapses to: tag -> position per symbol, quantity-weighted average cost.
+function normalise(j){
+  const rows=[];
+  const push=(tag,s,q,avg,label)=>{ if(!s||!(q>0)) return;
+    rows.push({tag:tag||UNTAGGED, s:String(s).toUpperCase(), q:+q, avg:+avg||0, label}); };
+
+  if(Array.isArray(j)){
+    j.forEach(o=>{
+      if(o.status && String(o.status).toUpperCase()!=='COMPLETE') return;   // ignore rejected/cancelled
+      const q=o.filled_quantity!=null?o.filled_quantity:(o.quantity!=null?o.quantity:o.q);
+      const avg=o.average_price!=null?o.average_price:(o.avg!=null?o.avg:o.price);
+      const side=String(o.transaction_type||'BUY').toUpperCase();
+      push(o.tag||(o.tags&&o.tags[0]), o.tradingsymbol||o.s, side==='SELL'?-q:q, avg);
+    });
+  } else if(j&&j.batches){
+    Object.entries(j.batches).forEach(([key,b])=>{
+      Object.entries(b.holdings||{}).forEach(([s,h])=>push(b.tag||key, s, h.q, h.avg, b.label));
+    });
+  } else { throw new Error('expected an array of orders, or an object with a "batches" key'); }
+  if(!rows.length) throw new Error('nothing usable found — no filled rows with a symbol and quantity');
+
+  // merge per tag+symbol, quantity-weighting the cost so repeat buys average correctly
+  const g={};
+  rows.forEach(r=>{
+    const G=g[r.tag]||(g[r.tag]={tag:r.tag,label:r.label,pos:{}});
+    if(r.label&&!G.label) G.label=r.label;
+    const p=G.pos[r.s]||(G.pos[r.s]={q:0,cost:0});
+    p.q+=r.q; p.cost+=r.q*r.avg;
+  });
+  Object.values(g).forEach(G=>{
+    Object.entries(G.pos).forEach(([s,p])=>{ if(p.q<=0) delete G.pos[s]; else p.avg=p.cost/p.q; });
+  });
+  return g;
+}
+
+function render(){
+  const seen={};
+  Object.values(GROUPS).forEach(G=>Object.keys(G.pos).forEach(s=>seen[s]=(seen[s]||0)+1));
+  const dual=Object.keys(seen).filter(s=>seen[s]>1);
+
+  let html='', gVal=0, gCost=0;
+  for(const [tag,G] of Object.entries(GROUPS)){
+    const rows=Object.entries(G.pos).map(([s,p])=>{
+      const px=PX[s];
+      return {s,q:p.q,avg:p.avg,px,cost:p.q*p.avg,val:px?p.q*px:null};
+    });
+    const priced=rows.filter(r=>r.val!=null);
+    const val=priced.reduce((a,r)=>a+r.val,0), cost=priced.reduce((a,r)=>a+r.cost,0);
+    const unreal=val-cost; gVal+=val; gCost+=cost;
+    const unpriced=rows.filter(r=>r.val==null).map(r=>r.s);
+    rows.sort((a,b)=>(b.val||0)-(a.val||0));
+
+    html+=`<div class="panel">
+      <div class="bhead">
+        <input class="bname" value="${esc(nameFor(tag))}" aria-label="Name for this basket"
+          data-tag="${esc(tag)}" spellcheck="false">
+        <span class="tag ${tag===UNTAGGED?'none':''}">${tag===UNTAGGED?'no tag':esc(tag)}</span>
+        <span class="note" style="margin:0;font-style:normal">${rows.length} stocks</span>
+      </div>
+      <div class="perf" style="margin-top:14px">
+        <div class="c"><div class="k">Current value</div><div class="v mono">${M(val)}</div>
+          <div class="s">${priced.length} of ${rows.length} priced</div></div>
+        <div class="c"><div class="k">Invested</div><div class="v mono">${M(cost)}</div>
+          <div class="s">cost of what is held</div></div>
+        <div class="c"><div class="k">Unrealised</div>
+          <div class="v mono ${cls(unreal)}">${sgn(unreal)}${M(Math.abs(unreal))}</div>
+          <div class="s ${cls(unreal)}">${cost?sgn(unreal)+Math.abs(unreal/cost*100).toFixed(2)+'%':'—'}</div></div>
+        <div class="c"><div class="k">Realised</div><div class="v mono" style="color:var(--tx3)">—</div>
+          <div class="s">needs sell history</div></div>
+      </div>
+      ${unpriced.length?`<div class="warn">No live price for <b>${unpriced.map(esc).join(', ')}</b> —
+        left out of every figure above rather than counted at cost.</div>`:''}
+      <table><thead><tr><th>Stock</th><th class="r">Shares</th><th class="r">Avg buy</th>
+        <th class="r">Price now</th><th class="r">Value</th><th class="r">Return</th>
+        <th class="r">Weight</th></tr></thead><tbody>
+      ${rows.map(r=>{
+        const ret=r.val!=null?(r.px/r.avg-1)*100:null, w=r.val!=null&&val?r.val/val*100:0;
+        return `<tr><td class="sym">${esc(r.s)}${dual.includes(r.s)?'<span class="dual">in 2+ baskets</span>':''}</td>
+          <td class="r mono">${r.q}</td><td class="r mono">${r.avg.toFixed(2)}</td>
+          <td class="r mono">${r.px!=null?r.px.toFixed(2):'—'}</td>
+          <td class="r mono">${r.val!=null?M(r.val):'—'}</td>
+          <td class="r mono ${ret!=null?cls(ret):''}">${ret!=null?sgn(ret)+Math.abs(ret).toFixed(2)+'%':'—'}</td>
+          <td class="r mono">${r.val!=null?w.toFixed(2)+'%':'—'}
+            ${r.val!=null?`<div class="wbar"><i style="width:${Math.min(100,w*3).toFixed(1)}%"></i></div>`:''}</td>
+        </tr>`;}).join('')}
+      </tbody></table></div>`;
+  }
+
+  const gUn=gVal-gCost;
+  $('out').innerHTML=`<h2>All baskets</h2><div class="panel">
+    <div class="perf">
+      <div class="c"><div class="k">Total value</div><div class="v mono">${M(gVal)}</div>
+        <div class="s">${Object.keys(GROUPS).length} baskets</div></div>
+      <div class="c"><div class="k">Total invested</div><div class="v mono">${M(gCost)}</div></div>
+      <div class="c"><div class="k">Unrealised</div>
+        <div class="v mono ${cls(gUn)}">${sgn(gUn)}${M(Math.abs(gUn))}</div>
+        <div class="s ${cls(gUn)}">${gCost?sgn(gUn)+Math.abs(gUn/gCost*100).toFixed(2)+'%':'—'}</div></div>
+    </div>
+    ${dual.length?`<div class="warn"><b>${dual.length} stock${dual.length>1?'s appear':' appears'} in more
+      than one basket:</b> ${dual.map(esc).join(', ')}. Weights are computed inside each basket, so
+      these are counted in both — correct per basket, but your real exposure to them is the sum, and
+      rebalancing one basket cannot see the other half.</div>`:''}
+    </div><h2>By basket</h2>`+html;
+
+  // names are editable and persist per tag
+  document.querySelectorAll('.bname').forEach(el=>{
+    el.onchange=()=>{ setName(el.dataset.tag, el.value); };
+  });
+}
+
+async function load(text){
+  let j; try{ j=JSON.parse(text); }catch(e){ say('That is not valid JSON — '+esc(e.message)); return; }
+  try{ GROUPS=normalise(j); }catch(e){ say(esc(e.message)); return; }
+  const syms=[...new Set(Object.values(GROUPS).flatMap(G=>Object.keys(G.pos)))];
+  say(`Grouped into ${Object.keys(GROUPS).length} baskets by tag · fetching ${syms.length} prices…`);
+  try{
+    const r=await prices(syms); PX=r.prices||{};
+    say(`${Object.keys(PX).length} of ${syms.length} priced${r.missing&&r.missing.length?' · no price for '+r.missing.join(', '):''}. Rename any basket by typing over its title.`);
+  }catch(e){ PX={}; say('No live prices — '+esc(e.message)+'. Showing cost basis only.'); }
+  render();
+}
+
+const drop=$('drop'), fin=$('fin');
+fin.onchange=e=>{ const f=e.target.files[0]; if(!f) return;
+  const fr=new FileReader(); fr.onload=()=>load(fr.result); fr.readAsText(f); };
+drop.ondragover=e=>{e.preventDefault();};
+drop.ondrop=e=>{e.preventDefault(); const f=e.dataTransfer.files[0]; if(!f) return;
+  const fr=new FileReader(); fr.onload=()=>load(fr.result); fr.readAsText(f); };
+</script></body></html>
