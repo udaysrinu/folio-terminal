@@ -50,6 +50,51 @@ padding:1px 2px;max-width:26em;width:auto;min-width:9em}
 .tag{font-family:var(--num);font-size:10px;letter-spacing:.08em;text-transform:uppercase;
 padding:3px 9px;border-radius:var(--radius-full);border:1px solid var(--em);color:var(--em)}
 .tag.none{border-color:var(--hair2);color:var(--tx3)}
+/* An internal tag is ours, not the broker's. It must not look like a recorded fact. */
+.tag.int{border-style:dashed;border-color:var(--hair2);color:var(--tx3)}
+.tag.int b{font-weight:400;opacity:.75}
+/* the platform's own numbers, shown beside ours because they will never match */
+.scbox{border:1px solid var(--em);background:rgba(21,90,120,.05);border-radius:var(--radius);
+padding:12px 15px;font-size:12.5px;color:var(--tx2);margin-top:13px;line-height:1.6}
+.scbox b{color:var(--tx)}
+.saved{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:12.5px;color:var(--tx2);
+border:1px dashed var(--hair2);border-radius:var(--radius);padding:9px 13px;margin-top:11px}
+.saved b{color:var(--tx)}
+/* a pending corporate action: informative, not an error - the money is real, just not credited yet */
+.ca{border:1px solid var(--em);background:rgba(21,90,120,.06);border-radius:var(--radius);
+padding:12px 15px;font-size:12.5px;color:var(--tx2);margin-top:13px;line-height:1.6}
+.ca b{color:var(--tx)}
+/* collapsible basket. summary is the one-line ledger row; the body is everything else. */
+details.bk{padding:0}
+details.bk>summary::-webkit-details-marker{display:none}
+details.bk>summary::marker{content:''}
+.bsum{display:flex;align-items:center;gap:12px;flex-wrap:wrap;cursor:pointer;list-style:none;
+padding:16px 23px;border-radius:var(--radius-lg)}
+.bsum:hover{background:var(--panel2)}
+details.bk[open]>.bsum{border-bottom:1px solid var(--hair);border-radius:var(--radius-lg) var(--radius-lg) 0 0}
+details.bk>*:not(summary){padding-left:23px;padding-right:23px}
+details.bk>table{width:calc(100% - 46px);margin-left:23px;margin-right:23px}
+details.bk>*:last-child{padding-bottom:20px}
+.chev{flex:none;width:8px;height:8px;border-right:1.8px solid var(--tx3);border-bottom:1.8px solid var(--tx3);
+transform:rotate(-45deg);transition:transform 170ms cubic-bezier(.22,.61,.36,1)}
+details.bk[open] .chev{transform:rotate(45deg)}
+.btitle{font-family:var(--display),sans-serif;font-weight:600;font-size:19px;letter-spacing:-.01em;
+color:var(--tx)}
+.rename{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:15px}
+.rename label{font-family:var(--num);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+color:var(--tx2)}
+.rename input{font-family:var(--ui),sans-serif;font-size:14px;color:var(--tx);background:var(--panel2);
+border:1px solid var(--hair2);border-radius:var(--radius-sm);padding:6px 10px;min-width:15em}
+.rename input:focus{outline:none;border-color:var(--em);box-shadow:0 0 0 3px rgba(21,90,120,.16)}
+.bsum .bn{color:var(--tx3)}
+.bfig{margin-left:auto;font-size:16px;font-weight:500}
+.bpct{font-size:14px;font-weight:600;min-width:5.2em;text-align:right}
+.bflag{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;
+border-radius:50%;background:var(--em);color:#fff;font-family:var(--num);font-size:11px;font-weight:700}
+.bflag.warnflag{background:var(--gold)}
+h2 button.sm{margin-left:0}
+@media(max-width:620px){.bfig{margin-left:0}.bsum{gap:8px}}
+button.sm{min-height:28px;padding:4px 11px;font-size:11.5px;margin-left:auto}
 table{width:100%;border-collapse:collapse;margin-top:12px;font-size:13.5px}
 th{font-family:var(--num);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--tx3);
 font-weight:600;text-align:left;padding:0 10px 8px 0;border-bottom:1px solid var(--hair2)}
@@ -65,7 +110,9 @@ border-radius:var(--radius-xs,3px);margin-left:5px;letter-spacing:.05em}
 .ftnav{max-width:1180px;margin:0 auto;display:flex;gap:2px;align-items:center;flex-wrap:nowrap;
 overflow-x:auto;padding:9px 20px}
 .ftnav a{font-size:12.5px;color:var(--tx2);text-decoration:none;padding:8px 13px;border-radius:var(--radius);
-white-space:nowrap;line-height:1}
+white-space:nowrap;line-height:1;display:inline-flex;align-items:center;gap:6px;min-height:34px}
+.ftnav svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.9;flex:none}
+.ftnav::-webkit-scrollbar{display:none}
 .ftnav a:hover{background:var(--panel2);color:var(--tx)}
 .ftnav a.on{background:var(--em);color:#fff;font-weight:600}
 .ftnav a.brand{font-family:var(--display),sans-serif;font-weight:600;font-size:13.5px;color:var(--tx);margin-right:8px;padding-left:0}
@@ -76,12 +123,16 @@ text-align:center;background:linear-gradient(160deg,var(--panel),var(--bg2));cur
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .foot{font-size:11px;color:var(--tx3);text-align:center;margin-top:44px;line-height:1.8}
 </style></head><body>
+<!-- Same seven links, same order, same icons as every other page. This page had five, so the bar
+     visibly reshaped the moment you navigated to the Tracker. -->
 <div class="ftbar"><nav class="ftnav" aria-label="Main">
 <a href="index.html" class="brand">sharecase</a>
-<a href="basket.html">Baskets</a>
-<a href="dashboard.html">Dashboard</a>
-<a href="baskets.html" class="on">Tracker</a>
-<a href="method.html">Method</a></nav></div>
+<a href="basket.html"><svg viewBox="0 0 24 24"><path d="M3 7h18l-1.6 11.2A2 2 0 0 1 17.4 20H6.6a2 2 0 0 1-2-1.8L3 7Z"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/></svg>Baskets</a>
+<a href="dashboard.html"><svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>Dashboard</a>
+<a href="onboarding.html"><svg viewBox="0 0 24 24"><path d="M13 2 4 14h6l-1 8 9-12h-6l1-8Z"/></svg>One-click setup</a>
+<a href="friends.html"><svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h13v18H6a2 2 0 0 1-2-2V5Z"/><path d="M9 3v18"/></svg>Guide</a>
+<a href="baskets.html" class="on"><svg viewBox="0 0 24 24"><path d="M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7v7h-7z"/></svg>Tracker</a>
+<a href="method.html"><svg viewBox="0 0 24 24"><path d="M12 3v18M3 12h18"/><circle cx="12" cy="12" r="9"/></svg>Method</a></nav></div>
 
 <div class="wrap">
 <h1>Basket tracker</h1>
@@ -100,6 +151,7 @@ text-align:center;background:linear-gradient(160deg,var(--panel),var(--bg2));cur
     <input type="file" id="fin" accept=".json,application/json" class="sr">
   </label>
   <div id="msg"></div>
+  <div id="saved"></div>
 </div>
 
 <div id="out"></div>
@@ -125,12 +177,57 @@ const NAMEKEY='sc_basket_names';
 const names=()=>{ try{ return JSON.parse(localStorage.getItem(NAMEKEY)||'{}'); }catch(e){ return {}; } };
 function setName(tag,v){ const n=names(); if(v&&v.trim()) n[tag]=v.trim(); else delete n[tag];
   try{ localStorage.setItem(NAMEKEY,JSON.stringify(n)); }catch(e){} }
-const nameFor=tag=>names()[tag] || (tag===UNTAGGED?'Untagged orders':tag);
+const nameFor=(tag,label)=>names()[tag] || label
+  || (tag===UNTAGGED?'Untagged orders':tag);
+
+// The imported file is kept in THIS BROWSER so the page is useful on a plain visit instead of
+// demanding the same JSON every time. It is your own position data: it never leaves the device,
+// there is no server to send it to, and "Forget" below removes it. Stored as the raw text so a
+// future change to normalise() re-reads the original rather than a stale parse of it.
+const DATAKEY='sc_basket_data';
+const saveData=text=>{ try{ localStorage.setItem(DATAKEY,JSON.stringify(
+  {text, at:new Date().toISOString()})); }catch(e){} };   // quota: a big map can exceed 5 MB
+const loadSaved=()=>{ try{ return JSON.parse(localStorage.getItem(DATAKEY)||'null'); }
+  catch(e){ return null; } };
+function forget(){ try{ localStorage.removeItem(DATAKEY); }catch(e){}
+  GROUPS=null; PX={}; $('out').innerHTML=''; $('saved').innerHTML='';
+  say('Forgotten. Drop a file to start again.','warn'); }
+const ago=iso=>{ const m=Math.round((Date.now()-new Date(iso))/60000);
+  if(m<1) return 'just now'; if(m<60) return m+' min ago';
+  const h=Math.round(m/60); if(h<24) return h+(h===1?' hour ago':' hours ago');
+  const d=Math.round(h/24); return d+(d===1?' day ago':' days ago'); };
+// Which baskets are expanded, remembered per tag. Collapsed by default so five baskets fit on one
+// screen; 72 holdings across them is a wall of table otherwise.
+const OPENKEY='sc_basket_open';
+const opens=()=>{ try{ return JSON.parse(localStorage.getItem(OPENKEY)||'{}'); }catch(e){ return {}; } };
+function setOpen(tag,v){ const o=opens(); if(v) o[tag]=1; else delete o[tag];
+  try{ localStorage.setItem(OPENKEY,JSON.stringify(o)); }catch(e){} }
+function allBaskets(v){ document.querySelectorAll('details.bk').forEach(d=>{
+  d.open=v; setOpen(d.dataset.tag,v); }); }
+
+function stamp(at){ $('saved').innerHTML=`<div class="saved">Showing the file you imported
+  <b>${esc(ago(at))}</b>. Held in this browser only — prices are refetched live on every visit.
+  <button class="sm" onclick="forget()">Forget this data</button></div>`; }
 const UNTAGGED='__untagged__';
 
 // One request for every symbol across every basket. The endpoint reads Yahoo server-side, which a
 // browser cannot do at all — see method.html. No key, so there is nothing to set up.
+// A whole portfolio holds more symbols than the endpoint accepts in one call: 65 against its cap of
+// 60 returned HTTP 400, which blanked EVERY figure on this page while the local test double — which
+// had no cap — showed all 65 priced. Chunking removes the cliff and stops the page depending on
+// whatever the server's cap happens to be.
+const PX_CHUNK=40;
 async function prices(syms){
+  const out={prices:{},missing:[]};
+  for(let i=0;i<syms.length;i+=PX_CHUNK){
+    const j=await priceChunk(syms.slice(i,i+PX_CHUNK));
+    Object.assign(out.prices,j.prices||{});
+    out.missing.push(...(j.missing||[]));
+  }
+  return out;
+}
+
+async function priceChunk(syms){
   const r=await fetch('/api/price?symbols='+encodeURIComponent(syms.join(',')));
   let j; try{ j=await r.json(); }
   catch(e){
@@ -149,9 +246,16 @@ async function prices(syms){
 //   3. a batches map                      {batches:{KEY:{tag,label,holdings:{SYM:{q,avg}}}}}
 // Everything collapses to: tag -> position per symbol, quantity-weighted average cost.
 function normalise(j){
-  const rows=[];
-  const push=(tag,s,q,avg,label)=>{ if(!s||!(q>0)) return;
-    rows.push({tag:tag||UNTAGGED, s:String(s).toUpperCase(), q:+q, avg:+avg||0, label}); };
+  const rows=[], META={};   // META: tag -> the batch, so basket-level extras survive the flattening
+  // src: 'kite' when the broker recorded the tag against the order, 'internal' when it is a label
+  // we assigned ourselves. Baskets bought before we started tagging can only ever be 'internal',
+  // and the UI has to say so — otherwise the chip reads as something get_orders would return.
+  // `!q`, not `!(q>0)`: a SELL arrives negated by design (line below) and must be NETTED, not
+  // dropped. Bailing on q<=0 silently discarded every sell, so a rebalance export - which is mostly
+  // sells - rendered a portfolio that no longer exists, with no warning on the page.
+  const push=(tag,s,q,avg,label,src,ca)=>{ if(!s||!q) return;
+    rows.push({tag:tag||UNTAGGED, s:String(s).toUpperCase(), q:+q, avg:+avg||0, label,
+               src:src||'kite', ca}); };
 
   if(Array.isArray(j)){
     j.forEach(o=>{
@@ -163,7 +267,9 @@ function normalise(j){
     });
   } else if(j&&j.batches){
     Object.entries(j.batches).forEach(([key,b])=>{
-      Object.entries(b.holdings||{}).forEach(([s,h])=>push(b.tag||key, s, h.q, h.avg, b.label));
+      META[b.tag||key]=b;
+      Object.entries(b.holdings||{}).forEach(([s,h])=>
+        push(b.tag||key, s, h.q, h.avg, b.label, b.tag?b.tag_source:'internal', h.pending_ca));
     });
   } else { throw new Error('expected an array of orders, or an object with a "batches" key'); }
   if(!rows.length) throw new Error('nothing usable found — no filled rows with a symbol and quantity');
@@ -171,13 +277,20 @@ function normalise(j){
   // merge per tag+symbol, quantity-weighting the cost so repeat buys average correctly
   const g={};
   rows.forEach(r=>{
-    const G=g[r.tag]||(g[r.tag]={tag:r.tag,label:r.label,pos:{}});
+    const G=g[r.tag]||(g[r.tag]={tag:r.tag,label:r.label,src:r.src,pos:{}});
     if(r.label&&!G.label) G.label=r.label;
+    if(r.src==='internal') G.src='internal';   // one internal row makes the whole group internal
     const p=G.pos[r.s]||(G.pos[r.s]={q:0,cost:0});
-    p.q+=r.q; p.cost+=r.q*r.avg;
+    // A sell removes shares at THEIR COST, not at the price they fetched. Subtracting the proceeds
+    // instead would fold realised gain into whatever is left, so the survivors would show a cost
+    // basis they never had. Cost before quantity - the divisor is the pre-sale holding.
+    p.cost += r.q>0 ? r.q*r.avg : r.q*(p.q ? p.cost/p.q : r.avg);
+    p.q += r.q;
+    if(r.ca) p.ca=r.ca;
   });
   Object.values(g).forEach(G=>{
     Object.entries(G.pos).forEach(([s,p])=>{ if(p.q<=0) delete G.pos[s]; else p.avg=p.cost/p.q; });
+    if(META[G.tag]) G.sc=META[G.tag].sc;   // the platform's own reported figures, if we have them
   });
   return g;
 }
@@ -187,38 +300,103 @@ function render(){
   Object.values(GROUPS).forEach(G=>Object.keys(G.pos).forEach(s=>seen[s]=(seen[s]||0)+1));
   const dual=Object.keys(seen).filter(s=>seen[s]>1);
 
-  let html='', gVal=0, gCost=0;
+  let html='', gVal=0, gCost=0, gCostPriced=0, gAdj=0;
   for(const [tag,G] of Object.entries(GROUPS)){
     const rows=Object.entries(G.pos).map(([s,p])=>{
       const px=PX[s];
-      return {s,q:p.q,avg:p.avg,px,cost:p.q*p.avg,val:px?p.q*px:null};
+      return {s,q:p.q,avg:p.avg,px,ca:p.ca,cost:p.q*p.avg,val:px?p.q*px:null};
     });
     const priced=rows.filter(r=>r.val!=null);
-    const val=priced.reduce((a,r)=>a+r.val,0), cost=priced.reduce((a,r)=>a+r.cost,0);
-    const unreal=val-cost; gVal+=val; gCost+=cost;
+    const val=priced.reduce((a,r)=>a+r.val,0);
+    // Invested comes from YOUR fills, so it is knowable with no price service at all — sum it over
+    // every row. Unrealised must compare like with like, so it uses only the rows that got a price.
+    const cost=rows.reduce((a,r)=>a+r.cost,0);
+    const costPriced=priced.reduce((a,r)=>a+r.cost,0);
+    const unreal=priced.length?val-costPriced:null;
+    gVal+=val; gCost+=cost; gCostPriced+=costPriced;
     const unpriced=rows.filter(r=>r.val==null).map(r=>r.s);
     rows.sort((a,b)=>(b.val||0)-(a.val||0));
 
-    html+=`<div class="panel">
-      <div class="bhead">
-        <input class="bname" value="${esc(nameFor(tag))}" aria-label="Name for this basket"
+    // A recorded corporate action whose shares have not been credited. The headline figures stay as
+    // the broker reports them - that is what you actually own today - and the true figure is shown
+    // beside them rather than substituted, so nothing on this page invents shares.
+    const cas=rows.filter(r=>r.ca&&r.val!=null)
+      .map(r=>({...r, trueVal:r.ca.expect*r.px, adj:r.ca.expect*r.px-r.val}));
+    const adj=cas.reduce((a,c)=>a+c.adj,0); gAdj+=adj;
+    // Nothing recorded, but a holding down more than 45% is almost never the market: NSE bands cap a
+    // session at 20%, so this is the same event unrecorded. Warn rather than compute.
+    const suspect=rows.filter(r=>!r.ca&&r.val!=null&&r.avg>0&&r.px/r.avg-1<-0.45);
+
+    // <details> rather than a JS accordion: it collapses with no script, is keyboard operable and
+    // Ctrl-F still finds text inside a closed one in current browsers.
+    const flag = cas.length ? '<span class="bflag" title="Corporate action pending — figures understate">!</span>'
+               : suspect.length ? '<span class="bflag warnflag" title="A holding is down more than 45% — check for an uncredited split or bonus">?</span>' : '';
+    html+=`<details class="bk panel" data-tag="${esc(tag)}" ${opens()[tag]?'open':''}>
+      <summary class="bsum">
+        <span class="chev" aria-hidden="true"></span>
+        <span class="btitle">${esc(nameFor(tag,G.label))}</span>
+        <span class="tag ${tag===UNTAGGED?'none':G.src==='internal'?'int':''}"
+          title="${G.src==='internal'
+            ?'Our own label. Kite has no record of it — these orders were placed before we tagged, or cannot be tagged at all.'
+            :'Recorded by Kite against the order at placement.'}"
+          >${tag===UNTAGGED?'no tag':esc(tag)}${G.src==='internal'?' <b>· internal</b>':''}</span>
+        <span class="note bn" style="margin:0;font-style:normal">${rows.length} stocks</span>${flag}
+        <span class="bfig mono">${M(val)}</span>
+        <span class="bpct mono ${unreal!=null?cls(unreal):''}">${unreal!=null&&costPriced
+          ?sgn(unreal)+Math.abs(unreal/costPriced*100).toFixed(2)+'%':'—'}</span>
+      </summary>
+      <div class="rename">
+        <label for="nm-${esc(tag)}">Basket name</label>
+        <input class="bname" id="nm-${esc(tag)}" value="${esc(nameFor(tag,G.label))}"
           data-tag="${esc(tag)}" spellcheck="false">
-        <span class="tag ${tag===UNTAGGED?'none':''}">${tag===UNTAGGED?'no tag':esc(tag)}</span>
-        <span class="note" style="margin:0;font-style:normal">${rows.length} stocks</span>
+        <span class="note" style="margin:0;font-style:normal">yours to choose — saved in this browser</span>
       </div>
       <div class="perf" style="margin-top:14px">
         <div class="c"><div class="k">Current value</div><div class="v mono">${M(val)}</div>
           <div class="s">${priced.length} of ${rows.length} priced</div></div>
         <div class="c"><div class="k">Invested</div><div class="v mono">${M(cost)}</div>
-          <div class="s">cost of what is held</div></div>
+          <div class="s">${priced.length===rows.length?'cost of what is held'
+            :'all '+rows.length+' holdings — no price needed'}</div></div>
         <div class="c"><div class="k">Unrealised</div>
-          <div class="v mono ${cls(unreal)}">${sgn(unreal)}${M(Math.abs(unreal))}</div>
-          <div class="s ${cls(unreal)}">${cost?sgn(unreal)+Math.abs(unreal/cost*100).toFixed(2)+'%':'—'}</div></div>
+          <div class="v mono ${unreal!=null?cls(unreal):''}">${unreal!=null
+            ?sgn(unreal)+M(Math.abs(unreal)):'—'}</div>
+          <div class="s ${unreal!=null?cls(unreal):''}">${unreal!=null&&costPriced
+            ?sgn(unreal)+Math.abs(unreal/costPriced*100).toFixed(2)+'%'
+            :'needs live prices'}</div></div>
         <div class="c"><div class="k">Realised</div><div class="v mono" style="color:var(--tx3)">—</div>
           <div class="s">needs sell history</div></div>
       </div>
       ${unpriced.length?`<div class="warn">No live price for <b>${unpriced.map(esc).join(', ')}</b> —
         left out of every figure above rather than counted at cost.</div>`:''}
+      ${cas.length?`<div class="ca">
+        <b>Corporate action pending — this basket's figures understate.</b>
+        ${cas.map(c=>`<div style="margin-top:6px"><b>${esc(c.s)}</b>: ${c.ca.ratio}-for-1.
+          Price already adjusted, but <b>${c.ca.expect-c.q} of ${c.ca.expect} shares are not yet
+          credited</b>. Shown ${M(c.val)}, worth ${M(c.trueVal)} once they land
+          (<span class="mono">${sgn(c.adj)}${M(Math.abs(c.adj))}</span>).</div>`).join('')}
+        <div style="margin-top:7px">This basket: <b class="${cls(unreal)}">${sgn(unreal)}${M(Math.abs(unreal))}</b>
+          shown, <b class="${cls(unreal+adj)}">${sgn(unreal+adj)}${M(Math.abs(unreal+adj))}</b>
+          (${sgn(unreal+adj)}${Math.abs((unreal+adj)/cost*100).toFixed(2)}%) once credited.
+          It self-corrects — don't sell until the shares appear.</div>
+      </div>`:''}
+      ${suspect.length?`<div class="warn"><b>${suspect.map(r=>esc(r.s)).join(', ')}</b> —
+        down more than 45%, which an NSE price band makes near-impossible in normal trading. Check
+        for a split or bonus whose shares have not been credited; nothing is recorded for it here.</div>`:''}
+      ${G.sc?`<div class="scbox">
+        <b>The platform reports ${G.sc.total_returns_pct}% total return</b> (${M(G.sc.total_returns)})
+        against our ${cost?(unreal!=null?sgn(unreal)+Math.abs(unreal/costPriced*100).toFixed(2)+'%':'—'):'—'},
+        and both are right. Theirs includes <b>${M(G.sc.realized_returns)} realised</b> from past
+        rebalances and <b>${M(G.sc.dividends)} of dividends</b>; ours is <b>unrealised only</b>, on
+        your broker's cost basis. Kite's APIs expose neither, so we understate by design — and
+        their cost basis is ${M(G.sc.current_investment)} to our ${M(cost)} because they fold the
+        realised amount back in. XIRR ${G.sc.xirr_pct}%.
+        ${val&&G.sc.current_value?`Value cross-check: <span class="mono">${M(val)}</span> ours vs
+          <span class="mono">${M(G.sc.current_value)}</span> theirs
+          (<span class="mono">${sgn(val-G.sc.current_value)}${M(Math.abs(val-G.sc.current_value))}</span>,
+          different moments in the same session).`:''}
+        ${G.sc.next_rebalance?`<br>Next rebalance <b>${esc(G.sc.next_rebalance)}</b> — this basket's
+          constituents go stale then and must be re-captured.`:''}
+      </div>`:''}
       <table><thead><tr><th>Stock</th><th class="r">Shares</th><th class="r">Avg buy</th>
         <th class="r">Price now</th><th class="r">Value</th><th class="r">Return</th>
         <th class="r">Weight</th></tr></thead><tbody>
@@ -232,42 +410,71 @@ function render(){
           <td class="r mono">${r.val!=null?w.toFixed(2)+'%':'—'}
             ${r.val!=null?`<div class="wbar"><i style="width:${Math.min(100,w*3).toFixed(1)}%"></i></div>`:''}</td>
         </tr>`;}).join('')}
-      </tbody></table></div>`;
+      </tbody></table></details>`;
   }
 
-  const gUn=gVal-gCost;
+  const gUn=gCostPriced?gVal-gCostPriced:null;
+  const gAdjNote=gAdj&&gUn!=null?`<div class="ca" style="margin-top:14px">
+    <b>Portfolio total, corrected for shares not yet credited:</b>
+    <span class="mono">${sgn(gUn)}${M(Math.abs(gUn))}</span> shown
+    (${sgn(gUn)}${Math.abs(gUn/gCostPriced*100).toFixed(2)}%) →
+    <span class="mono"><b>${sgn(gUn+gAdj)}${M(Math.abs(gUn+gAdj))}</b></span>
+    (<b>${sgn(gUn+gAdj)}${Math.abs((gUn+gAdj)/gCostPriced*100).toFixed(2)}%</b>).
+    The difference is <span class="mono">${M(Math.abs(gAdj))}</span> of shares the exchange has
+    allotted but your demat has not received.</div>`:'';
   $('out').innerHTML=`<h2>All baskets</h2><div class="panel">
     <div class="perf">
       <div class="c"><div class="k">Total value</div><div class="v mono">${M(gVal)}</div>
-        <div class="s">${Object.keys(GROUPS).length} baskets</div></div>
+        <div class="s">${Object.keys(GROUPS).length} baskets${gAdj?' · before pending shares':''}</div></div>
       <div class="c"><div class="k">Total invested</div><div class="v mono">${M(gCost)}</div></div>
       <div class="c"><div class="k">Unrealised</div>
-        <div class="v mono ${cls(gUn)}">${sgn(gUn)}${M(Math.abs(gUn))}</div>
-        <div class="s ${cls(gUn)}">${gCost?sgn(gUn)+Math.abs(gUn/gCost*100).toFixed(2)+'%':'—'}</div></div>
+        <div class="v mono ${gUn!=null?cls(gUn):''}">${gUn!=null?sgn(gUn)+M(Math.abs(gUn)):'—'}</div>
+        <div class="s ${gUn!=null?cls(gUn):''}">${gUn!=null&&gCostPriced
+          ?sgn(gUn)+Math.abs(gUn/gCostPriced*100).toFixed(2)+'%':'needs live prices'}</div></div>
     </div>
     ${dual.length?`<div class="warn"><b>${dual.length} stock${dual.length>1?'s appear':' appears'} in more
       than one basket:</b> ${dual.map(esc).join(', ')}. Weights are computed inside each basket, so
       these are counted in both — correct per basket, but your real exposure to them is the sum, and
       rebalancing one basket cannot see the other half.</div>`:''}
-    </div><h2>By basket</h2>`+html;
+    </div>${gAdjNote}
+    <h2>By basket
+      <button class="sm" style="margin:0" onclick="allBaskets(true)">Expand all</button>
+      <button class="sm" style="margin:0" onclick="allBaskets(false)">Collapse all</button>
+    </h2>`+html;
 
   // names are editable and persist per tag
   document.querySelectorAll('.bname').forEach(el=>{
-    el.onchange=()=>{ setName(el.dataset.tag, el.value); };
+    el.onchange=()=>{ setName(el.dataset.tag, el.value);
+      // keep the collapsed header in step, otherwise the rename looks like it did not take
+      const h=el.closest('details.bk').querySelector('.btitle');
+      if(h) h.textContent=el.value.trim()||el.dataset.tag; };
+  });
+  document.querySelectorAll('details.bk').forEach(d=>{
+    d.ontoggle=()=>setOpen(d.dataset.tag, d.open);
   });
 }
 
-async function load(text){
+async function load(text,opts){
   let j; try{ j=JSON.parse(text); }catch(e){ say('That is not valid JSON — '+esc(e.message)); return; }
   try{ GROUPS=normalise(j); }catch(e){ say(esc(e.message)); return; }
+  // Only persist a file the user actually just dropped, never a restore - otherwise a stale
+  // timestamp is rewritten on every page view and "imported 3 days ago" becomes "just now".
+  if(!opts||!opts.restored){ saveData(text); stamp(new Date().toISOString()); }
+  else stamp(opts.at);
   const syms=[...new Set(Object.values(GROUPS).flatMap(G=>Object.keys(G.pos)))];
   say(`Grouped into ${Object.keys(GROUPS).length} baskets by tag · fetching ${syms.length} prices…`);
   try{
     const r=await prices(syms); PX=r.prices||{};
-    say(`${Object.keys(PX).length} of ${syms.length} priced${r.missing&&r.missing.length?' · no price for '+r.missing.join(', '):''}. Rename any basket by typing over its title.`);
+    say(`${Object.keys(PX).length} of ${syms.length} priced${r.missing&&r.missing.length?' · no price for '+r.missing.join(', '):''}. Open a basket to see its holdings or rename it.`);
   }catch(e){ PX={}; say('No live prices — '+esc(e.message)+'. Showing cost basis only.'); }
   render();
 }
+
+// A plain visit should show your baskets, not an empty drop zone.
+addEventListener('DOMContentLoaded',()=>{
+  const sv=loadSaved();
+  if(sv&&sv.text) load(sv.text,{restored:true,at:sv.at});
+});
 
 const drop=$('drop'), fin=$('fin');
 fin.onchange=e=>{ const f=e.target.files[0]; if(!f) return;
