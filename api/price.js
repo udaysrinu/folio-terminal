@@ -18,11 +18,8 @@
 const MAX_SYMBOLS = 60;      // one basket is ~25; a cap keeps a stray loop from burning the free tier
 const TIMEOUT_MS  = 8000;
 
-// Only these origins may read the response. A wildcard would work — there are no credentials to
-// protect — but naming origins stops other sites casually using this endpoint as free infrastructure.
-// Same-origin requests send no Origin header and need nothing here. These cover the other hosts the
-// page might be served from. A wildcard would be safe — there are no credentials to protect — but
-// naming origins stops other sites using this as free infrastructure.
+// Only these origins may read the response. A wildcard would be safe — there are no credentials to
+// protect — but naming origins stops other sites casually using this as free infrastructure.
 // Vercel serves the pages and this function from the same origin, so the page's own call sends no
 // Origin header and needs nothing from this list. It exists only for a page served from ELSEWHERE:
 // a local static server, or a mirror. VERCEL_URL is injected by Vercel itself — it is not a variable
@@ -34,7 +31,21 @@ const ALLOWED = [
   'http://localhost:3000',
 ].filter(Boolean);
 
+// NSE series suffixes. The broker's tradeable symbol carries them (MTARTECH-BE, E2E-BE) but Yahoo
+// indexes only the base name — MTARTECH-BE.NS is a 404 while MTARTECH.NS returns a price. Verified
+// against Yahoo, not assumed. The list is an allowlist on purpose: INDIGRID-IV.NS DOES resolve, so
+// stripping everything after a hyphen would break a holding that currently works.
+const SERIES = /-(BE|BZ|BL|SM|ST|IL|GB|GS)$/;
+
 async function yahooPrice(sym) {
+  // Ask for exactly what the caller named first, then fall back to the de-suffixed base. Order
+  // matters: anything Yahoo does carry under its full name keeps working untouched.
+  const px = await yahooOne(sym);
+  if (px !== null || !SERIES.test(sym)) return px;
+  return yahooOne(sym.replace(SERIES, ''));
+}
+
+async function yahooOne(sym) {
   // v8 chart, not v7 quote: v7 batch now demands a crumb/cookie, v8 needs nothing. One symbol per
   // request, which is fine — they run in parallel and Yahoo is not metering us.
   const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(sym)}.NS`
