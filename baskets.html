@@ -141,7 +141,9 @@ text-align:center;background:linear-gradient(160deg,var(--panel),var(--bg2));cur
 <div class="panel">
   <p style="font-size:14px">Drop any JSON that carries <b>order tags</b> — a Kite orders export, or a
   saved batch map. Orders are grouped by their <b>tag</b>, which is the only basket marker Kite
-  records, and each group's name is yours to type. Prices come live; nothing is uploaded.</p>
+  records, and each group's name is yours to type. The file is read in this browser and never
+  uploaded — the only thing that leaves the device is the <b>list of stock symbols</b>, sent to this
+  app's own price endpoint. Not your quantities, not your cost, not who you are.</p>
   <p class="note" style="font-style:normal">Kite sets a tag when an order is placed and never after,
   and holdings carry no tag at all — so snapshot your orders on the day you place them, or the
   grouping is gone.</p>
@@ -166,7 +168,11 @@ const $=id=>document.getElementById(id);
 const M=v=>'₹'+Math.round(v).toLocaleString('en-IN');
 const cls=v=>v>=0?'pos':'neg';
 const sgn=v=>v>=0?'+':'−';
-const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+  .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+// Anything numeric that reaches the HTML must arrive as a number, not as a string that happens to
+// look like one. ca.ratio and the sc.* percentages were interpolated raw.
+const num=(v,dp=2)=>Number.isFinite(+v)?(+v).toFixed(dp).replace(/\.00$/,''):'—';
 const say=(h,c='warn')=>$('msg').innerHTML=h?`<div class="${c}">${h}</div>`:'';
 
 let GROUPS=null, PX={};
@@ -189,7 +195,9 @@ const saveData=text=>{ try{ localStorage.setItem(DATAKEY,JSON.stringify(
   {text, at:new Date().toISOString()})); }catch(e){} };   // quota: a big map can exceed 5 MB
 const loadSaved=()=>{ try{ return JSON.parse(localStorage.getItem(DATAKEY)||'null'); }
   catch(e){ return null; } };
-function forget(){ try{ localStorage.removeItem(DATAKEY); }catch(e){}
+function forget(){
+  // The tags, and the names you gave them, are position metadata too - so Forget removes all three.
+  try{ [DATAKEY,NAMEKEY,OPENKEY].forEach(k=>localStorage.removeItem(k)); }catch(e){}
   GROUPS=null; PX={}; $('out').innerHTML=''; $('saved').innerHTML='';
   say('Forgotten. Drop a file to start again.','warn'); }
 const ago=iso=>{ const m=Math.round((Date.now()-new Date(iso))/60000);
@@ -206,7 +214,7 @@ function allBaskets(v){ document.querySelectorAll('details.bk').forEach(d=>{
   d.open=v; setOpen(d.dataset.tag,v); }); }
 
 function stamp(at){ $('saved').innerHTML=`<div class="saved">Showing the file you imported
-  <b>${esc(ago(at))}</b>. Held in this browser only — prices are refetched live on every visit.
+  <b>${esc(ago(at))}</b>. Held in this browser only. Prices are refetched live, which sends the symbol names.
   <button class="sm" onclick="forget()">Forget this data</button></div>`; }
 const UNTAGGED='__untagged__';
 
@@ -281,15 +289,20 @@ function normalise(j){
     if(r.label&&!G.label) G.label=r.label;
     if(r.src==='internal') G.src='internal';   // one internal row makes the whole group internal
     const p=G.pos[r.s]||(G.pos[r.s]={q:0,cost:0});
-    // A sell removes shares at THEIR COST, not at the price they fetched. Subtracting the proceeds
-    // instead would fold realised gain into whatever is left, so the survivors would show a cost
-    // basis they never had. Cost before quantity - the divisor is the pre-sale holding.
-    p.cost += r.q>0 ? r.q*r.avg : r.q*(p.q ? p.cost/p.q : r.avg);
+    // A sell removes shares at THEIR COST, never at the price they fetched — folding proceeds into
+    // the basis would give the survivors a cost they never had. And if the matching BUY is not in
+    // this file (a sell of a position bought earlier), the cost is simply unknowable: say so rather
+    // than invent one. Using the sell price there made a 2-share position read Rs26,084 invested.
+    if(r.q>0){ p.cost+=r.q*r.avg; }
+    else if(p.q>0){ p.cost+=r.q*(p.cost/p.q); }
+    else { p.costUnknown=true; }
     p.q += r.q;
+    if(r.avg<=0) p.costUnknown=true;      // a holding with no avg is not free
     if(r.ca) p.ca=r.ca;
   });
   Object.values(g).forEach(G=>{
-    Object.entries(G.pos).forEach(([s,p])=>{ if(p.q<=0) delete G.pos[s]; else p.avg=p.cost/p.q; });
+    Object.entries(G.pos).forEach(([s,p])=>{ if(p.q<=0) delete G.pos[s];
+      else p.avg=p.costUnknown?null:p.cost/p.q; });
     if(META[G.tag]) G.sc=META[G.tag].sc;   // the platform's own reported figures, if we have them
   });
   return g;
@@ -300,32 +313,47 @@ function render(){
   Object.values(GROUPS).forEach(G=>Object.keys(G.pos).forEach(s=>seen[s]=(seen[s]||0)+1));
   const dual=Object.keys(seen).filter(s=>seen[s]>1);
 
-  let html='', gVal=0, gCost=0, gCostPriced=0, gAdj=0;
+  let html='', gVal=0, gCost=0, gCostPriced=0, gValPriced=0, gAdj=0;
   for(const [tag,G] of Object.entries(GROUPS)){
     const rows=Object.entries(G.pos).map(([s,p])=>{
       const px=PX[s];
-      return {s,q:p.q,avg:p.avg,px,ca:p.ca,cost:p.q*p.avg,val:px?p.q*px:null};
+      // avg null => cost basis unknowable (a sell with no matching buy, or a missing avg). Such a
+      // row is excluded from invested and unrealised exactly as an unpriced row is, and named.
+      return {s,q:p.q,avg:p.avg,px,ca:p.ca,noCost:p.avg==null,
+              cost:p.avg==null?0:p.q*p.avg, val:px?p.q*px:null};
     });
     const priced=rows.filter(r=>r.val!=null);
     const val=priced.reduce((a,r)=>a+r.val,0);
     // Invested comes from YOUR fills, so it is knowable with no price service at all — sum it over
     // every row. Unrealised must compare like with like, so it uses only the rows that got a price.
-    const cost=rows.reduce((a,r)=>a+r.cost,0);
-    const costPriced=priced.reduce((a,r)=>a+r.cost,0);
-    const unreal=priced.length?val-costPriced:null;
-    gVal+=val; gCost+=cost; gCostPriced+=costPriced;
+    // Invested needs no price, so it sums every row that HAS a cost. Unrealised must compare like
+    // with like, so it uses only rows that are both priced and costed.
+    const costed=rows.filter(r=>!r.noCost);
+    const cost=costed.reduce((a,r)=>a+r.cost,0);
+    const both=priced.filter(r=>!r.noCost);
+    const costPriced=both.reduce((a,r)=>a+r.cost,0);
+    const valPriced=both.reduce((a,r)=>a+r.val,0);
+    const unreal=both.length?valPriced-costPriced:null;
+    const noCost=rows.filter(r=>r.noCost).map(r=>r.s);
+    gVal+=val; gCost+=cost; gCostPriced+=costPriced; gValPriced+=valPriced;
     const unpriced=rows.filter(r=>r.val==null).map(r=>r.s);
     rows.sort((a,b)=>(b.val||0)-(a.val||0));
 
     // A recorded corporate action whose shares have not been credited. The headline figures stay as
     // the broker reports them - that is what you actually own today - and the true figure is shown
     // beside them rather than substituted, so nothing on this page invents shares.
-    const cas=rows.filter(r=>r.ca&&r.val!=null)
-      .map(r=>({...r, trueVal:r.ca.expect*r.px, adj:r.ca.expect*r.px-r.val}));
+    const caRows=rows.filter(r=>r.ca&&r.val!=null&&!r.noCost);
+    const caBad=caRows.filter(r=>!(Number.isFinite(+r.ca.ratio)&&+r.ca.ratio>1&&+r.ca.ratio<=50));
+    const cas=caRows.filter(r=>!caBad.includes(r)).map(r=>{
+      const ratio=+r.ca.ratio, trueQ=Math.round(r.q*ratio);
+      return {...r, ratio, trueQ, trueVal:trueQ*r.px, adj:trueQ*r.px-r.val};
+    }).filter(c=>c.trueQ>c.q);   // nothing left to credit once the shares have landed
     const adj=cas.reduce((a,c)=>a+c.adj,0); gAdj+=adj;
-    // Nothing recorded, but a holding down more than 45% is almost never the market: NSE bands cap a
-    // session at 20%, so this is the same event unrecorded. Warn rather than compute.
-    const suspect=rows.filter(r=>!r.ca&&r.val!=null&&r.avg>0&&r.px/r.avg-1<-0.45);
+    // Down more than half since purchase. This is measured against COST, not against yesterday's
+    // close, so it cannot distinguish an uncredited split from a genuinely bad holding - the page
+    // has no previous snapshot to compare against. bucket_report.py can, because it diffs two
+    // snapshots and snaps the implied ratio to a clean fraction. So: prompt, never conclude.
+    const suspect=rows.filter(r=>!r.ca&&r.val!=null&&!r.noCost&&r.avg>0&&r.px/r.avg-1<-0.5);
 
     // <details> rather than a JS accordion: it collapses with no script, is keyboard operable and
     // Ctrl-F still finds text inside a closed one in current browsers.
@@ -355,7 +383,8 @@ function render(){
         <div class="c"><div class="k">Current value</div><div class="v mono">${M(val)}</div>
           <div class="s">${priced.length} of ${rows.length} priced</div></div>
         <div class="c"><div class="k">Invested</div><div class="v mono">${M(cost)}</div>
-          <div class="s">${priced.length===rows.length?'cost of what is held'
+          <div class="s">${noCost.length?costed.length+' of '+rows.length+' have a cost basis'
+            :priced.length===rows.length?'cost of what is held'
             :'all '+rows.length+' holdings — no price needed'}</div></div>
         <div class="c"><div class="k">Unrealised</div>
           <div class="v mono ${unreal!=null?cls(unreal):''}">${unreal!=null
@@ -367,29 +396,39 @@ function render(){
           <div class="s">needs sell history</div></div>
       </div>
       ${unpriced.length?`<div class="warn">No live price for <b>${unpriced.map(esc).join(', ')}</b> —
-        left out of every figure above rather than counted at cost.</div>`:''}
+        excluded from Current value and Unrealised. Invested still counts it, because what you paid
+        needs no price, so <b>Value minus Invested will not equal Unrealised</b> while this shows.</div>`:''}
       ${cas.length?`<div class="ca">
         <b>Corporate action pending — this basket's figures understate.</b>
-        ${cas.map(c=>`<div style="margin-top:6px"><b>${esc(c.s)}</b>: ${c.ca.ratio}-for-1.
-          Price already adjusted, but <b>${c.ca.expect-c.q} of ${c.ca.expect} shares are not yet
-          credited</b>. Shown ${M(c.val)}, worth ${M(c.trueVal)} once they land
+        ${cas.map(c=>`<div style="margin-top:6px"><b>${esc(c.s)}</b>: ${num(c.ratio)}-for-1.
+          Price already adjusted, but <b>${c.trueQ-c.q} of this basket's ${c.trueQ} shares are not
+          yet credited</b>. Shown ${M(c.val)}, worth ${M(c.trueVal)} once they land
           (<span class="mono">${sgn(c.adj)}${M(Math.abs(c.adj))}</span>).</div>`).join('')}
         <div style="margin-top:7px">This basket: <b class="${cls(unreal)}">${sgn(unreal)}${M(Math.abs(unreal))}</b>
           shown, <b class="${cls(unreal+adj)}">${sgn(unreal+adj)}${M(Math.abs(unreal+adj))}</b>
-          (${sgn(unreal+adj)}${Math.abs((unreal+adj)/cost*100).toFixed(2)}%) once credited.
-          It self-corrects — don't sell until the shares appear.</div>
+          (${costPriced?sgn(unreal+adj)+Math.abs((unreal+adj)/costPriced*100).toFixed(2)+'%':'—'})
+          once credited. It self-corrects — don't sell until the shares appear.</div>
       </div>`:''}
+      ${caBad.length?`<div class="warn"><b>${caBad.map(r=>esc(r.s)).join(', ')}</b> — a corporate
+        action is recorded but its ratio is not a usable number, so no correction has been applied.
+        Fix <span class="mono">pending_ca.ratio</span> in the file.</div>`:''}
+      ${noCost.length?`<div class="warn">No cost basis for <b>${noCost.map(esc).join(', ')}</b> —
+        the file sells shares whose purchase it does not contain, or records no average price. Those
+        rows are left out of Invested and Unrealised rather than counted at a guessed cost.</div>`:''}
       ${suspect.length?`<div class="warn"><b>${suspect.map(r=>esc(r.s)).join(', ')}</b> —
-        down more than 45%, which an NSE price band makes near-impossible in normal trading. Check
-        for a split or bonus whose shares have not been credited; nothing is recorded for it here.</div>`:''}
+        down more than half since you bought. That may simply be a bad holding. But if the price fell
+        that far in one session it cannot be the market, because NSE price bands cap a session at
+        about 20% — so it would be a split or bonus whose shares have not reached your demat. This
+        page only sees your cost, not yesterday's close, so it cannot tell which. If it is a
+        corporate action, record <span class="mono">pending_ca</span> against the holding.</div>`:''}
       ${G.sc?`<div class="scbox">
-        <b>The platform reports ${G.sc.total_returns_pct}% total return</b> (${M(G.sc.total_returns)})
+        <b>The platform reports ${num(G.sc.total_returns_pct)}% total return</b> (${M(G.sc.total_returns)})
         against our ${cost?(unreal!=null?sgn(unreal)+Math.abs(unreal/costPriced*100).toFixed(2)+'%':'—'):'—'},
         and both are right. Theirs includes <b>${M(G.sc.realized_returns)} realised</b> from past
         rebalances and <b>${M(G.sc.dividends)} of dividends</b>; ours is <b>unrealised only</b>, on
         your broker's cost basis. Kite's APIs expose neither, so we understate by design — and
         their cost basis is ${M(G.sc.current_investment)} to our ${M(cost)} because they fold the
-        realised amount back in. XIRR ${G.sc.xirr_pct}%.
+        realised amount back in. XIRR ${num(G.sc.xirr_pct)}%.
         ${val&&G.sc.current_value?`Value cross-check: <span class="mono">${M(val)}</span> ours vs
           <span class="mono">${M(G.sc.current_value)}</span> theirs
           (<span class="mono">${sgn(val-G.sc.current_value)}${M(Math.abs(val-G.sc.current_value))}</span>,
@@ -413,7 +452,7 @@ function render(){
       </tbody></table></details>`;
   }
 
-  const gUn=gCostPriced?gVal-gCostPriced:null;
+  const gUn=gCostPriced?gValPriced-gCostPriced:null;
   const gAdjNote=gAdj&&gUn!=null?`<div class="ca" style="margin-top:14px">
     <b>Portfolio total, corrected for shares not yet credited:</b>
     <span class="mono">${sgn(gUn)}${M(Math.abs(gUn))}</span> shown
@@ -459,6 +498,16 @@ async function load(text,opts){
   try{ GROUPS=normalise(j); }catch(e){ say(esc(e.message)); return; }
   // Only persist a file the user actually just dropped, never a restore - otherwise a stale
   // timestamp is rewritten on every page view and "imported 3 days ago" becomes "just now".
+  const positions=Object.values(GROUPS).reduce((a,G)=>a+Object.keys(G.pos).length,0);
+  if(!positions){
+    // e.g. a sells-only rebalance export: every position nets to zero. Overwriting the saved import
+    // with this would replace a real portfolio with Rs0, and there is no undo.
+    say('That file leaves no open positions — every holding in it nets to zero. Keeping whatever was '
+      +'already saved.','warn');
+    const sv=loadSaved();
+    if(sv&&sv.text&&(!opts||!opts.restored)) return load(sv.text,{restored:true,at:sv.at});
+    return;
+  }
   if(!opts||!opts.restored){ saveData(text); stamp(new Date().toISOString()); }
   else stamp(opts.at);
   const syms=[...new Set(Object.values(GROUPS).flatMap(G=>Object.keys(G.pos)))];

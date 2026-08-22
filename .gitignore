@@ -1,4 +1,13 @@
 # ---- YOUR DATA — never commit ----
+# Patterns are deliberately loose: '*_sheet.json' missed
+# 'defense_sheet rebalance stocks.json' and 'tradebook*.csv' missed 'test_tradebook.csv'.
+*sheet*.json
+*sheet*.md
+*tradebook*
+*.xlsx
+TOMORROW_*.md
+sc_manage.md
+PIPELINE.md
 _holdings.json
 _live_*.json
 _bucket_report_*.txt
@@ -7,11 +16,7 @@ live.json
 _deep.json
 _analysis.json
 _cumcurve.json
-*_sheet.json
-*_sheet.md
 *_BASKET.md
-tradebook*.xlsx
-tradebook*.csv
 taxpnl*.xlsx
 JOURNAL.md
 CURRENT_STATE.md

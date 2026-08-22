@@ -1,6 +1,9 @@
 <!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>sharecase</title>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<!-- Pinned with SRI. Without it, a swapped CDN asset executes on this origin, and
+     since the Tracker now persists the portfolio in localStorage it could read the
+     whole position book plus ft_kite_api_key. crossorigin is required for SRI. -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous"></script>
 <style>
 /* ---------- type: self-hosted, latin subset. Direction B ---------- */
 @font-face{font-family:'IBM Plex Sans';src:url(fonts/plex-sans-400.woff2)format('woff2');
